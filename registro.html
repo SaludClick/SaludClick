@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - SaludClick</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="assets/icons/favicon.ico">
+</head>
+
+<body class="bg-light">
+
+    <div class="container-fluid min-vh-100 d-flex align-items-center justify-content-center py-5">
+
+        <div class="row w-100 justify-content-center">
+
+            <div class="col-11 col-sm-10 col-md-8 col-lg-6">
+
+                <!-- Logo -->
+                <div class="text-center mb-4">
+
+                    <a href="index.html"
+                        class="text-success text-decoration-none">
+
+                        <i class="fa-solid fa-heart-pulse fa-3x mb-3"></i>
+
+                        <h2 class="fw-bold">
+                            SaludClick
+                        </h2>
+
+                    </a>
+
+                    <p class="text-muted">
+                        Tu bienestar, a un solo clic
+                    </p>
+
+                </div>
+
+                <!-- Card Registro -->
+                <div class="card border-0 shadow-lg rounded-4">
+
+                    <div class="card-body p-4 p-md-5">
+
+                        <h3 class="text-center fw-bold mb-2">
+                            Crear Cuenta
+                        </h3>
+
+                        <p class="text-center text-muted mb-4">
+                            Regístrate para gestionar tus medicamentos
+                            de forma rápida y segura.
+                        </p>
+
+                        <form>
+
+                            <!-- Nombre -->
+                            <div class="mb-3">
+
+                                <label class="form-label fw-semibold">
+                                    Nombre Completo
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+                                        <i class="fa-solid fa-user"></i>
+                                    </span>
+
+                                    <input type="text"
+                                        class="form-control"
+                                        placeholder="Juan David Mosquera"
+                                        required>
+
+                                </div>
+
+                            </div>
+
+                            <!-- Correo -->
+                            <div class="mb-3">
+
+                                <label class="form-label fw-semibold">
+                                    Correo Electrónico
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+                                        <i class="fa-solid fa-envelope"></i>
+                                    </span>
+
+                                    <input type="email"
+                                        class="form-control"
+                                        placeholder="correo@ejemplo.com"
+                                        required>
+
+                                </div>
+
+                            </div>
+
+                            <!-- Documento -->
+                            <div class="row">
+
+                                <div class="col-md-4 mb-3">
+
+                                    <label class="form-label fw-semibold">
+                                        Tipo Doc.
+                                    </label>
+
+                                    <select class="form-select">
+
+                                        <option>CC</option>
+                                        <option>TI</option>
+                                        <option>CE</option>
+
+                                    </select>
+
+                                </div>
+
+                                <div class="col-md-8 mb-3">
+
+                                    <label class="form-label fw-semibold">
+                                        Número Documento
+                                    </label>
+
+                                    <input type="text"
+                                        class="form-control"
+                                        placeholder="123456789">
+
+                                </div>
+
+                            </div>
+
+                            <!-- Contraseña -->
+                            <div class="mb-3">
+
+                                <label class="form-label fw-semibold">
+                                    Contraseña
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+                                        <i class="fa-solid fa-lock"></i>
+                                    </span>
+
+                                    <input type="password"
+                                        class="form-control"
+                                        placeholder="Mínimo 8 caracteres"
+                                        required>
+
+                                </div>
+
+                            </div>
+
+                            <!-- Confirmar -->
+                            <div class="mb-3">
+
+                                <label class="form-label fw-semibold">
+                                    Confirmar Contraseña
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+                                        <i class="fa-solid fa-shield-halved"></i>
+                                    </span>
+
+                                    <input type="password"
+                                        class="form-control"
+                                        placeholder="Repite tu contraseña"
+                                        required>
+
+                                </div>
+
+                            </div>
+
+                            <!-- Términos -->
+                            <div class="form-check mb-4">
+
+                                <input class="form-check-input"
+                                    type="checkbox"
+                                    required>
+
+                                <label class="form-check-label small text-muted">
+
+                                    Acepto los
+                                    <a href="#" class="text-success text-decoration-none">
+                                        Términos y Condiciones
+                                    </a>
+                                    y la
+                                    <a href="#" class="text-success text-decoration-none">
+                                        Política de Privacidad
+                                    </a>
+
+                                </label>
+
+                            </div>
+
+                            <!-- Botón -->
+                            <button type="submit"
+                                class="btn btn-success w-100 py-3 fw-bold">
+
+                                <i class="fa-solid fa-user-plus me-2"></i>
+                                Crear Cuenta
+
+                            </button>
+
+                        </form>
+
+                        <hr class="my-4">
+
+                        <div class="text-center">
+
+                            <span class="text-muted">
+                                ¿Ya tienes cuenta?
+                            </span>
+
+                            <a href="login.html"
+                                class="text-success fw-bold text-decoration-none">
+
+                                Inicia sesión aquí
+
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Footer -->
+                <div class="text-center mt-4">
+
+                    <small class="text-muted">
+                        © 2026 SaludClick - Medellín, Colombia
+                    </small>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="js/registro.js"></script>
+    <script src="js/menu.js"></script>
+
+</body>
+
+</html>

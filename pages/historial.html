@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Historial | SaludClick</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="icon" href="assets/icons/favicon.ico">
+</head>
+
+<body>
+
+    <header class="navbar">
+
+        <div class="container nav-container">
+
+            <div class="logo">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span>SaludClick</span>
+            </div>
+
+            <nav>
+
+                <a href="dashboard.html">Inicio</a>
+                <a href="medicamentos.html">Medicamentos</a>
+                <a href="pedidos.html">Pedidos</a>
+                <a href="historial.html">Historial</a>
+                <a href="perfil.html">Perfil</a>
+
+            </nav>
+
+        </div>
+
+    </header>
+
+    <section class="hero">
+
+        <div class="container">
+
+            <div class="hero-texto">
+
+                <span class="badge">
+                    Historial de Solicitudes
+                </span>
+
+                <h1>
+                    Historial de Pedidos
+                </h1>
+
+                <p>
+                    Consulta todos los medicamentos que has solicitado
+                    anteriormente y revisa su estado final.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <section class="servicios">
+
+        <div class="container">
+
+            <h2>
+                Historial General
+            </h2>
+
+            <div class="tabla-responsive">
+
+                <table class="tabla-medicamentos">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>ID</th>
+                            <th>Medicamento</th>
+                            <th>Fecha</th>
+                            <th>Estado Final</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="tablaHistorial"></tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <footer>
+
+        <div class="container">
+
+            <h3>
+                SaludClick
+            </h3>
+
+            <p>
+                Tu bienestar, a un solo clic.
+            </p>
+
+            <p>
+                Medellín - Colombia
+            </p>
+
+        </div>
+
+    </footer>
+    <script src="../js/auth.js"></script>
+<script src="../js/historial.js"></script>
+<script src="js/menu.js"></script>
+
+</body>
+
+</html>

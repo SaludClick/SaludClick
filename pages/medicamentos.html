@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Medicamentos | SaludClick</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="icon" href="assets/icons/favicon.ico">
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+
+    <header class="navbar">
+
+        <div class="container nav-container">
+
+            <div class="logo">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span>SaludClick</span>
+            </div>
+
+            <nav>
+
+                <a href="dashboard.html">Inicio</a>
+                <a href="medicamentos.html">Medicamentos</a>
+                <a href="pedidos.html">Pedidos</a>
+                <a href="historial.html">Historial</a>
+                <a href="perfil.html">Perfil</a>
+
+            </nav>
+
+        </div>
+
+    </header>
+
+    <!-- ENCABEZADO -->
+
+    <section class="hero">
+
+        <div class="container">
+
+            <div class="hero-texto">
+
+                <span class="badge">
+                    Gestión Farmacéutica
+                </span>
+
+                <h1>
+                    Consulta de Medicamentos
+                </h1>
+
+                <p>
+                    Busca medicamentos disponibles en la red de farmacias
+                    afiliadas y realiza solicitudes de manera rápida.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- BUSCADOR -->
+
+    <section class="servicios">
+
+        <div class="container">
+
+            <div class="buscador">
+
+                <input
+                    type="text"
+                    id="buscarMedicamento"
+                    placeholder="Buscar medicamento...">
+
+                <button>
+                    Buscar
+                </button>
+
+            </div>
+
+        </div>
+
+        <div class="buscador-container">
+
+    <input
+        type="text"
+        id="buscadorMedicamentos"
+        placeholder="Buscar medicamento...">
+
+</div>
+
+    </section>
+    
+
+    <!-- TABLA -->
+
+    <section class="servicios">
+
+        <div class="container">
+
+            <h2>
+                Medicamentos Disponibles
+            </h2>
+
+            <div class="tabla-responsive">
+
+                <table class="tabla-medicamentos">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Medicamento</th>
+                            <th>Presentación</th>
+                            <th>Disponibilidad</th>
+                            <th>Acción</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        <tr>
+
+                            <td>Acetaminofén</td>
+                            <td>500 mg</td>
+                            <td class="disponible">
+                                Disponible
+                            </td>
+
+                            <td>
+
+                                <button class="btn-tabla">
+                                    Solicitar
+                                </button>
+
+                            </td>
+
+                        </tr>
+
+                        <tr>
+
+                            <td>Ibuprofeno</td>
+                            <td>400 mg</td>
+                            <td class="disponible">
+                                Disponible
+                            </td>
+
+                            <td>
+
+                                <button class="btn-tabla">
+                                    Solicitar
+                                </button>
+
+                            </td>
+
+                        </tr>
+
+                        <tr>
+
+                            <td>Amoxicilina</td>
+                            <td>500 mg</td>
+                            <td class="agotado">
+                                Agotado
+                            </td>
+
+                            <td>
+
+                                <button
+                                    class="btn-tabla"
+                                    disabled>
+
+                                    No Disponible
+
+                                </button>
+
+                            </td>
+
+                        </tr>
+
+                        <tr>
+
+                            <td>Loratadina</td>
+                            <td>10 mg</td>
+                            <td class="disponible">
+                                Disponible
+                            </td>
+
+                            <td>
+
+                                <button class="btn-tabla">
+                                    Solicitar
+                                </button>
+
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- FOOTER -->
+
+    <footer>
+
+        <div class="container">
+
+            <h3>
+                SaludClick
+            </h3>
+
+            <p>
+                Tu bienestar, a un solo clic.
+            </p>
+
+            <p>
+                Medellín - Colombia
+            </p>
+
+        </div>
+
+    </footer>
+<script src="../js/auth.js"></script>
+<script src="../js/medicamentos.js"></script>
+<script src="../js/buscador.js"></script>
+<script src="js/menu.js"></script>
+</body>
+
+</html>
