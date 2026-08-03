@@ -1,60 +1,45 @@
+import { checkAuthGuard, initAuth, getCurrentUser } from "./auth.js";
+
+checkAuthGuard();
+
 document.addEventListener("DOMContentLoaded", () => {
+    initAuth();
 
-    const usuario = JSON.parse(
-        localStorage.getItem("usuarioSaludClick")
-    );
+    const usuario = getCurrentUser() || {};
 
-    if (!usuario) return;
+    const inputNombre = document.getElementById("nombre");
+    const inputEmail = document.getElementById("email");
+    const inputTipoDoc = document.getElementById("tipoDocumento");
+    const inputNumDoc = document.getElementById("numeroDocumento");
+    const inputTelefono = document.getElementById("telefono");
+    const inputCiudad = document.getElementById("ciudad");
 
-    document.getElementById("nombre").value =
-        usuario.nombre || "";
-
-    document.getElementById("email").value =
-        usuario.email || "";
-
-    document.getElementById("tipoDocumento").value =
-        usuario.tipoDocumento || "";
-
-    document.getElementById("numeroDocumento").value =
-        usuario.numeroDocumento || "";
-
-    document.getElementById("telefono").value =
-        usuario.telefono || "";
-
-    document.getElementById("ciudad").value =
-        usuario.ciudad || "";
+    if (inputNombre) inputNombre.value = usuario.nombre || "";
+    if (inputEmail) inputEmail.value = usuario.email || "";
+    if (inputTipoDoc) inputTipoDoc.value = usuario.tipoDocumento || "";
+    if (inputNumDoc) inputNumDoc.value = usuario.numeroDocumento || "";
+    if (inputTelefono) inputTelefono.value = usuario.telefono || "";
+    if (inputCiudad) inputCiudad.value = usuario.ciudad || "";
 
     const form = document.querySelector("form");
 
-    form.addEventListener("submit", (e) => {
+    if (form) {
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
 
-        e.preventDefault();
+            usuario.nombre = inputNombre.value.trim();
+            usuario.email = inputEmail.value.trim();
+            usuario.tipoDocumento = inputTipoDoc.value.trim();
+            usuario.numeroDocumento = inputNumDoc.value.trim();
+            usuario.telefono = inputTelefono.value.trim();
+            usuario.ciudad = inputCiudad.value.trim();
 
-        usuario.nombre =
-            document.getElementById("nombre").value;
+            localStorage.setItem("usuarioSaludClick", JSON.stringify(usuario));
 
-        usuario.email =
-            document.getElementById("email").value;
+            const nombreHeader = document.getElementById("nombreUsuario");
+            if (nombreHeader) nombreHeader.textContent = usuario.nombre || "Usuario";
 
-        usuario.tipoDocumento =
-            document.getElementById("tipoDocumento").value;
-
-        usuario.numeroDocumento =
-            document.getElementById("numeroDocumento").value;
-
-        usuario.telefono =
-            document.getElementById("telefono").value;
-
-        usuario.ciudad =
-            document.getElementById("ciudad").value;
-
-        localStorage.setItem(
-            "usuarioSaludClick",
-            JSON.stringify(usuario)
-        );
-
-        alert("Perfil actualizado correctamente.");
-
-    });
-
+            alert("Perfil actualizado correctamente.");
+        });
+    }
 });

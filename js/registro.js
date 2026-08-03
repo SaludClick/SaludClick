@@ -1,75 +1,57 @@
 document.addEventListener("DOMContentLoaded", () => {
-
     const form = document.querySelector("form");
-
     if (!form) return;
 
     form.addEventListener("submit", (e) => {
-
         e.preventDefault();
 
-        const nombre =
-            document.querySelector('input[type="text"]').value.trim();
+        // Selección por tipos de input según la estructura del formulario HTML
+        const inputs = form.querySelectorAll("input");
+        const nombre = inputs[0]?.value.trim();
+        const email = inputs[1]?.value.trim().toLowerCase();
+        
+        const passwords = form.querySelectorAll('input[type="password"]');
+        const password = passwords[0] ? passwords[0].value.trim() : "";
+        const confirmar = passwords[1] ? passwords[1].value.trim() : "";
 
-        const email =
-            document.querySelector('input[type="email"]').value.trim();
+        const aceptoTerminos = document.getElementById("aceptoTerminos");
 
-        const passwords =
-            document.querySelectorAll('input[type="password"]');
+if (!aceptoTerminos.checked) {
+    alert("Debes aceptar los Términos y Condiciones y la Política de Privacidad para continuar.");
+    return;
+}
 
-        const password =
-            passwords[0].value.trim();
+        const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-        const confirmar =
-            passwords[1].value.trim();
-
-        if (
-            nombre === "" ||
-            email === "" ||
-            password === "" ||
-            confirmar === ""
-        ) {
-
+        if (!nombre || !email || !password || !confirmar) {
             alert("Todos los campos son obligatorios.");
             return;
         }
 
-        if (password.length < 8) {
+        if (!regexEmail.test(email)) {
+            alert("Correo electrónico inválido.");
+            return;
+        }
 
+        if (password.length < 8) {
             alert("La contraseña debe tener mínimo 8 caracteres.");
             return;
         }
 
         if (password !== confirmar) {
-
             alert("Las contraseñas no coinciden.");
             return;
         }
 
+        // Guardar el objeto en localStorage con la clave "usuarioSaludClick"
         const usuario = {
-            nombre,
-            email,
-            password
+            nombre: nombre,
+            email: email,
+            password: password
         };
 
-        localStorage.setItem(
-            "usuarioSaludClick",
-            JSON.stringify(usuario)
-        );
-
-        alert("Registro exitoso.");
-
+        localStorage.setItem("usuarioSaludClick", JSON.stringify(usuario));
+        alert("¡Registro exitoso! Ahora puedes iniciar sesión.");
         window.location.href = "login.html";
-        
     });
-    const regexEmail =
-/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-if (!regexEmail.test(email)) {
-
-    alert("Correo electrónico inválido.");
-    return;
-
-}
-
 });
