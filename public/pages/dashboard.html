@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | SaludClick</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <link rel="icon" href="../assets/icons/favicon.ico">
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+
+    <header class="navbar">
+
+        <div class="container nav-container">
+
+            <button class="hamburger" id="menuToggle">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <div class="logo">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span>SaludClick</span>
+            </div>
+
+            <div class="user-menu">
+
+                <button class="user-btn" id="userBtn">
+
+                    <i class="fa-solid fa-user-circle"></i>
+
+                    <span id="nombreUsuarioTop">Usuario</span>
+
+                    <i class="fa-solid fa-chevron-down"></i>
+
+                </button>
+
+                <div class="dropdown" id="userDropdown">
+
+                    <div class="dropdown-header">
+
+                        <i class="fa-solid fa-user-circle"></i>
+
+                        <div>
+
+                            <strong id="dropdownNombre">Usuario</strong>
+
+                            <p>Mi cuenta</p>
+
+                        </div>
+
+                    </div>
+
+                    <a href="perfil.html">
+                        <i class="fa-solid fa-user"></i>
+                        Perfil
+                    </a>
+
+                    <a href="#">
+                        <i class="fa-solid fa-gear"></i>
+                        Configuración
+                    </a>
+
+                    <a href="#">
+                        <i class="fa-solid fa-circle-question"></i>
+                        Ayuda
+                    </a>
+
+                    <a href="#" class="logout" id="logoutDropdown">
+
+                        <i class="fa-solid fa-right-from-bracket"></i>
+
+                        Cerrar sesión
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </header>
+
+    <!-- SIDEBAR -->
+
+    <aside class="sidebar" id="sidebar">
+
+        <div class="sidebar-header">
+
+            <div class="logo">
+
+                <i class="fa-solid fa-heart-pulse"></i>
+
+                <span>SaludClick</span>
+
+            </div>
+
+            <button id="closeSidebar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+        </div>
+
+        <nav>
+
+            <a class="active" href="dashboard.html">
+                <i class="fa-solid fa-house"></i>
+                Inicio
+            </a>
+
+            <a href="medicamentos.html">
+                <i class="fa-solid fa-pills"></i>
+                Medicamentos
+            </a>
+
+            <a href="pedidos.html">
+                <i class="fa-solid fa-truck"></i>
+                Pedidos
+            </a>
+
+            <a href="historial.html">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                Historial
+            </a>
+
+            <a href="perfil.html">
+                <i class="fa-solid fa-user"></i>
+                Perfil
+            </a>
+
+        </nav>
+
+        <a href="#" class="logout-sidebar" id="logoutSidebar">
+
+            <i class="fa-solid fa-right-from-bracket"></i>
+
+            Cerrar sesión
+
+        </a>
+
+    </aside>
+
+    <div class="overlay" id="overlay"></div>
+
+    <!-- HERO -->
+
+    <section class="hero">
+
+        <div class="container">
+
+            <span class="badge">Panel Principal</span>
+
+            <h1 id="bienvenida">Bienvenido</h1>
+
+            <p>
+
+                Administra tus medicamentos, realiza solicitudes, consulta el historial de pedidos y mantén actualizada tu información personal.
+
+            </p>
+
+            <div class="usuario-info">
+
+                <i class="fa-solid fa-user-circle"></i>
+
+                <span id="nombreUsuario"></span>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- TARJETAS -->
+
+    <section class="servicios">
+
+        <div class="container">
+
+            <h2>Accesos Rápidos</h2>
+
+            <div class="grid-servicios">
+
+                <div class="card">
+
+                    <i class="fa-solid fa-pills"></i>
+
+                    <h3>Medicamentos</h3>
+
+                    <p>Consulta disponibilidad y realiza solicitudes.</p>
+
+                    <a href="medicamentos.html" class="btn-primary">
+
+                        <i class="fa-solid fa-arrow-right"></i>
+
+                    </a>
+
+                </div>
+
+                <div class="card">
+
+                    <i class="fa-solid fa-truck"></i>
+
+                    <h3>Pedidos</h3>
+
+                    <p>Visualiza solicitudes activas y entregas.</p>
+
+                    <a href="pedidos.html" class="btn-primary">
+
+                        <i class="fa-solid fa-arrow-right"></i>
+
+                    </a>
+
+                </div>
+
+                <div class="card">
+
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+
+                    <h3>Historial</h3>
+
+                    <p>Consulta movimientos realizados.</p>
+
+                    <a href="historial.html" class="btn-primary">
+
+                        <i class="fa-solid fa-arrow-right"></i>
+
+                    </a>
+
+                </div>
+
+                <div class="card">
+
+                    <i class="fa-solid fa-user"></i>
+
+                    <h3>Perfil</h3>
+
+                    <p>Administra tus datos personales.</p>
+
+                    <a href="perfil.html" class="btn-primary">
+
+                        <i class="fa-solid fa-arrow-right"></i>
+
+                    </a>
+
+                </div>
+
+            </div>
+
+            <div class="grid-servicios my-4">
+
+                <div class="card">
+
+                    <h3>Total Pedidos</h3>
+
+                    <p id="totalPedidos">0</p>
+
+                </div>
+
+                <div class="card">
+
+                    <h3>Medicamentos Disponibles</h3>
+
+                    <p>3</p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <footer>
+
+        <div class="container">
+
+            <h3>SaludClick</h3>
+
+            <p>Tu bienestar, a un solo clic.</p>
+
+            <p>Medellín - Colombia</p>
+
+        </div>
+
+    </footer>
+
+    <script type="module" src="../js/dashboard.js"></script>
+    <script type="module" src="../js/main.js"></script>
+
+</body>
+
+</html>
