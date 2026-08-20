@@ -1,674 +1,1619 @@
-/* =========================
-   CONFIGURACIÓN GENERAL
-========================= */
+/* =========================================================
+   SALUDCLICK — DASHBOARD
+   SIDEBAR + DISEÑO VISUAL
+========================================================= */
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:'Segoe UI', sans-serif;
+
+/* =========================================================
+   BODY
+========================================================= */
+
+body {
+    background: #f5f8fa;
 }
 
-body{
-    background:#f5f8fc;
-    color:#333;
-    padding-top:90px;
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+
+    width: 255px;
+    height: 100vh;
+
+    background: #ffffff;
+
+    border-right: 1px solid #e7edf1;
+
+    box-shadow:
+        8px 0 25px rgba(15, 23, 42, 0.04);
+
+    z-index: 1200;
+
+    transform: translateX(0);
+
+    transition:
+        transform 0.3s ease,
+        box-shadow 0.3s ease;
 }
 
-/* =========================
-   CONTENEDOR
-========================= */
 
-.container{
-    width:90%;
-    max-width:1200px;
-    margin:auto;
+/* Sidebar cerrado */
+
+.sidebar.sidebar-closed {
+    transform: translateX(-110%);
+
+    box-shadow: none;
 }
 
-/* =========================
-   NAVBAR
-========================= */
 
-.navbar{
-    background:rgba(255,255,255,0.95);
-    backdrop-filter:blur(10px);
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    z-index:1000;
-    box-shadow:0 2px 10px rgba(0,0,0,.08);
-    padding:15px 0;
-}
+/* =========================================================
+   BOTÓN HAMBURGUESA
+========================================================= */
 
-.nav-container{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
+.hamburger {
+    display: flex !important;
 
-.logo{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    color:#198754;
-    font-size:24px;
-    font-weight:bold;
-    text-decoration:none;
-}
-
-.logo i{
-    font-size:28px;
-}
-
-nav{
-    display:flex;
-    gap:20px;
-}
-
-nav a{
-    text-decoration:none;
-    color:#333;
-    font-weight:600;
-    transition:.3s;
-}
-
-nav a:hover{
-    color:#198754;
-}
-
-/* =========================
-   BOTONES
-========================= */
-
-.botones-nav{
-    display:flex;
-    gap:10px;
-}
-
-.btn-primary,
-.btn-outline{
-    padding:10px 20px;
-    border-radius:8px;
-    text-decoration:none;
-    font-weight:600;
-    transition:.3s;
-}
-
-.btn-primary,
-.btn-success{
-    background:#198754 !important;
-    border-color:#198754 !important;
-    color:white !important;
-}
-
-.btn-primary:hover,
-.btn-success:hover{
-    background:#146c43 !important;
-    border-color:#13653f !important;
-}
-
-.btn-outline{
-    border:2px solid #198754;
-    color:#198754;
-}
-
-.btn-outline:hover{
-    background:#198754;
-    color:white;
-}
-
-.btn-lg{
-    padding:12px 25px;
-}
-
-/* =========================
-   HERO
-========================= */
-
-.hero{
-    padding:80px 0;
-}
-
-.hero-content{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:50px;
-}
-
-.hero-texto{
-    flex:1;
-}
-
-.badge{
-    background:#198754;
-    color:white;
-    padding:8px 15px;
-    border-radius:30px;
-    display:inline-block;
-}
-
-.hero-texto h1{
-    font-size:55px;
-    margin:20px 0;
-    color:#198754;
-}
-
-.hero-texto p{
-    font-size:18px;
-    margin-bottom:25px;
-}
-
-.hero-imagen{
-    flex:1;
-    text-align:center;
-}
-
-.hero-imagen img{
-    width:100%;
-    max-width:400px;
-}
-
-/* =========================
-   BUSCADOR INICIO
-========================= */
-
-.buscador{
-    display:flex;
-    margin:25px 0;
-    max-width:500px;
-}
-
-.buscador input{
-    flex:1;
-    padding:12px;
-    border:1px solid #ddd;
-    border-radius:8px 0 0 8px;
-    outline:none;
-}
-
-.buscador button{
-    background:#198754;
-    color:white;
-    border:none;
-    padding:12px 20px;
-    border-radius:0 8px 8px 0;
-    cursor:pointer;
-}
-
-.buscador button:hover{
-    background:#146c43;
-}
-
-.hero-botones{
-    display:flex;
-    gap:15px;
-    flex-wrap:wrap;
-}
-
-/* =========================
-   SERVICIOS
-========================= */
-
-.servicios{
-    padding:80px 0;
-}
-
-.servicios h2{
-    text-align:center;
-    margin-bottom:50px;
-    color:#198754;
-}
-
-.grid-servicios{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-    gap:25px;
-}
-
-.grid-servicios .card{
-    background:white;
-    padding:30px;
-    text-align:center;
-    border-radius:15px;
-    box-shadow:0 5px 20px rgba(0,0,0,.08);
-    transition:.3s;
-}
-
-.grid-servicios .card:hover{
-    transform:translateY(-8px);
-}
-
-.grid-servicios .card i{
-    font-size:45px;
-    color:#198754;
-    margin-bottom:15px;
-}
-
-.grid-servicios .card h3{
-    margin-bottom:10px;
-}
-
-.grid-servicios .card p{
-    margin-bottom:15px;
-}
-
-.grid-servicios .card button{
-    background:#198754;
-    color:white;
-    border:none;
-    padding:10px 20px;
-    border-radius:8px;
-    cursor:pointer;
-    transition:.3s;
-}
-
-.grid-servicios .card button:hover{
-    background:#146c43;
-}
-
-/* =========================
-   BENEFICIOS
-========================= */
-
-.beneficios{
-    background:#e8f5ee;
-    padding:80px 0;
-}
-
-.beneficios h2{
-    text-align:center;
-    color:#198754;
-    margin-bottom:40px;
-}
-
-.beneficios-grid{
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:20px;
-}
-
-.beneficio{
-    background:white;
-    padding:25px;
-    border-radius:12px;
-    text-align:center;
-    font-weight:bold;
-    box-shadow:0 5px 15px rgba(0,0,0,.05);
-}
-
-/* ==========================================
-   SECCIÓN FOOTER
-========================================== */
-.footer {
-    background-color: #0f5132; /* Verde corporativo oscuro */
-    color: #ffffff;
-    padding-top: 3rem;
-    padding-bottom: 1.5rem;
-}
-
-.footer-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: 2rem;
-    margin-bottom: 2rem;
-}
-
-.footer-col {
-    flex: 1 1 250px;
-}
-
-/* Columna Marca */
-.logo-footer {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 1.5rem;
-    font-weight: bold;
-    margin-bottom: 0.5rem;
-}
-
-.tagline {
-    opacity: 0.85;
-    font-size: 0.95rem;
-}
-
-/* Columna Contacto */
-.contact-col p {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    margin-bottom: 0.5rem;
-    font-size: 0.95rem;
-}
-
-.email-link {
-    color: #ffffff;
-    text-decoration: none;
-    transition: color 0.2s ease;
-}
-
-.email-link:hover {
-    text-decoration: underline;
-    color: #a3e635;
-}
-
-/* Columna Redes Sociales */
-.social-title {
-    font-weight: 600;
-    margin-bottom: 0.8rem;
-}
-
-.redes {
-    display: flex;
-    gap: 0.8rem;
-}
-
-.redes a {
-    display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    background-color: rgba(255, 255, 255, 0.15);
-    color: #ffffff;
-    border-radius: 50%;
+
+    width: 42px;
+    height: 42px;
+
+    border: none;
+    border-radius: 11px;
+
+    background: #eaf7f0;
+
+    color: #198754;
+
+    cursor: pointer;
+
+    transition:
+        background 0.25s ease,
+        color 0.25s ease,
+        transform 0.25s ease;
+}
+
+.hamburger:hover {
+    background: #198754;
+    color: white;
+
+    transform: scale(1.04);
+}
+
+.hamburger i {
+    font-size: 18px;
+
+    transition: transform 0.25s ease;
+}
+
+.hamburger:hover i {
+    transform: scale(1.08);
+}
+
+
+/* =========================================================
+   BOTÓN CERRAR SIDEBAR
+========================================================= */
+
+#closeSidebar {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 36px;
+    height: 36px;
+
+    border: none;
+    border-radius: 10px;
+
+    background: #f8f1f3;
+
+    color: #8b7480;
+
+    cursor: pointer;
+
+    transition:
+        background 0.25s ease,
+        color 0.25s ease,
+        transform 0.25s ease;
+}
+
+#closeSidebar:hover {
+    background: #fee2e2;
+
+    color: #dc3545;
+
+    transform: rotate(90deg);
+}
+
+
+/* =========================================================
+   SIDEBAR HEADER
+========================================================= */
+
+.sidebar-header {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 22px 16px;
+
+    border-bottom: 1px solid #edf1f3;
+}
+
+.sidebar-header .logo {
+    display: flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    color: #198754;
+
+    font-size: 20px;
+    font-weight: 750;
+}
+
+.sidebar-header .logo i {
+    font-size: 24px;
+}
+
+
+/* =========================================================
+   MENÚ SIDEBAR
+========================================================= */
+
+.sidebar nav {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 6px;
+
+    padding: 22px 16px;
+}
+
+.sidebar nav a {
+    display: flex;
+
+    align-items: center;
+
+    gap: 13px;
+
+    padding: 12px 14px;
+
+    border-radius: 12px;
+
+    color: #667085;
+
     text-decoration: none;
-    font-size: 1.1rem;
-    transition: all 0.3s ease;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease;
 }
 
-.redes a:hover {
-    background-color: #ffffff;
-    color: #0f5132;
-    transform: translateY(-3px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-}
+.sidebar nav a i {
+    width: 20px;
 
-/* Línea de Copyright */
-.footer-bottom {
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
-    padding-top: 1.5rem;
     text-align: center;
-    font-size: 0.85rem;
-    opacity: 0.75;
+
+    font-size: 16px;
 }
 
-/* ==========================================
-   FORMULARIO: LOGIN, REGISTRO Y RECUPERAR
-========================================== */
+.sidebar nav a:hover {
+    background: #eaf7f0;
 
-.input-group-text{
-    background-color:#198754;
-    color:white;
-    border:1px solid #198754;
-    min-width:48px;
-    justify-content:center;
+    color: #198754;
+
+    transform: translateX(3px);
 }
 
-.form-control, .form-select{
-    padding:0.65rem 0.85rem;
-    border-color:#ced4da;
+.sidebar nav a.active {
+    background:
+        linear-gradient(
+            135deg,
+            #198754,
+            #20a86a
+        );
+
+    color: #ffffff;
+
+    box-shadow:
+        0 7px 18px rgba(25, 135, 84, 0.20);
 }
 
-.form-control:focus, .form-select:focus{
-    border-color:#198754;
-    box-shadow:0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+.sidebar nav a.active i {
+    color: #ffffff;
 }
 
-.input-group .form-control{
-    border-top-right-radius:0.375rem !important;
-    border-bottom-right-radius:0.375rem !important;
+
+/* =========================================================
+   CERRAR SESIÓN SIDEBAR
+========================================================= */
+
+.logout-sidebar {
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    margin-top: auto;
+
+    margin-left: 16px;
+    margin-right: 16px;
+    margin-bottom: 22px;
+
+    padding: 12px 14px;
+
+    border-radius: 12px;
+
+    color: #dc3545;
+
+    text-decoration: none;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease;
 }
 
-.form-container{
-    width:100%;
-    max-width:420px;
-    margin:100px auto;
-    background:white;
-    padding:40px;
-    border-radius:15px;
-    box-shadow:0 5px 20px rgba(0,0,0,.1);
+.logout-sidebar:hover {
+    background: #fff1f2;
+
+    color: #c82333;
 }
 
-.form-container h2{
-    text-align:center;
-    margin-bottom:25px;
-    color:#198754;
+
+/* =========================================================
+   OVERLAY
+========================================================= */
+
+.overlay {
+    position: fixed;
+
+    inset: 0;
+
+    background: rgba(15, 23, 42, 0.45);
+
+    opacity: 0;
+
+    visibility: hidden;
+
+    pointer-events: none;
+
+    z-index: 1150;
+
+    transition:
+        opacity 0.3s ease,
+        visibility 0.3s ease;
 }
 
-.form-container input{
-    width:100%;
-    padding:12px;
-    margin-bottom:15px;
-    border:1px solid #ddd;
-    border-radius:8px;
+.overlay.overlay-active {
+    opacity: 1;
+
+    visibility: visible;
+
+    pointer-events: auto;
 }
 
-.form-container button{
-    width:100%;
-    background:#198754;
-    color:white;
-    border:none;
-    padding:12px;
-    border-radius:8px;
-    cursor:pointer;
-    transition:.3s;
+
+/* =========================================================
+   NAVBAR
+========================================================= */
+
+.navbar {
+    background: rgba(255, 255, 255, 0.96);
+
+    border-bottom: 1px solid #e7edf1;
+
+    box-shadow:
+        0 4px 18px rgba(15, 23, 42, 0.05);
 }
 
-.form-container button:hover{
-    background:#146c43;
+.nav-container {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
 }
 
-.form-container p{
-    text-align:center;
-    margin-top:15px;
-}
 
-.form-container a, 
-a.text-success{
-    color:#198754 !important;
-    text-decoration:none;
-}
+/* =========================================================
+   HERO
+========================================================= */
 
-.form-container a:hover, 
-a.text-success:hover{
-    color:#146c43 !important;
-    text-decoration:underline;
-}
-/* Color personalizado para casilla de verificación marcada */
-.form-check-input:checked {
-    background-color: #198754;
-    border-color: #198754;
-}
+.hero {
+    position: relative;
 
-.form-check-input:focus {
-    border-color: #198754;
-    box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
-}
+    width: min(92%, 1200px);
 
-/* =========================
-   ESTADOS PEDIDOS
-========================= */
+    margin: 28px auto 0;
 
-.estado-entregado{
-    color:#198754;
-    font-weight:bold;
-}
+    padding: 45px 48px;
 
-.estado-camino{
-    color:#0d6efd;
-    font-weight:bold;
-}
+    border-radius: 24px;
 
-.estado-proceso{
-    color:#fd7e14;
-    font-weight:bold;
-}
-
-/* =========================
-   PERFIL
-========================= */
-
-.perfil-card{
-    background:white;
-    padding:40px;
-    border-radius:15px;
-    box-shadow:0 5px 20px rgba(0,0,0,.08);
-}
-
-.perfil-card h2{
-    margin-bottom:30px;
-    color:#198754;
-}
-
-.perfil-grid{
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:20px;
-}
-
-.campo{
-    display:flex;
-    flex-direction:column;
-}
-
-.campo label{
-    margin-bottom:8px;
-    font-weight:600;
-}
-
-.campo input{
-    padding:12px;
-    border:1px solid #ddd;
-    border-radius:8px;
-    outline:none;
-}
-
-.btn-guardar{
-    margin-top:25px;
-    background:#198754;
-    color:white;
-    border:none;
-    padding:12px 25px;
-    border-radius:8px;
-    cursor:pointer;
-    font-weight:600;
-    transition:.3s;
-}
-
-.btn-guardar:hover{
-    background:#146c43;
-}
-
-/* =========================
-   BUSCADOR MEDICAMENTOS
-========================= */
-
-.buscador-container{
-    margin:20px 0;
-}
-
-#buscadorMedicamentos{
-    width:100%;
-    padding:12px;
-    border:1px solid #ddd;
-    border-radius:8px;
-    font-size:16px;
-}
-
-/* =========================
-   MENU Y RESPONSIVE UNIFICADO
-========================= */
-
-.menu-toggle{
-    display:none;
-    background:none;
-    border:none;
-    font-size:28px;
-    color:#198754;
-    cursor:pointer;
-}
-
-@media(max-width:768px){
-
-    .nav-container{
-        flex-direction:row;
-        justify-content:space-between;
-        align-items:center;
-    }
-
-    .menu-toggle{
-        display:block;
-    }
-
-    nav{
-        position:absolute;
-        top:80px;
-        left:0;
-        width:100%;
-        background:white;
-        flex-direction:column;
-        align-items:center;
-        gap:15px;
-        padding:20px 0;
-        box-shadow:0 5px 15px rgba(0,0,0,.1);
-        display:none;
-    }
-
-    nav.active{
-        display:flex !important;
-    }
-
-    .hero-content{
-        flex-direction:column;
-        text-align:center;
-    }
-
-    .hero-texto h1{
-        font-size:38px;
-    }
-
-    .buscador{
-        flex-direction:column;
-    }
-
-    .buscador input{
-        border-radius:8px;
-        margin-bottom:10px;
-    }
-
-    .buscador button{
-        border-radius:8px;
-    }
-
-    .beneficios-grid{
-        grid-template-columns:1fr;
-    }
-
-    .hero-botones{
-        justify-content:center;
-    }
-
-    .perfil-grid{
-        grid-template-columns:1fr;
-    }
-}
-/* Ajuste de desbordamiento en tarjetas de autenticación */
-.card {
     overflow: hidden;
+
+    background:
+        radial-gradient(
+            circle at 90% 10%,
+            rgba(255, 255, 255, 0.20),
+            transparent 28%
+        ),
+        linear-gradient(
+            135deg,
+            #146c43,
+            #198754 55%,
+            #20a86a
+        );
+
+    color: white;
+
+    box-shadow:
+        0 18px 40px rgba(25, 135, 84, 0.18);
 }
 
-.form-check {
+.hero::before {
+    content: "";
+
+    position: absolute;
+
+    width: 240px;
+    height: 240px;
+
+    right: -80px;
+    bottom: -120px;
+
+    border-radius: 50%;
+
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.hero::after {
+    content: "";
+
+    position: absolute;
+
+    width: 140px;
+    height: 140px;
+
+    right: 120px;
+    top: -80px;
+
+    border-radius: 50%;
+
+    border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.hero .container {
+    position: relative;
+
+    z-index: 2;
+}
+
+.hero .badge {
+    display: inline-block;
+
+    padding: 7px 14px;
+
+    border-radius: 30px;
+
+    background: rgba(255, 255, 255, 0.15);
+
+    border: 1px solid rgba(255, 255, 255, 0.20);
+
+    color: white;
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.hero h1 {
+    margin: 18px 0 10px;
+
+    color: white;
+
+    font-size: clamp(32px, 4vw, 48px);
+
+    line-height: 1.1;
+
+    font-weight: 750;
+}
+
+.hero p {
+    max-width: 720px;
+
+    color: rgba(255, 255, 255, 0.88);
+
+    font-size: 15px;
+
+    line-height: 1.7;
+}
+
+.usuario-info {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    margin-top: 20px;
+
+    padding: 9px 15px;
+
+    border-radius: 30px;
+
+    background: rgba(255, 255, 255, 0.13);
+
+    border: 1px solid rgba(255, 255, 255, 0.16);
+
+    color: white;
+
+    font-size: 14px;
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   SERVICIOS
+========================================================= */
+
+.servicios {
+    padding: 55px 0 70px;
+}
+
+.servicios h2 {
+    margin-bottom: 28px;
+
+    color: #263238;
+
+    font-size: 26px;
+
+    font-weight: 750;
+}
+
+
+/* =========================================================
+   GRID
+========================================================= */
+
+.grid-servicios {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 20px;
+}
+
+
+/* =========================================================
+   CARDS
+========================================================= */
+
+.grid-servicios .card {
+    position: relative;
+
+    min-height: 205px;
+
+    padding: 25px;
+
+    background: #ffffff;
+
+    border: 1px solid #e7edf1;
+
+    border-radius: 18px;
+
+    box-shadow:
+        0 4px 15px rgba(15, 23, 42, 0.05);
+
+    overflow: hidden;
+
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        border-color 0.25s ease;
+}
+
+.grid-servicios .card::after {
+    content: "";
+
+    position: absolute;
+
+    width: 100px;
+    height: 100px;
+
+    right: -45px;
+    top: -45px;
+
+    border-radius: 50%;
+
+    background: #f0faf5;
+
+    transition: transform 0.3s ease;
+}
+
+.grid-servicios .card:hover {
+    transform: translateY(-7px);
+
+    border-color: rgba(25, 135, 84, 0.20);
+
+    box-shadow:
+        0 14px 30px rgba(15, 23, 42, 0.09);
+}
+
+.grid-servicios .card:hover::after {
+    transform: scale(1.5);
+}
+
+
+/* =========================================================
+   ICONOS CARDS
+========================================================= */
+
+.grid-servicios .card > i {
+    position: relative;
+
+    z-index: 2;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 52px;
+    height: 52px;
+
+    margin-bottom: 18px;
+
+    border-radius: 14px;
+
+    background: #eaf7f0;
+
+    color: #198754;
+
+    font-size: 21px;
+
+    transition: 0.25s ease;
+}
+
+.grid-servicios .card:hover > i {
+    background: #198754;
+
+    color: white;
+
+    transform: scale(1.06);
+}
+
+
+/* =========================================================
+   TEXTO CARDS
+========================================================= */
+
+.grid-servicios .card h3 {
+    position: relative;
+
+    z-index: 2;
+
+    margin-bottom: 8px;
+
+    color: #263238;
+
+    font-size: 17px;
+
+    font-weight: 700;
+}
+
+.grid-servicios .card p {
+    position: relative;
+
+    z-index: 2;
+
+    margin-bottom: 20px;
+
+    color: #667085;
+
+    font-size: 13px;
+
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   BOTÓN FLECHA
+========================================================= */
+
+.grid-servicios .card .btn-primary {
+    position: absolute;
+
+    z-index: 3;
+
+    right: 20px;
+    bottom: 20px;
+
+    width: 38px;
+    height: 38px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+
+    border-radius: 50%;
+
+    background: #198754 !important;
+
+    color: white !important;
+
+    text-decoration: none;
+
+    box-shadow:
+        0 6px 15px rgba(25, 135, 84, 0.20);
+
+    transition: 0.25s ease;
+}
+
+.grid-servicios .card .btn-primary:hover {
+    background: #146c43 !important;
+
+    transform: translateX(4px);
+
+    box-shadow:
+        0 8px 18px rgba(25, 135, 84, 0.30);
+}
+
+
+/* =========================================================
+   ESTADÍSTICAS
+========================================================= */
+
+.grid-servicios.my-4 {
+    margin-top: 28px !important;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+}
+
+.grid-servicios.my-4 .card {
+    min-height: 140px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    padding: 25px 28px;
+}
+
+.grid-servicios.my-4 .card::before {
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    top: 0;
+
+    width: 4px;
+    height: 100%;
+
+    background: #198754;
+}
+
+.grid-servicios.my-4 .card h3 {
+    margin-bottom: 8px;
+
+    color: #667085;
+
+    font-size: 12px;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.6px;
+}
+
+.grid-servicios.my-4 .card p {
+    margin: 0;
+
+    color: #198754;
+
+    font-size: 36px;
+
+    font-weight: 800;
+
+    line-height: 1;
+}
+
+
+/* =========================================================
+   DROPDOWN USUARIO
+========================================================= */
+
+.dropdown {
+    border: 1px solid #e7edf1;
+
+    border-radius: 16px;
+
+    box-shadow:
+        0 18px 40px rgba(15, 23, 42, 0.12);
+}
+
+.dropdown a:hover {
+    background: #eaf7f0;
+
+    color: #198754;
+}
+
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+footer {
+    margin-top: 10px;
+
+    padding: 40px 0 28px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #0f5132,
+            #146c43
+        );
+
+    color: white;
+
+    text-align: center;
+}
+
+footer h3 {
+    color: white;
+}
+
+footer p {
+    color: rgba(255, 255, 255, 0.75);
+
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 1100px) {
+
+    .grid-servicios {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .hero {
+        padding: 40px;
+    }
+}
+
+
+/* =========================================================
+   MÓVIL
+========================================================= */
+
+@media (max-width: 768px) {
+
+    .hamburger {
+        display: flex !important;
+    }
+
+    .sidebar {
+        width: 275px;
+
+        transform: translateX(-110%);
+    }
+
+    .sidebar:not(.sidebar-closed) {
+        transform: translateX(0);
+    }
+
+    .sidebar.sidebar-closed {
+        transform: translateX(-110%);
+    }
+
+    .hero {
+        width: 92%;
+
+        margin-top: 20px;
+
+        padding: 32px 25px;
+
+        border-radius: 20px;
+    }
+
+    .hero h1 {
+        font-size: 34px;
+    }
+
+    .hero p {
+        font-size: 14px;
+    }
+
+    .servicios {
+        padding: 42px 0 55px;
+    }
+
+    .servicios h2 {
+        font-size: 23px;
+    }
+
+    .grid-servicios {
+        grid-template-columns: 1fr;
+
+        gap: 15px;
+    }
+
+    .grid-servicios .card {
+        min-height: 190px;
+    }
+
+    .grid-servicios.my-4 {
+        grid-template-columns: 1fr;
+
+        gap: 15px;
+    }
+
+    .grid-servicios.my-4 .card {
+        min-height: 125px;
+    }
+
+    .grid-servicios.my-4 .card p {
+        font-size: 32px;
+    }
+}
+
+
+/* =========================================================
+   MÓVIL PEQUEÑO
+========================================================= */
+
+@media (max-width: 420px) {
+
+    .hero {
+        padding: 28px 21px;
+    }
+
+    .hero h1 {
+        font-size: 30px;
+    }
+
+    .grid-servicios .card {
+        padding: 22px;
+    }
+
+    .grid-servicios .card h3 {
+        font-size: 16px;
+    }
+
+    .grid-servicios .card p {
+        font-size: 12px;
+    }
+}
+
+/* =========================================================
+   DASHBOARD — PARTE SUPERIOR MODERNA
+========================================================= */
+
+/* ---------- NAVBAR ---------- */
+
+.navbar {
+    height: 72px;
+
+    background: #ffffff;
+
+    border-bottom: 1px solid #edf1f3;
+
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+
+    position: relative;
+
+    z-index: 1000;
+}
+
+.nav-container {
+    height: 100%;
+
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: space-between;
+
+    padding: 0 28px;
 }
 
-.form-check-input {
-    margin-top: 0 !important;
+
+/* ---------- HAMBURGUESA ---------- */
+
+.hamburger {
+    width: 40px;
+    height: 40px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 0;
+    border-radius: 10px;
+
+    background: transparent;
+
+    color: #64748b;
+
+    cursor: pointer;
+
+    transition: .2s ease;
 }
 
+.hamburger:hover {
+    background: #f0fdf4;
+    color: #198754;
+}
+
+
+/* ---------- USUARIO ---------- */
+
+.user-btn {
+    display: flex;
+    align-items: center;
+
+    gap: 9px;
+
+    padding: 7px 10px;
+
+    border: none;
+    border-radius: 12px;
+
+    background: transparent;
+
+    color: #334155;
+
+    cursor: pointer;
+
+    transition: .2s ease;
+}
+
+.user-btn:hover {
+    background: #f5f8f7;
+}
+
+.user-btn > i:first-child {
+    color: #198754;
+
+    font-size: 29px;
+}
+
+.user-btn > span {
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.user-btn > i:last-child {
+    font-size: 10px;
+
+    color: #94a3b8;
+}
+
+
+/* =========================================================
+   HERO — MÁS PEQUEÑO Y ELEGANTE
+========================================================= */
+
+.hero {
+    width: auto;
+
+    margin: 28px 32px 0;
+
+    padding: 30px 34px;
+
+    min-height: 175px;
+
+    border-radius: 20px;
+
+    position: relative;
+
+    overflow: hidden;
+
+    background:
+        linear-gradient(
+            110deg,
+            #198754 0%,
+            #20a86a 100%
+        );
+
+    color: #ffffff;
+
+    box-shadow:
+        0 10px 28px rgba(25, 135, 84, .12);
+}
+
+
+/* Decoración */
+
+.hero::before {
+    content: "";
+
+    position: absolute;
+
+    width: 190px;
+    height: 190px;
+
+    right: 40px;
+    top: -110px;
+
+    border-radius: 50%;
+
+    border: 1px solid rgba(255,255,255,.13);
+
+    background: transparent;
+}
+
+.hero::after {
+    content: "";
+
+    position: absolute;
+
+    width: 150px;
+    height: 150px;
+
+    right: -45px;
+    bottom: -80px;
+
+    border-radius: 50%;
+
+    background: rgba(255,255,255,.08);
+}
+
+.hero .container {
+    position: relative;
+
+    z-index: 2;
+}
+
+
+/* ---------- BADGE ---------- */
+
+.hero .badge {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 5px 11px;
+
+    border-radius: 20px;
+
+    background: rgba(255,255,255,.13);
+
+    border: 1px solid rgba(255,255,255,.18);
+
+    color: rgba(255,255,255,.9);
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    letter-spacing: .2px;
+}
+
+
+/* ---------- TÍTULO ---------- */
+
+.hero h1 {
+    margin: 12px 0 5px;
+
+    color: #ffffff;
+
+    font-size: 32px;
+
+    line-height: 1.15;
+
+    font-weight: 750;
+
+    letter-spacing: -.5px;
+}
+
+
+/* ---------- DESCRIPCIÓN ---------- */
+
+.hero p {
+    max-width: 650px;
+
+    margin: 0;
+
+    color: rgba(255,255,255,.84);
+
+    font-size: 13px;
+
+    line-height: 1.55;
+}
+
+
+/* ---------- USUARIO ---------- */
+
+.usuario-info {
+    display: none;
+}
+
+
+/* =========================================================
+   DROPDOWN USUARIO
+========================================================= */
+
+.dropdown {
+    margin-top: 8px;
+
+    min-width: 220px;
+
+    padding: 8px;
+
+    background: #ffffff;
+
+    border: 1px solid #edf1f3;
+
+    border-radius: 15px;
+
+    box-shadow:
+        0 15px 35px rgba(15,23,42,.12);
+}
+
+.dropdown-header {
+    padding: 12px;
+
+    border-bottom: 1px solid #f0f2f4;
+
+    margin-bottom: 5px;
+}
+
+.dropdown-header > i {
+    color: #198754;
+}
+
+.dropdown a {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 10px 12px;
+
+    border-radius: 9px;
+
+    color: #475569;
+
+    font-size: 13px;
+
+    text-decoration: none;
+
+    transition: .2s ease;
+}
+
+.dropdown a:hover {
+    background: #f0fdf4;
+
+    color: #198754;
+}
+
+.dropdown a i {
+    width: 18px;
+
+    color: #7b8794;
+}
+
+.dropdown a:hover i {
+    color: #198754;
+}
+
+
+/* =========================================================
+   ESPACIADO DE ACCESOS RÁPIDOS
+========================================================= */
+
+.servicios {
+    padding-top: 32px;
+}
+
+.servicios h2 {
+    margin-bottom: 20px;
+
+    font-size: 21px;
+
+    font-weight: 700;
+
+    color: #263238;
+}
+
+
+/* =========================================================
+   MÓVIL
+========================================================= */
+
+@media (max-width: 768px) {
+
+    .navbar {
+        height: 64px;
+    }
+
+    .nav-container {
+        padding: 0 16px;
+    }
+
+    .hero {
+        margin: 18px 16px 0;
+
+        padding: 25px 22px;
+
+        min-height: 160px;
+
+        border-radius: 17px;
+    }
+
+    .hero h1 {
+        font-size: 27px;
+    }
+
+    .hero p {
+        font-size: 12px;
+
+        max-width: 90%;
+    }
+
+    .servicios {
+        padding-top: 30px;
+    }
+}
+
+
+/* =========================================================
+   MÓVIL PEQUEÑO
+========================================================= */
+
+@media (max-width: 420px) {
+
+    .hero {
+        padding: 22px 19px;
+    }
+
+    .hero h1 {
+        font-size: 24px;
+    }
+
+    .hero p {
+        font-size: 12px;
+    }
+}
+
+/* =========================================================
+   MENÚ DE USUARIO - DASHBOARD
+   Solo modifica la parte superior derecha
+========================================================= */
+
+.user-menu {
+    position: relative;
+    margin-left: auto;
+}
+
+/* Botón del usuario */
+
+.user-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    height: 46px;
+    padding: 0 14px;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+
+    background: #ffffff;
+    color: #334155;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: all 0.2s ease;
+
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.05);
+}
+
+.user-btn:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    box-shadow: 0 5px 18px rgba(15, 23, 42, 0.08);
+}
+
+/* Avatar */
+
+.user-btn > i:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 32px;
+    height: 32px;
+
+    border-radius: 50%;
+
+    background: #e8f7f3;
+    color: #0f9f83;
+
+    font-size: 18px;
+}
+
+/* Nombre */
+
+#nombreUsuarioTop {
+    max-width: 140px;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    color: #1e293b;
+}
+
+/* Flecha */
+
+.user-btn > i:last-child {
+    color: #94a3b8;
+    font-size: 11px;
+
+    transition: transform 0.2s ease;
+}
+
+/* =========================================================
+   DROPDOWN
+========================================================= */
+
+.user-dropdown,
+.dropdown {
+    position: absolute;
+
+    top: calc(100% + 10px);
+    right: 0;
+
+    width: 245px;
+
+    padding: 8px;
+
+    background: #ffffff;
+
+    border: 1px solid #e8edf2;
+    border-radius: 16px;
+
+    box-shadow:
+        0 18px 45px rgba(15, 23, 42, 0.13),
+        0 4px 12px rgba(15, 23, 42, 0.05);
+
+    z-index: 2000;
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+
+    transform: translateY(-8px) scale(0.98);
+
+    transform-origin: top right;
+
+    transition:
+        opacity 0.18s ease,
+        transform 0.18s ease,
+        visibility 0.18s ease;
+}
+
+/* Estado abierto */
+
+.dropdown.show,
+.dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+
+    transform: translateY(0) scale(1);
+}
+
+/* =========================================================
+   CABECERA DEL DROPDOWN
+========================================================= */
+
+.dropdown-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    padding: 14px 12px 13px;
+
+    margin-bottom: 6px;
+
+    border-bottom: 1px solid #eef2f5;
+}
+
+/* Avatar grande */
+
+.dropdown-header > i {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    width: 42px;
+    height: 42px;
+
+    border-radius: 50%;
+
+    background: #e8f7f3;
+    color: #0f9f83;
+
+    font-size: 22px;
+}
+
+/* Contenedor del nombre */
+
+.dropdown-header > div {
+    min-width: 0;
+}
+
+/* Nombre */
+
+#dropdownNombre {
+    display: block;
+
+    max-width: 150px;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    color: #1e293b;
+
+    font-size: 14px;
+    font-weight: 700;
+}
+
+/* Mi cuenta */
+
+.dropdown-header p {
+    margin: 3px 0 0;
+
+    color: #94a3b8;
+
+    font-size: 12px;
+}
+
+/* =========================================================
+   OPCIONES
+========================================================= */
+
+.dropdown > a {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+
+    width: 100%;
+
+    box-sizing: border-box;
+
+    padding: 11px 12px;
+
+    border-radius: 10px;
+
+    color: #475569;
+
+    font-size: 13px;
+    font-weight: 500;
+
+    text-decoration: none;
+
+    transition:
+        background 0.18s ease,
+        color 0.18s ease,
+        transform 0.18s ease;
+}
+
+.dropdown > a:hover {
+    background: #f0faf8;
+    color: #0f8f77;
+
+    transform: translateX(2px);
+}
+
+/* Iconos */
+
+.dropdown > a > i {
+    width: 18px;
+
+    text-align: center;
+
+    color: #64748b;
+
+    font-size: 14px;
+
+    transition: color 0.18s ease;
+}
+
+.dropdown > a:hover > i {
+    color: #0f9f83;
+}
+
+/* =========================================================
+   CERRAR SESIÓN
+========================================================= */
+
+.dropdown > a.logout {
+    margin-top: 5px;
+
+    border-top: 1px solid #eef2f5;
+
+    border-radius: 10px;
+
+    color: #dc3545;
+}
+
+.dropdown > a.logout:hover {
+    background: #fff1f2;
+    color: #c62828;
+}
+
+.dropdown > a.logout > i {
+    color: #dc3545;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 600px) {
+
+    .user-btn {
+        width: 46px;
+
+        padding: 0;
+
+        justify-content: center;
+
+        border-radius: 13px;
+    }
+
+    .user-btn > i:first-child {
+        margin: 0;
+    }
+
+    #nombreUsuarioTop,
+    .user-btn > i:last-child {
+        display: none;
+    }
+
+    .dropdown {
+        right: 0;
+
+        width: 235px;
+    }
+}

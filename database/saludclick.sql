@@ -31,6 +31,7 @@ CREATE TABLE usuarios (
     apellido VARCHAR(100) NOT NULL,
     correo VARCHAR(150) NOT NULL UNIQUE,
     telefono VARCHAR(20),
+    cedula VARCHAR(20) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     rol_id INT NOT NULL,
     estado ENUM('ACTIVO','INACTIVO') DEFAULT 'ACTIVO',

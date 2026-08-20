@@ -4,14 +4,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Registro - SaludClick</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
 
-    <link rel="stylesheet"
+    <link
+        rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
     <link rel="stylesheet" href="css/style.css">
+
     <link rel="icon" href="assets/icons/favicon.ico">
 </head>
 
@@ -23,20 +28,27 @@
 
             <div class="col-11 col-sm-10 col-md-8 col-lg-6">
 
+                <!-- ENCABEZADO -->
                 <div class="text-center mb-4">
 
                     <a href="index.html" class="text-success text-decoration-none">
 
                         <i class="fa-solid fa-heart-pulse fa-3x mb-3"></i>
 
-                        <h2 class="fw-bold">SaludClick</h2>
+                        <h2 class="fw-bold">
+                            SaludClick
+                        </h2>
 
                     </a>
 
-                    <p class="text-muted">Tu bienestar, a un solo clic</p>
+                    <p class="text-muted">
+                        Tu bienestar, a un solo clic
+                    </p>
 
                 </div>
 
+
+                <!-- TARJETA -->
                 <div class="card border-0 shadow-lg rounded-4">
 
                     <div class="card-body p-4 p-md-5">
@@ -49,8 +61,12 @@
                             Regístrate para gestionar tus medicamentos de forma rápida y segura.
                         </p>
 
+
+                        <!-- FORMULARIO -->
                         <form id="registroForm">
 
+
+                            <!-- NOMBRE -->
                             <div class="mb-3">
 
                                 <label class="form-label fw-semibold">
@@ -63,7 +79,8 @@
                                         <i class="fa-solid fa-user"></i>
                                     </span>
 
-                                    <input id="nombre"
+                                    <input
+                                        id="nombre"
                                         type="text"
                                         class="form-control"
                                         placeholder="Juan David Mosquera"
@@ -73,6 +90,8 @@
 
                             </div>
 
+
+                            <!-- CORREO -->
                             <div class="mb-3">
 
                                 <label class="form-label fw-semibold">
@@ -85,7 +104,8 @@
                                         <i class="fa-solid fa-envelope"></i>
                                     </span>
 
-                                    <input id="correo"
+                                    <input
+                                        id="correo"
                                         type="email"
                                         class="form-control"
                                         placeholder="correo@ejemplo.com"
@@ -95,31 +115,82 @@
 
                             </div>
 
-                            <div class="row">
 
-                                <div class="col-md-4 mb-3">
+                            <!-- TELEFONO -->
+                            <div class="mb-3">
 
-                                    <label class="form-label fw-semibold">
-                                        Tipo Doc.
-                                    </label>
+                                <label class="form-label fw-semibold">
+                                    Teléfono
+                                </label>
 
-                                    <select id="tipoDocumento" class="form-select">
+                                <div class="input-group">
 
-                                        <option value="CC">CC</option>
-                                        <option value="TI">TI</option>
-                                        <option value="CE">CE</option>
+                                    <span class="input-group-text">
+                                        <i class="fa-solid fa-phone"></i>
+                                    </span>
 
-                                    </select>
+                                    <input
+                                        id="telefono"
+                                        type="text"
+                                        class="form-control"
+                                        placeholder="1234567890"
+                                        required>
 
                                 </div>
 
-                                <div class="col-md-8 mb-3">
+                            </div>
+
+
+                            <!-- DOCUMENTOS -->
+                            <div class="row">
+
+
+                                <!-- TIPO DOCUMENTO -->
+                                <div class="col-md-6 mb-3">
 
                                     <label class="form-label fw-semibold">
-                                        Número Documento
+                                        Tipo de Documento
                                     </label>
 
-                                    <input id="numeroDocumento"
+                                    <div class="input-group">
+
+                                        <span class="input-group-text">
+                                            <i class="fa-solid fa-address-card"></i>
+                                        </span>
+
+                                        <select
+                                            id="tipoDocumento"
+                                            class="form-select"
+                                            required>
+
+                                            <option value="CC">
+                                                Cédula
+                                            </option>
+
+                                            <option value="TI">
+                                                Tarjeta de Identidad
+                                            </option>
+
+                                            <option value="CE">
+                                                Cédula de Extranjería
+                                            </option>
+
+                                        </select>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- NUMERO DOCUMENTO -->
+                                <div class="col-md-6 mb-3">
+
+                                    <label class="form-label fw-semibold">
+                                        Número de Documento
+                                    </label>
+
+                                    <input
+                                        id="numeroDocumento"
                                         type="text"
                                         class="form-control"
                                         placeholder="123456789"
@@ -129,6 +200,8 @@
 
                             </div>
 
+
+                            <!-- CONTRASEÑA -->
                             <div class="mb-3">
 
                                 <label class="form-label fw-semibold">
@@ -141,16 +214,28 @@
                                         <i class="fa-solid fa-lock"></i>
                                     </span>
 
-                                    <input id="password"
+                                    <input
+                                        id="password"
                                         type="password"
                                         class="form-control"
                                         placeholder="Mínimo 8 caracteres"
                                         required>
 
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary"
+                                        id="mostrarPassword">
+
+                                        <i class="fa-solid fa-eye"></i>
+
+                                    </button>
+
                                 </div>
 
                             </div>
 
+
+                            <!-- CONFIRMAR CONTRASEÑA -->
                             <div class="mb-3">
 
                                 <label class="form-label fw-semibold">
@@ -163,19 +248,32 @@
                                         <i class="fa-solid fa-shield-halved"></i>
                                     </span>
 
-                                    <input id="confirmarPassword"
+                                    <input
+                                        id="confirmarPassword"
                                         type="password"
                                         class="form-control"
                                         placeholder="Repite tu contraseña"
                                         required>
 
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary"
+                                        id="mostrarConfirmarPassword">
+
+                                        <i class="fa-solid fa-eye"></i>
+
+                                    </button>
+
                                 </div>
 
                             </div>
 
+
+                            <!-- TERMINOS -->
                             <div class="form-check mb-4">
 
-                                <input id="aceptoTerminos"
+                                <input
+                                    id="aceptoTerminos"
                                     class="form-check-input"
                                     type="checkbox"
                                     required>
@@ -184,13 +282,17 @@
 
                                     Acepto los
 
-                                    <a href="#" class="text-success text-decoration-none">
+                                    <a
+                                        href="#"
+                                        class="text-success text-decoration-none">
                                         Términos y Condiciones
                                     </a>
 
                                     y la
 
-                                    <a href="#" class="text-success text-decoration-none">
+                                    <a
+                                        href="#"
+                                        class="text-success text-decoration-none">
                                         Política de Privacidad
                                     </a>
 
@@ -198,25 +300,34 @@
 
                             </div>
 
-                            <button type="submit"
+
+                            <!-- BOTON -->
+                            <button
+                                type="submit"
                                 class="btn btn-success w-100 py-3 fw-bold">
 
                                 <i class="fa-solid fa-user-plus me-2"></i>
+
                                 Crear Cuenta
 
                             </button>
 
                         </form>
 
+
+                        <!-- SEPARADOR -->
                         <hr class="my-4">
 
+
+                        <!-- LOGIN -->
                         <div class="text-center">
 
                             <span class="text-muted">
                                 ¿Ya tienes cuenta?
                             </span>
 
-                            <a href="login.html"
+                            <a
+                                href="login.html"
                                 class="text-success fw-bold text-decoration-none">
 
                                 Inicia sesión aquí
@@ -229,6 +340,8 @@
 
                 </div>
 
+
+                <!-- FOOTER -->
                 <div class="text-center mt-4">
 
                     <small class="text-muted">
@@ -243,10 +356,74 @@
 
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <script type="module" src="js/registro.js"></script>
-    <script src="js/menu.js"></script>
+    <!-- BOOTSTRAP -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+    </script>
+
+
+    <!-- REGISTRO -->
+    <script
+        type="module"
+        src="js/registro.js">
+    </script>
+
+
+    <!-- MENU -->
+    <script
+        src="js/menu.js">
+    </script>
+
+
+    <!-- MOSTRAR / OCULTAR CONTRASEÑAS -->
+    <script>
+
+        const password = document.getElementById("password");
+        const confirmarPassword = document.getElementById("confirmarPassword");
+
+        const mostrarPassword = document.getElementById("mostrarPassword");
+        const mostrarConfirmarPassword = document.getElementById("mostrarConfirmarPassword");
+
+
+        mostrarPassword.addEventListener("click", function () {
+
+            if (password.type === "password") {
+
+                password.type = "text";
+
+                this.innerHTML = '<i class="fa-solid fa-eye-slash"></i>';
+
+            } else {
+
+                password.type = "password";
+
+                this.innerHTML = '<i class="fa-solid fa-eye"></i>';
+
+            }
+
+        });
+
+
+        mostrarConfirmarPassword.addEventListener("click", function () {
+
+            if (confirmarPassword.type === "password") {
+
+                confirmarPassword.type = "text";
+
+                this.innerHTML = '<i class="fa-solid fa-eye-slash"></i>';
+
+            } else {
+
+                confirmarPassword.type = "password";
+
+                this.innerHTML = '<i class="fa-solid fa-eye"></i>';
+
+            }
+
+        });
+
+    </script>
 
 </body>
 
