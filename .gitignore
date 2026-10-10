@@ -3,9 +3,12 @@ node_modules/
 
 # Variables de entorno
 .env
+.env.*
 .env.local
 .env.development
 .env.production
+!.env.example
+!**/.env.example
 
 # Logs
 logs/
@@ -17,6 +20,11 @@ pnpm-debug.log*
 # Archivos temporales
 tmp/
 temp/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
 
 # Archivos del sistema
 .DS_Store
@@ -40,6 +48,41 @@ coverage/
 *.pem
 *.key
 *.crt
+*.cer
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+**/credentials.json
+**/*service-account*.json
+
+# Respaldos de bases de datos (las migraciones .sql se conservan)
+*.bak
+*.backup
+*.old
+*.dump
+*.dump.*
+*.sql~
+*.sql.gz
+*.sql.bz2
+*.sql.xz
+*backup*.sql
+*dump*.sql
+**/database/backups/
+
+# SQL y documentación históricos pendientes de saneamiento antes de distribuirse
+/backend/database/catalogo_completo.sql
+/backend/database/migration_profesional.sql
+/backend/database/saludclick_demo_completo.sql
+/backend/database/seed.sql
+/docs/AUDITORIA_PROFESIONAL.md
+
 # Archivos privados de fórmulas
 private_uploads/*
 !private_uploads/.gitkeep
+/backend/private_uploads/*
+!/backend/private_uploads/.gitkeep
