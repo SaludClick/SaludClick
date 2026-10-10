@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Fórmulas médicas | SaludClick</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="container nav-container">
+            <a href="dashboard.html" class="logo">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span>SaludClick</span>
+            </a>
+            <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menú">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <nav class="main-nav" id="menu" aria-label="Menú">
+                <a class="nav-link" href="dashboard.html"><i class="fa-solid fa-house"></i> Inicio</a>
+                <a class="nav-link" href="medicamentos.html"><i class="fa-solid fa-pills"></i> Medicamentos</a>
+                <a class="nav-link" href="pedidos.html"><i class="fa-solid fa-cart-shopping"></i> Pedidos</a>
+                <a class="nav-link active" href="formulas.html"><i class="fa-solid fa-file-medical"></i> Fórmulas</a>
+                <a class="nav-link" href="historial.html"><i class="fa-solid fa-clock-rotate-left"></i> Historial</a>
+                <a class="nav-link" href="perfil.html"><i class="fa-solid fa-user"></i> Perfil</a>
+                <button class="nav-link logout-link" id="logout" type="button">
+                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="page-content">
+        <div class="container">
+            <section class="page-header">
+                <span class="badge">Documentos de salud</span>
+                <h1>Mis fórmulas médicas</h1>
+                <p>Carga y consulta tus fórmulas desde cualquier dispositivo. Los archivos se almacenan de forma privada.</p>
+            </section>
+
+            <section class="card formula-upload-card">
+                <h2><i class="fa-solid fa-cloud-arrow-up"></i> Cargar nueva fórmula</h2>
+                <form id="formulaForm">
+                    <label>Nombre o referencia
+                        <input id="formulaNombre" required maxlength="180" placeholder="Ej. Fórmula control septiembre">
+                    </label>
+                    <label>Descripción (opcional)
+                        <textarea id="formulaDescripcion" maxlength="500" placeholder="Observaciones para identificarla"></textarea>
+                    </label>
+                    <label>Archivo <small>PDF, JPG, PNG o WEBP · máximo 5 MB</small>
+                        <input id="formulaArchivo" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" required>
+                    </label>
+                    <button class="btn-primary" type="submit">
+                        <i class="fa-solid fa-upload"></i> Cargar fórmula
+                    </button>
+                    <p id="formulaMensaje" role="status" aria-live="polite"></p>
+                </form>
+            </section>
+
+            <section class="card">
+                <div class="section-heading">
+                    <div>
+                        <h2>Mis documentos</h2>
+                        <p>Abre una fórmula para verla sin exponerla públicamente.</p>
+                    </div>
+                    <button id="recargarFormulas" class="btn-outline" type="button">
+                        <i class="fa-solid fa-rotate"></i> Actualizar
+                    </button>
+                </div>
+                <div id="listaFormulas" class="formula-grid"></div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-col">
+                <div class="logo-footer">
+                    <i class="fa-solid fa-heart-pulse"></i>
+                    <span>SaludClick</span>
+                </div>
+                <p>Tu bienestar, a un solo clic.</p>
+            </div>
+            <div class="footer-col">
+                <p><i class="fa-solid fa-location-dot"></i> Medellín - Colombia</p>
+                <p><i class="fa-solid fa-lock"></i> Documentos privados</p>
+            </div>
+            <div class="footer-col">
+                <p>Accesos</p>
+                <div class="redes">
+                    <a href="dashboard.html"><i class="fa-solid fa-house"></i></a>
+                    <a href="medicamentos.html"><i class="fa-solid fa-pills"></i></a>
+                    <a href="pedidos.html"><i class="fa-solid fa-cart-shopping"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2026 SaludClick · Plataforma de demostración.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script type="module" src="../js/menu.js"></script>
+    <script type="module" src="../js/formulas.js"></script>
+    <script type="module" src="../js/main.js"></script>
+</body>
+</html>

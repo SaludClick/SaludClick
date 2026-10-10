@@ -1,0 +1,4 @@
+const repo=require("../repositories/admin.repository");
+async function pedidos(req,res){try{res.json({ok:true,pedidos:await repo.pedidos()});}catch(e){console.error(e);res.status(500).json({ok:false,mensaje:"No se pudieron cargar los pedidos."});}}
+async function estadoPedido(req,res){try{const id=Number(req.params.id),estado=String(req.body.estado||"");const allowed=["PENDIENTE","APROBADA","PREPARANDO","LISTA","ENTREGADA","CANCELADA"];if(!Number.isInteger(id)||!allowed.includes(estado))throw new Error("Datos inválidos.");if(!(await repo.estadoPedido(id,estado)))return res.status(404).json({ok:false,mensaje:"Pedido no encontrado."});res.json({ok:true,mensaje:"Estado del pedido actualizado."});}catch(e){res.status(400).json({ok:false,mensaje:e.message});}}
+module.exports={pedidos,estadoPedido};
