@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Administración | SaludClick</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+
+<body>
+    <!-- =====================================================
+         NAVBAR
+    ====================================================== -->
+    <header class="navbar">
+        <div class="container nav-container">
+            <a href="dashboard.html" class="logo">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span>SaludClick</span>
+            </a>
+            <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menú">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <nav class="main-nav" id="menu">
+                <a class="nav-link" href="dashboard.html"><i class="fa-solid fa-house"></i> Inicio</a>
+                <a class="nav-link" href="medicamentos.html"><i class="fa-solid fa-pills"></i> Medicamentos</a>
+                <a class="nav-link" href="pedidos.html"><i class="fa-solid fa-cart-shopping"></i> Pedidos</a>
+                <a class="nav-link active" href="admin.html"><i class="fa-solid fa-chart-line"></i> Administración</a>
+                <button class="nav-link logout-link" id="logout" type="button">
+                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- =====================================================
+         CONTENIDO PRINCIPAL
+    ====================================================== -->
+    <main class="page-content">
+        <div class="container">
+            <section class="page-header">
+                <span class="badge">Panel administrativo</span>
+                <h1>Operación de SaludClick</h1>
+                <p>Consulta indicadores, pedidos y documentos pendientes. Los datos se obtienen directamente de MySQL.</p>
+            </section>
+
+            <div id="adminMessage" role="status"></div>
+
+            <section class="admin-stats" id="adminStats"></section>
+
+            <section class="admin-columns">
+                <div class="card">
+                    <div class="section-heading">
+                        <div>
+                            <h2>Pedidos por estado</h2>
+                            <p>Distribución actual de solicitudes.</p>
+                        </div>
+                        <button id="refreshAdmin" class="btn-outline" type="button">
+                            <i class="fa-solid fa-rotate"></i> Actualizar
+                        </button>
+                    </div>
+                    <div id="orderStates"></div>
+                </div>
+
+                <div class="card">
+                    <h2>Fórmulas pendientes</h2>
+                    <p>Revisa el estado de los documentos enviados por usuarios.</p>
+                    <div id="adminFormulas"></div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="section-heading">
+                    <div>
+                        <h2>Operación de pedidos</h2>
+                        <p>Últimos 50 pedidos y su estado operativo.</p>
+                    </div>
+                </div>
+                <div class="orders-table-wrapper">
+                    <table class="orders-table">
+                        <thead>
+                            <tr>
+                                <th>Pedido</th>
+                                <th>Usuario</th>
+                                <th>Fecha</th>
+                                <th>Total</th>
+                                <th>Pago</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminOrders"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- =====================================================
+         FOOTER
+    ====================================================== -->
+    <footer id="contacto" class="footer">
+        <div class="container footer-container">
+            
+            <!-- Columna 1: Info e Identidad -->
+            <div class="footer-col brand-col">
+                <div class="logo-footer">
+                    <i class="fa-solid fa-heart-pulse"></i>
+                    <span>SaludClick</span>
+                </div>
+                <p class="tagline">Tu bienestar, a un solo clic.</p>
+            </div>
+
+            <!-- Columna 2: Ubicación y Contacto -->
+            <div class="footer-col contact-col">
+                <p><i class="fa-solid fa-location-dot"></i> Medellín - Colombia</p>
+                <p>
+                    <i class="fa-solid fa-envelope"></i> 
+                    <a href="mailto:juandavidmospa12@gmail.com" class="email-link">juandavidmospa12@gmail.com</a>
+                </p>
+            </div>
+
+            <!-- Columna 3: Enlaces Activos a Redes Sociales -->
+            <div class="footer-col social-col">
+                <p class="social-title">Síguenos en nuestras redes</p>
+                <div class="redes">
+                    <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+                        <i class="fa-brands fa-facebook-f"></i>
+                    </a>
+                    <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                        <i class="fa-brands fa-instagram"></i>
+                    </a>
+                    <a href="https://wa.me/573208447006" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer-bottom">
+            <p>&copy; 2026 SaludClick - Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- =====================================================
+         JAVASCRIPT
+    ====================================================== -->
+    <script type="module" src="../js/menu.js"></script>
+    <script type="module" src="../js/admin.js"></script>
+    <script type="module" src="../js/main.js"></script>
+</body>
+
+</html>
