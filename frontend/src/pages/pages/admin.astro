@@ -1,16 +1,13 @@
-<!DOCTYPE html>
-<html lang="es">
+---
+import Layout from "../../layouts/Layout.astro";
+const title = "Administración | SaludClick";
+const bodyClass = "";
+---
+<Layout title={title} bodyClass={bodyClass}>
+  <Fragment slot="head">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Administración | SaludClick</title>
-    <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-</head>
-
-<body>
-    <!-- =====================================================
+  </Fragment>
+  <!-- =====================================================
          NAVBAR
     ====================================================== -->
     <header class="navbar">
@@ -101,7 +98,7 @@
     ====================================================== -->
     <footer id="contacto" class="footer">
         <div class="container footer-container">
-            
+
             <!-- Columna 1: Info e Identidad -->
             <div class="footer-col brand-col">
                 <div class="logo-footer">
@@ -115,7 +112,7 @@
             <div class="footer-col contact-col">
                 <p><i class="fa-solid fa-location-dot"></i> Medellín - Colombia</p>
                 <p>
-                    <i class="fa-solid fa-envelope"></i> 
+                    <i class="fa-solid fa-envelope"></i>
                     <a href="mailto:juandavidmospa12@gmail.com" class="email-link">juandavidmospa12@gmail.com</a>
                 </p>
             </div>
@@ -146,9 +143,7 @@
     <!-- =====================================================
          JAVASCRIPT
     ====================================================== -->
-    <script type="module" src="../js/menu.js"></script>
-    <script type="module" src="../js/admin.js"></script>
-    <script type="module" src="../js/main.js"></script>
-</body>
-
-</html>
+    <script is:inline type="module" src="/js/menu.js"></script>
+    <script is:inline type="module" src="/js/admin.js"></script>
+    <script is:inline type="module" src="/js/main.js"></script>
+</Layout>

@@ -1,19 +1,13 @@
-<!DOCTYPE html>
-<html lang="es">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Perfil | SaludClick</title>
-
+---
+import Layout from "../../layouts/Layout.astro";
+const title = "Perfil | SaludClick";
+const bodyClass = "dashboard-page";
+---
+<Layout title={title} bodyClass={bodyClass}>
+  <Fragment slot="head">
     <!-- Estilos generales y FontAwesome -->
-    <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-</head>
-
-<body class="dashboard-page">
-
-    <!-- BARRA DE NAVEGACIÓN -->
+  </Fragment>
+  <!-- BARRA DE NAVEGACIÓN -->
     <header class="navbar">
         <div class="container nav-container">
             <a href="dashboard.html" class="logo">
@@ -169,10 +163,7 @@
     </footer>
 
     <!-- SCRIPTS -->
-    <script type="module" src="../js/perfil.js"></script>
-    <script type="module" src="../js/menu.js"></script>
-    <script type="module" src="../js/main.js"></script>
-
-</body>
-
-</html>
+    <script is:inline type="module" src="/js/perfil.js"></script>
+    <script is:inline type="module" src="/js/menu.js"></script>
+    <script is:inline type="module" src="/js/main.js"></script>
+</Layout>
