@@ -1,0 +1,14 @@
+# Dependencias
+node_modules/
+
+# Archivos generados por Astro
+.astro/
+dist/
+
+# Variables de entorno locales
+.env
+.env.*
+!.env.example
+
+# Copias de respaldo que no forman parte del proyecto
+backup-astro-conflicto/

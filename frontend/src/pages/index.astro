@@ -1,24 +1,17 @@
-<!DOCTYPE html>
-<html lang="es">
+---
+import Layout from "../layouts/Layout.astro";
+import Brand from "../components/Brand.jsx";
+import SearchBox from "../components/SearchBox.jsx";
+const title = "SaludClick - Tu bienestar, a un solo clic";
+const bodyClass = "";
+---
+<Layout title={title} bodyClass={bodyClass}>
+  <Fragment slot="head">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SaludClick - Tu bienestar, a un solo clic</title>
-
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link rel="icon" href="assets/icons/favicon.ico">
-</head>
-
-<body>
-
-    <header class="navbar">
+  </Fragment>
+  <header class="navbar">
         <div class="container nav-container">
-            <div class="logo">
-                <i class="fa-solid fa-heart-pulse"></i>
-                <span>SaludClick</span>
-            </div>
+            <Brand client:load className="logo" />
             <nav id="menu">
                 <a href="#inicio">Inicio</a>
                 <a href="#servicios">Servicios</a>
@@ -40,10 +33,7 @@
                 <h1>Gestiona tus medicamentos de forma rápida y segura</h1>
                 <p>Consulta disponibilidad, solicita medicamentos y realiza seguimiento de tus pedidos desde cualquier lugar.</p>
 
-                <div class="buscador">
-                    <input id="busquedaInicio" type="text" placeholder="Buscar medicamento..." aria-label="Buscar medicamento">
-                    <button id="buscarInicio" type="button"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
-                </div>
+                <SearchBox client:load />
 
                 <div class="hero-botones">
                     <a href="login.html" class="btn-primary btn-lg">Solicitar Medicamentos</a>
@@ -123,13 +113,10 @@
     <!-- Footer Optimizado con Redes Interactivas -->
     <footer id="contacto" class="footer">
         <div class="container footer-container">
-            
+
             <!-- Columna 1: Info e Identidad -->
             <div class="footer-col brand-col">
-                <div class="logo-footer">
-                    <i class="fa-solid fa-heart-pulse"></i>
-                    <span>SaludClick</span>
-                </div>
+                <Brand client:load className="logo-footer" />
                 <p class="tagline">Tu bienestar, a un solo clic.</p>
             </div>
 
@@ -137,7 +124,7 @@
             <div class="footer-col contact-col">
                 <p><i class="fa-solid fa-location-dot"></i> Medellín - Colombia</p>
                 <p>
-                    <i class="fa-solid fa-envelope"></i> 
+                    <i class="fa-solid fa-envelope"></i>
                     <a href="mailto:juandavidmospa12@gmail.com" class="email-link">juandavidmospa12@gmail.com</a>
                 </p>
             </div>
@@ -165,8 +152,7 @@
         </div>
     </footer>
 
-    <script type="module" src="js/menu.js"></script>
-    <script type="module" src="js/inicio.js?v=servicios-2"></script>
-</body>
-
-</html>
+    <script is:inline type="module" src="/js/menu.js"></script>
+    <script is:inline type="module" src="/js/inicio.js?v=servicios-2"></script>
+  <script type="module" is:inline src="/js/main.js"></script>
+</Layout>
