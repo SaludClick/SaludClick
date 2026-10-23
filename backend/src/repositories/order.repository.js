@@ -1,4 +1,5 @@
-const pool = require("../config/database");
+
+const prisma = require("../config/prisma");
 
 // =================================================
 // LISTAR MEDICAMENTOS
@@ -9,25 +10,21 @@ async function listarMedicamentos(ids) {
         return [];
     }
 
-    const placeholders =
-        ids.map(() => "?").join(",");
-
-    const [rows] = await pool.query(
-        `SELECT
-            id,
-            nombre,
-            descripcion,
-            categoria_id,
-            precio,
-            stock,
-            imagen,
-            estado
-         FROM medicamentos
-         WHERE id IN (${placeholders})`,
-        ids
-    );
-
-    return rows;
+    return prisma.medicamento.findMany({
+        where: {
+            id: { in: ids.map(Number) }
+        },
+        select: {
+            id: true,
+            nombre: true,
+            descripcion: true,
+            categoria_id: true,
+            precio: true,
+            stock: true,
+            imagen: true,
+            estado: true
+        }
+    });
 }
 
 // =================================================
@@ -43,155 +40,105 @@ async function crearPedidoConPago({
     total,
     pago
 }) {
-    const connection =
-        await pool.getConnection();
-
-    try {
-        await connection.beginTransaction();
-
-        // -----------------------------------------
-        // VERIFICAR STOCK
-        // -----------------------------------------
+    return prisma.$transaction(async (tx) => {
+        // Verificar stock y disponibilidad.
+        // La actualización condicional evita vender más unidades
+        // de las que quedan disponibles si hay compras simultáneas.
 
         for (const item of items) {
-            const [rows] =
-                await connection.query(
-                    `SELECT
-                        id,
-                        nombre,
-                        precio,
-                        stock,
-                        estado
-                     FROM medicamentos
-                     WHERE id = ?
-                     FOR UPDATE`,
-                    [item.medicamento_id]
-                );
+            const medicamentoId = Number(item.medicamento_id);
+            const cantidad = Number(item.cantidad);
 
-            const med = rows[0];
+            const medicamento = await tx.medicamento.findUnique({
+                where: { id: medicamentoId },
+                select: {
+                    id: true,
+                    nombre: true,
+                    precio: true,
+                    stock: true,
+                    estado: true
+                }
+            });
 
-            if (
-                !med ||
-                med.estado !== "DISPONIBLE"
-            ) {
+            if (!medicamento || medicamento.estado !== "DISPONIBLE") {
                 throw new Error(
-                    `El medicamento ${item.medicamento_id} no está disponible.`
+                    `El medicamento ${medicamentoId} no está disponible.`
                 );
             }
 
-            if (med.stock < item.cantidad) {
+            if (medicamento.stock < cantidad) {
                 throw new Error(
-                    `Stock insuficiente para ${med.nombre}. Disponible: ${med.stock}.`
+                    `Stock insuficiente para ${medicamento.nombre}. Disponible: ${medicamento.stock}.`
                 );
             }
         }
 
-        // -----------------------------------------
-        // CREAR SOLICITUD
-        // -----------------------------------------
+        // Crear solicitud.
+        const solicitud = await tx.solicitud.create({
+            data: {
+                usuario_id: Number(usuarioId),
+                estado: "APROBADA",
+                tipo_entrega: tipoEntrega,
+                direccion: direccion || null,
+                observaciones: observaciones || null
+            },
+            select: { id: true }
+        });
 
-        const [pedidoResult] =
-            await connection.query(
-                `INSERT INTO solicitudes
-                (
-                    usuario_id,
-                    estado,
-                    tipo_entrega,
-                    direccion,
-                    observaciones
-                )
-                VALUES (?, 'APROBADA', ?, ?, ?)`,
-                [
-                    usuarioId,
-                    tipoEntrega,
-                    direccion || null,
-                    observaciones || null
-                ]
-            );
-
-        const solicitudId =
-            pedidoResult.insertId;
-
-        // -----------------------------------------
-        // CREAR DETALLES Y ACTUALIZAR STOCK
-        // -----------------------------------------
-
+        // Crear detalles y descontar inventario.
         for (const item of items) {
-            await connection.query(
-                `INSERT INTO detalle_solicitud
-                (
-                    solicitud_id,
-                    medicamento_id,
+            const medicamentoId = Number(item.medicamento_id);
+            const cantidad = Number(item.cantidad);
+
+            const actualizado = await tx.medicamento.updateMany({
+                where: {
+                    id: medicamentoId,
+                    estado: "DISPONIBLE",
+                    stock: { gte: cantidad }
+                },
+                data: {
+                    stock: { decrement: cantidad }
+                }
+            });
+
+            if (actualizado.count !== 1) {
+                throw new Error(
+                    `Stock insuficiente para el medicamento ${medicamentoId}.`
+                );
+            }
+
+            await tx.detalleSolicitud.create({
+                data: {
+                    solicitud_id: solicitud.id,
+                    medicamento_id: medicamentoId,
                     cantidad,
-                    precio,
-                    subtotal
-                )
-                VALUES (?, ?, ?, ?, ?)`,
-                [
-                    solicitudId,
-                    item.medicamento_id,
-                    item.cantidad,
-                    item.precio,
-                    item.subtotal
-                ]
-            );
-
-            await connection.query(
-                `UPDATE medicamentos
-                 SET stock = stock - ?
-                 WHERE id = ?`,
-                [
-                    item.cantidad,
-                    item.medicamento_id
-                ]
-            );
+                    precio: item.precio,
+                    subtotal: item.subtotal
+                }
+            });
         }
 
-        // -----------------------------------------
-        // CREAR PAGO
-        // -----------------------------------------
-
-        const [pagoResult] =
-            await connection.query(
-                `INSERT INTO pagos
-                (
-                    solicitud_id,
-                    usuario_id,
-                    referencia,
-                    metodo,
-                    marca,
-                    ultimos_digitos,
-                    monto,
-                    estado,
-                    simulacion
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-                [
-                    solicitudId,
-                    usuarioId,
-                    pago.referencia,
-                    pago.metodo,
-                    pago.marca,
-                    pago.ultimos_digitos,
-                    total,
-                    pago.estado
-                ]
-            );
-
-        await connection.commit();
+        // Registrar pago simulado.
+        const registroPago = await tx.pago.create({
+            data: {
+                solicitud_id: solicitud.id,
+                usuario_id: Number(usuarioId),
+                referencia: pago.referencia,
+                metodo: pago.metodo,
+                marca: pago.marca,
+                ultimos_digitos: pago.ultimos_digitos,
+                monto: total,
+                estado: pago.estado,
+                simulacion: true
+            },
+            select: { id: true }
+        });
 
         return {
-            solicitudId,
-            pagoId: pagoResult.insertId
+            solicitudId: solicitud.id,
+            pagoId: registroPago.id
         };
-
-    } catch (error) {
-        await connection.rollback();
-        throw error;
-
-    } finally {
-        connection.release();
-    }
+    });
 }
 
 // =================================================
@@ -199,190 +146,153 @@ async function crearPedidoConPago({
 // =================================================
 
 async function listarPedidosUsuario(usuarioId) {
-    const [rows] =
-        await pool.query(
-            `SELECT
-                s.id,
-                s.fecha,
-                s.estado,
-                s.tipo_entrega,
-                s.direccion,
+    const solicitudes = await prisma.solicitud.findMany({
+        where: {
+            usuario_id: Number(usuarioId)
+        },
+        include: {
+            detalles: {
+                select: { subtotal: true }
+            },
+            pagos: {
+                select: {
+                    id: true,
+                    estado: true,
+                    metodo: true,
+                    marca: true,
+                    ultimos_digitos: true
+                },
+                orderBy: { id: "desc" }
+            }
+        },
+        orderBy: { fecha: "desc" }
+    });
 
-                COALESCE(
-                    SUM(ds.subtotal),
-                    0
-                ) AS total,
-
-                p.estado AS pago_estado,
-                p.metodo AS pago_metodo,
-                p.marca AS pago_marca,
-                p.ultimos_digitos
-
-             FROM solicitudes s
-
-             LEFT JOIN detalle_solicitud ds
-                ON ds.solicitud_id = s.id
-
-             LEFT JOIN pagos p
-                ON p.solicitud_id = s.id
-
-             WHERE s.usuario_id = ?
-
-             GROUP BY
-                s.id,
-                p.id
-
-             ORDER BY s.fecha DESC`,
-            [usuarioId]
+    return solicitudes.map((solicitud) => {
+        const total = solicitud.detalles.reduce(
+            (suma, detalle) => suma + Number(detalle.subtotal),
+            0
         );
 
-    return rows;
+        const pago = solicitud.pagos[0];
+
+        return {
+            id: solicitud.id,
+            fecha: solicitud.fecha,
+            estado: solicitud.estado,
+            tipo_entrega: solicitud.tipo_entrega,
+            direccion: solicitud.direccion,
+            total,
+            pago_estado: pago?.estado ?? null,
+            pago_metodo: pago?.metodo ?? null,
+            pago_marca: pago?.marca ?? null,
+            ultimos_digitos: pago?.ultimos_digitos ?? null
+        };
+    });
 }
 
 // =================================================
 // DETALLE DE UN PEDIDO
 // =================================================
 
-async function detallePedidoUsuario(
-    usuarioId,
-    pedidoId
-) {
-    const [rows] =
-        await pool.query(
-            `SELECT
-                s.id,
-                s.fecha,
-                s.estado,
-                s.tipo_entrega,
-                s.direccion,
-                s.observaciones,
+async function detallePedidoUsuario(usuarioId, pedidoId) {
+    const solicitud = await prisma.solicitud.findFirst({
+        where: {
+            id: Number(pedidoId),
+            usuario_id: Number(usuarioId)
+        },
+        include: {
+            detalles: {
+                include: {
+                    medicamento: {
+                        select: {
+                            nombre: true,
+                            imagen: true
+                        }
+                    }
+                },
+                orderBy: { id: "asc" }
+            },
+            pagos: {
+                select: {
+                    referencia: true,
+                    estado: true,
+                    metodo: true,
+                    marca: true,
+                    ultimos_digitos: true
+                },
+                orderBy: { id: "desc" }
+            }
+        }
+    });
 
-                ds.medicamento_id,
-                m.nombre,
-                m.imagen,
-                ds.cantidad,
-                ds.precio,
-                ds.subtotal,
+    if (!solicitud) {
+        return [];
+    }
 
-                p.referencia,
-                p.estado AS pago_estado,
-                p.metodo,
-                p.marca,
-                p.ultimos_digitos
+    return solicitud.detalles.map((detalle) => {
+        const pago = solicitud.pagos[0];
 
-             FROM solicitudes s
-
-             JOIN detalle_solicitud ds
-                ON ds.solicitud_id = s.id
-
-             JOIN medicamentos m
-                ON m.id = ds.medicamento_id
-
-             LEFT JOIN pagos p
-                ON p.solicitud_id = s.id
-
-             WHERE
-                s.usuario_id = ?
-                AND s.id = ?
-
-             ORDER BY ds.id`,
-            [
-                usuarioId,
-                pedidoId
-            ]
-        );
-
-    return rows;
+        return {
+            id: solicitud.id,
+            fecha: solicitud.fecha,
+            estado: solicitud.estado,
+            tipo_entrega: solicitud.tipo_entrega,
+            direccion: solicitud.direccion,
+            observaciones: solicitud.observaciones,
+            medicamento_id: detalle.medicamento_id,
+            nombre: detalle.medicamento.nombre,
+            imagen: detalle.medicamento.imagen,
+            cantidad: detalle.cantidad,
+            precio: detalle.precio,
+            subtotal: detalle.subtotal,
+            referencia: pago?.referencia ?? null,
+            pago_estado: pago?.estado ?? null,
+            metodo: pago?.metodo ?? null,
+            marca: pago?.marca ?? null,
+            ultimos_digitos: pago?.ultimos_digitos ?? null
+        };
+    });
 }
 
 // =================================================
 // ELIMINAR PEDIDO DEL USUARIO
 // =================================================
 
-async function eliminarPedidoUsuario(
-    usuarioId,
-    pedidoId
-) {
-    const connection =
-        await pool.getConnection();
+async function eliminarPedidoUsuario(usuarioId, pedidoId) {
+    return prisma.$transaction(async (tx) => {
+        const id = Number(pedidoId);
+        const usuario = Number(usuarioId);
 
-    try {
-        await connection.beginTransaction();
+        const solicitud = await tx.solicitud.findFirst({
+            where: {
+                id,
+                usuario_id: usuario
+            },
+            select: { id: true }
+        });
 
-        // -----------------------------------------
-        // VERIFICAR PROPIEDAD DEL PEDIDO
-        // -----------------------------------------
-
-        const [pedidos] =
-            await connection.query(
-                `SELECT id
-                 FROM solicitudes
-                 WHERE id = ?
-                   AND usuario_id = ?
-                 LIMIT 1`,
-                [
-                    pedidoId,
-                    usuarioId
-                ]
-            );
-
-        if (!pedidos.length) {
-            throw new Error(
-                "Pedido no encontrado."
-            );
+        if (!solicitud) {
+            throw new Error("Pedido no encontrado.");
         }
 
-        // -----------------------------------------
-        // ELIMINAR PAGO
-        // -----------------------------------------
+        await tx.pago.deleteMany({
+            where: {
+                solicitud_id: id,
+                usuario_id: usuario
+            }
+        });
 
-        await connection.query(
-            `DELETE FROM pagos
-             WHERE solicitud_id = ?
-               AND usuario_id = ?`,
-            [
-                pedidoId,
-                usuarioId
-            ]
-        );
+        await tx.detalleSolicitud.deleteMany({
+            where: { solicitud_id: id }
+        });
 
-        // -----------------------------------------
-        // ELIMINAR DETALLES
-        // -----------------------------------------
-
-        await connection.query(
-            `DELETE FROM detalle_solicitud
-             WHERE solicitud_id = ?`,
-            [
-                pedidoId
-            ]
-        );
-
-        // -----------------------------------------
-        // ELIMINAR SOLICITUD
-        // -----------------------------------------
-
-        await connection.query(
-            `DELETE FROM solicitudes
-             WHERE id = ?
-               AND usuario_id = ?`,
-            [
-                pedidoId,
-                usuarioId
-            ]
-        );
-
-        await connection.commit();
+        await tx.solicitud.delete({
+            where: { id }
+        });
 
         return true;
-
-    } catch (error) {
-        await connection.rollback();
-        throw error;
-
-    } finally {
-        connection.release();
-    }
+    });
 }
 
 // =================================================

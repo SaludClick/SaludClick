@@ -1,12 +1,13 @@
-const pool = require("../config/database");
+
+const prisma = require("../config/prisma");
 
 const health = async () => {
-    const [rows] = await pool.query("SELECT NOW() AS fecha");
+    const resultado = await prisma.$queryRaw`SELECT NOW() AS fecha`;
 
     return {
         ok: true,
         mensaje: "API funcionando correctamente",
-        servidor: rows[0].fecha
+        servidor: resultado[0].fecha
     };
 };
 

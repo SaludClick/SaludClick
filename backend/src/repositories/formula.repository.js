@@ -1,63 +1,100 @@
-const pool = require("../config/database");
+
+const prisma = require("../config/prisma");
 
 async function crear(data) {
-    // Definimos la ruta del archivo para llenar la columna obligatoria 'ruta_archivo'
-    const rutaArchivo = `private_uploads/${data.nombreArchivo}`;
+    const formula = await prisma.formulaMedica.create({
+        data: {
+            usuario_id: Number(data.usuarioId),
+            nombre_archivo: data.nombreArchivo,
+            nombre_original: data.nombreOriginal,
+            tipo_mime: data.tipoMime,
+            ruta_archivo: `private_uploads/${data.nombreArchivo}`,
+            tamano: data.tamano,
+            descripcion: data.descripcion || null,
+            estado: "PENDIENTE"
+        },
+        select: { id: true }
+    });
 
-    const [r] = await pool.query(
-        `INSERT INTO formulas_medicas
-         (usuario_id, nombre_archivo, nombre_original, tipo_mime, ruta_archivo, tamano, descripcion, estado)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDIENTE')`,
-        [
-            data.usuarioId,
-            data.nombreArchivo,
-            data.nombreOriginal,
-            data.tipoMime,
-            rutaArchivo,
-            data.tamano,
-            data.descripcion || null
-        ]
-    );
-    return r.insertId;
+    return formula.id;
 }
 
 async function listarUsuario(usuarioId) {
-    const [rows] = await pool.query(
-        `SELECT id, nombre_original AS nombre, tipo_mime, tamano, descripcion, estado, fecha_subida AS created_at
-         FROM formulas_medicas 
-         WHERE usuario_id = ? AND estado <> 'ELIMINADA' 
-         ORDER BY fecha_subida DESC`,
-        [usuarioId]
-    );
-    return rows;
+    const formulas = await prisma.formulaMedica.findMany({
+        where: {
+            usuario_id: Number(usuarioId),
+            estado: { not: "ELIMINADA" }
+        },
+        select: {
+            id: true,
+            nombre_original: true,
+            tipo_mime: true,
+            tamano: true,
+            descripcion: true,
+            estado: true,
+            fecha_subida: true
+        },
+        orderBy: { fecha_subida: "desc" }
+    });
+
+    return formulas.map(formula => ({
+        id: formula.id,
+        nombre: formula.nombre_original,
+        tipo_mime: formula.tipo_mime,
+        tamano: formula.tamano,
+        descripcion: formula.descripcion,
+        estado: formula.estado,
+        created_at: formula.fecha_subida
+    }));
 }
 
 async function buscarPropia(usuarioId, id) {
-    const [rows] = await pool.query(
-        `SELECT * FROM formulas_medicas WHERE id = ? AND usuario_id = ? AND estado <> 'ELIMINADA' LIMIT 1`,
-        [id, usuarioId]
-    );
-    return rows[0];
+    return prisma.formulaMedica.findFirst({
+        where: {
+            id: Number(id),
+            usuario_id: Number(usuarioId),
+            estado: { not: "ELIMINADA" }
+        }
+    });
 }
 
 async function listarAdmin() {
-    const [rows] = await pool.query(
-        `SELECT f.id, f.nombre_original AS nombre, f.tipo_mime AS f_tipo_mime, f.tamano, f.descripcion, f.estado, f.fecha_subida AS created_at,
-                u.id AS usuario_id, CONCAT(u.nombre, ' ', u.apellido) AS usuario, u.correo
-         FROM formulas_medicas f 
-         JOIN usuarios u ON u.id = f.usuario_id
-         WHERE f.estado <> 'ELIMINADA' 
-         ORDER BY f.fecha_subida DESC`
-    );
-    return rows;
+    const formulas = await prisma.formulaMedica.findMany({
+        where: { estado: { not: "ELIMINADA" } },
+        include: {
+            usuario: {
+                select: {
+                    id: true,
+                    nombre: true,
+                    apellido: true,
+                    correo: true
+                }
+            }
+        },
+        orderBy: { fecha_subida: "desc" }
+    });
+
+    return formulas.map(formula => ({
+        id: formula.id,
+        nombre: formula.nombre_original,
+        f_tipo_mime: formula.tipo_mime,
+        tamano: formula.tamano,
+        descripcion: formula.descripcion,
+        estado: formula.estado,
+        created_at: formula.fecha_subida,
+        usuario_id: formula.usuario.id,
+        usuario: `${formula.usuario.nombre} ${formula.usuario.apellido}`,
+        correo: formula.usuario.correo
+    }));
 }
 
 async function actualizarEstado(id, estado) {
-    const [r] = await pool.query(
-        `UPDATE formulas_medicas SET estado = ? WHERE id = ?`,
-        [estado, id]
-    );
-    return r.affectedRows;
+    const resultado = await prisma.formulaMedica.updateMany({
+        where: { id: Number(id) },
+        data: { estado }
+    });
+
+    return resultado.count;
 }
 
 module.exports = {
