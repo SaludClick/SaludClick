@@ -1,14 +1,89 @@
 # Dependencias
 node_modules/
 
-# Archivos generados por Astro
-.astro/
-dist/
-
-# Variables de entorno locales
+# Variables de entorno
 .env
 .env.*
+.env.local
+.env.development
+.env.production
 !.env.example
+!**/.env.example
 
-# Copias de respaldo que no forman parte del proyecto
-backup-astro-conflicto/
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Archivos temporales
+tmp/
+temp/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# IDE / editores
+.vscode/
+.idea/
+
+# Archivos de configuración local
+*.local
+
+# Cobertura de pruebas
+coverage/
+
+# Bases de datos locales
+*.sqlite
+*.sqlite3
+
+# Certificados y claves privadas
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+**/credentials.json
+**/*service-account*.json
+
+# Respaldos de bases de datos (las migraciones .sql se conservan)
+*.bak
+*.backup
+*.old
+*.dump
+*.dump.*
+*.sql~
+*.sql.gz
+*.sql.bz2
+*.sql.xz
+*backup*.sql
+*dump*.sql
+**/database/backups/
+
+# SQL y documentación históricos pendientes de saneamiento antes de distribuirse
+/backend/database/catalogo_completo.sql
+/backend/database/migration_profesional.sql
+/backend/database/saludclick_demo_completo.sql
+/backend/database/seed.sql
+/docs/AUDITORIA_PROFESIONAL.md
+
+# Archivos privados de fórmulas
+private_uploads/*
+!private_uploads/.gitkeep
+/backend/private_uploads/*
+!/backend/private_uploads/.gitkeep
+.astro/

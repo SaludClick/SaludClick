@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medicamentos | SaludClick</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+</head>
+
+<body>
+
+    <header class="navbar">
+        <div class="container nav-container">
+            <div class="logo">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span>SaludClick</span>
+            </div>
+
+            <button type="button" class="menu-toggle" id="menuToggle">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <nav id="menu">
+                <a href="dashboard.html">Inicio</a>
+                <a href="medicamentos.html">Medicamentos</a>
+                <a href="pedidos.html">Pedidos</a>
+                <a href="historial.html">Historial</a>
+                <a href="perfil.html">Perfil</a>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-texto">
+                <span class="badge">Gestión Farmacéutica</span>
+                <h1>Consulta de Medicamentos</h1>
+                <p>Busca medicamentos disponibles en la red de farmacias afiliadas y realiza solicitudes de manera rápida.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="servicios">
+        <div class="container">
+            <div class="buscador">
+                <input type="text" id="buscadorMedicamentos" placeholder="Buscar medicamento...">
+                <select id="filtroCategoriaMedicamentos" aria-label="Filtrar por categoría">
+                    <option value="">Todas las categorías</option>
+                </select>
+                <button id="buscarMedicamentos" type="button">Buscar</button>
+                <button id="limpiarMedicamentos" type="button">Limpiar</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="servicios">
+        <div class="container">
+            <h2>Medicamentos Disponibles</h2>
+            <p>Catálogo conectado a la base de datos. El stock se valida nuevamente al confirmar el pedido.</p>
+            <div class="tabla-responsive">
+                <table class="tabla-medicamentos">
+                    <thead>
+                        <tr>
+                            <th>Medicamento</th>
+                            <th>Categoría</th>
+                            <th>Presentación</th>
+                            <th>Disponibilidad</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <!-- DATOS TEMPORALES DE PRUEBA: reemplazar por MySQL. -->
+                    <tbody id="catalogoMedicamentos">
+                        <tr>
+                            <td>Acetaminofén</td><td>Analgésicos</td>
+                            <td>500 mg</td>
+                            <td class="disponible">Disponible</td>
+                            <td><button class="btn-tabla" data-medicamento-id="1" type="button">Solicitar</button></td>
+                        </tr>
+                        <tr>
+                            <td>Ibuprofeno</td><td>Antiinflamatorios</td>
+                            <td>400 mg</td>
+                            <td class="disponible">Disponible</td>
+                            <td><button class="btn-tabla" data-medicamento-id="2" type="button">Solicitar</button></td>
+                        </tr>
+                        <tr>
+                            <td>Amoxicilina</td><td>Antibióticos</td>
+                            <td>500 mg</td>
+                            <td class="disponible">Disponible</td>
+                            <td><button class="btn-tabla" data-medicamento-id="3" type="button">Solicitar</button></td>
+                        </tr>
+                        <tr>
+                            <td>Loratadina</td><td>Antialérgicos</td>
+                            <td>10 mg</td>
+                            <td class="disponible">Disponible</td>
+                            <td><button class="btn-tabla" data-medicamento-id="4" type="button">Solicitar</button></td>
+                        </tr>
+                        <tr>
+                            <td>Omeprazol</td><td>Gastrointestinales</td>
+                            <td>20 mg</td>
+                            <td class="disponible">Disponible</td>
+                            <td><button class="btn-tabla" data-medicamento-id="5" type="button">Solicitar</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="servicios" aria-labelledby="tituloPedido">
+        <div class="container pedido-temporal">
+            <h2 id="tituloPedido">Mi pedido temporal</h2>
+            <p>Se guarda solo en este navegador. No se envía a una farmacia ni a MySQL.</p>
+            <p>Total de unidades seleccionadas: <strong id="totalSeleccionado" aria-live="polite">0</strong></p>
+            <p id="mensajePedido" role="status" aria-live="polite"></p>
+            <div class="tabla-responsive">
+                <table class="tabla-medicamentos">
+                    <thead><tr><th>Medicamento</th><th>Cantidad</th><th>Acción</th></tr></thead>
+                    <tbody id="detallePedido"></tbody>
+                </table>
+            </div>
+            <div class="acciones-pedido">
+                <button id="confirmarPedido" type="button" class="btn-primary">Confirmar pedido temporal</button>
+                <button id="vaciarPedido" type="button" class="btn-outline">Vaciar pedido</button>
+                <a href="pedidos.html">Ver pedidos locales</a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer"><div class="container footer-container">
+<div class="footer-col"><div class="logo-footer"><i class="fa-solid fa-heart-pulse"></i><span>SaludClick</span></div><p>Tu bienestar, a un solo clic.</p></div>
+<div class="footer-col"><p><i class="fa-solid fa-location-dot"></i> Medellín - Colombia</p><p><i class="fa-solid fa-shield-halved"></i> Plataforma de demostración</p></div>
+<div class="footer-col"><p>Accesos rápidos</p><div class="redes"><a href="dashboard.html" aria-label="Inicio"><i class="fa-solid fa-house"></i></a><a href="medicamentos.html" aria-label="Medicamentos"><i class="fa-solid fa-pills"></i></a><a href="pedidos.html" aria-label="Pedidos"><i class="fa-solid fa-cart-shopping"></i></a><a href="formulas.html" aria-label="Fórmulas"><i class="fa-solid fa-file-medical"></i></a></div></div>
+</div><div class="footer-bottom"><p>© 2026 SaludClick · Todos los derechos reservados.</p></div></footer>
+
+    <script type="module" src="../js/medicamentos.js"></script>
+    <script type="module" src="../js/menu.js"></script>
+</body>
+
+</html>

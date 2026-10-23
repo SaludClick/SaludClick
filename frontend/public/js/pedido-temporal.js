@@ -1,13 +1,13 @@
-// ============================================================
+﻿// ============================================================
 // Programa: SaludClick
 // Archivo: pedido-temporal.js
-// Descripción: Manejo del carrito temporal de medicamentos.
+// DescripciÃ³n: Manejo del carrito temporal de medicamentos.
 // ============================================================
 
 export const CATALOGO = Object.freeze([
     {
         id: 1,
-        nombre: "Acetaminofén",
+        nombre: "AcetaminofÃ©n",
         presentacion: "500 mg",
         empaque: "Caja x 20 tabletas",
         imagen: "/images/medicamentos/acetaminofen.svg",
@@ -27,7 +27,7 @@ export const CATALOGO = Object.freeze([
         id: 3,
         nombre: "Amoxicilina",
         presentacion: "500 mg",
-        empaque: "Caja x 21 cápsulas",
+        empaque: "Caja x 21 cÃ¡psulas",
         imagen: "/images/medicamentos/amoxicilina.svg",
         disponible: true,
         precio: 0
@@ -45,7 +45,7 @@ export const CATALOGO = Object.freeze([
         id: 5,
         nombre: "Omeprazol",
         presentacion: "20 mg",
-        empaque: "Caja x 14 cápsulas",
+        empaque: "Caja x 14 cÃ¡psulas",
         imagen: "/images/medicamentos/omeprazol.svg",
         disponible: true,
         precio: 0
@@ -61,7 +61,7 @@ export const MAX_CANTIDAD = 999;
 
 
 // ============================================================
-// Guardar catálogo recibido desde MySQL
+// Guardar catÃ¡logo recibido desde MySQL
 // ============================================================
 
 export function setCatalogo(catalogo) {
@@ -102,7 +102,7 @@ export function setCatalogo(catalogo) {
 
 
 // ============================================================
-// Obtener catálogo actual
+// Obtener catÃ¡logo actual
 // ============================================================
 
 function catalogoActivo() {
@@ -131,7 +131,7 @@ export function medicamento(id) {
 
     if (!item) {
         throw new Error(
-            "El medicamento seleccionado no existe en el catálogo."
+            "El medicamento seleccionado no existe en el catÃ¡logo."
         );
     }
 
@@ -140,7 +140,7 @@ export function medicamento(id) {
      * Para poder mostrar el carrito no bloqueamos el medicamento
      * solamente porque el estado local sea diferente.
      *
-     * El backend volverá a validar el stock al crear el pedido.
+     * El backend volverÃ¡ a validar el stock al crear el pedido.
      */
 
     return item;
@@ -153,30 +153,29 @@ export function medicamento(id) {
 
 export function cantidadValida(cantidad) {
 
-    const numero = Number(cantidad);
-
     if (
-        !Number.isInteger(numero) ||
-        numero < 1 ||
-        numero > MAX_CANTIDAD
+        typeof cantidad !== "number" ||
+        !Number.isInteger(cantidad) ||
+        cantidad < 1 ||
+        cantidad > MAX_CANTIDAD
     ) {
         throw new Error(
             `La cantidad debe estar entre 1 y ${MAX_CANTIDAD}.`
         );
     }
 
-    return numero;
+    return cantidad;
 }
 
 
 // ============================================================
-// Validar líneas del carrito
+// Validar lÃ­neas del carrito
 // ============================================================
 
 function validarLineas(lineas) {
 
     if (!Array.isArray(lineas)) {
-        throw new Error("El pedido local no es válido.");
+        throw new Error("El pedido local no es vÃ¡lido.");
     }
 
     const ids = new Set();
@@ -184,13 +183,13 @@ function validarLineas(lineas) {
     for (const linea of lineas) {
 
         if (!linea) {
-            throw new Error("El pedido local no es válido.");
+            throw new Error("El pedido local no es vÃ¡lido.");
         }
 
         const id = Number(linea.id);
 
         if (!Number.isInteger(id) || id <= 0) {
-            throw new Error("El ID del medicamento no es válido.");
+            throw new Error("El ID del medicamento no es vÃ¡lido.");
         }
 
         if (ids.has(id)) {
@@ -250,7 +249,7 @@ export function leerEstado(storage) {
     } catch {
 
         throw new Error(
-            "Los datos del carrito no son válidos."
+            "Los datos del carrito no son vÃ¡lidos."
         );
     }
 }
@@ -274,6 +273,14 @@ export function actualizarPedido(
     if (
         ["agregar", "cantidad", "eliminar"].includes(accion)
     ) {
+
+        if (
+            typeof id !== "number" ||
+            !Number.isInteger(id) ||
+            id <= 0
+        ) {
+            throw new Error("El ID del medicamento no es válido.");
+        }
 
         medicamento(numericId);
 
@@ -314,12 +321,12 @@ export function actualizarPedido(
 
             if (!linea) {
                 throw new Error(
-                    "El medicamento no está en el carrito."
+                    "El medicamento no estÃ¡ en el carrito."
                 );
             }
 
             linea.cantidad =
-                cantidadValida(Number(cantidad));
+                cantidadValida(cantidad);
         }
 
 
@@ -391,7 +398,7 @@ export function actualizarPedido(
     else {
 
         throw new Error(
-            "Acción no válida."
+            "AcciÃ³n no vÃ¡lida."
         );
     }
 
@@ -434,3 +441,5 @@ export const totalUnidades = lineas => {
         0
     );
 };
+
+

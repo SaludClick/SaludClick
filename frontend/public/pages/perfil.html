@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil | SaludClick</title>
+
+    <!-- Estilos generales y FontAwesome -->
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+
+<body class="dashboard-page">
+
+    <!-- BARRA DE NAVEGACIÓN -->
+    <header class="navbar">
+        <div class="container nav-container">
+            <a href="dashboard.html" class="logo">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span>SaludClick</span>
+            </a>
+
+            <button type="button" class="menu-toggle" id="menuToggle" aria-label="Abrir menú">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <nav id="menu">
+                <a href="dashboard.html"><i class="fa-solid fa-house"></i> Inicio</a>
+                <a href="medicamentos.html"><i class="fa-solid fa-pills"></i> Medicamentos</a>
+                <a href="pedidos.html"><i class="fa-solid fa-cart-shopping"></i> Pedidos</a>
+                <a href="formulas.html"><i class="fa-solid fa-file-medical"></i> Fórmulas</a>
+                <a href="historial.html"><i class="fa-solid fa-clock-rotate-left"></i> Historial</a>
+                <a href="perfil.html" class="active"><i class="fa-solid fa-user"></i> Perfil</a>
+                <button type="button" class="logout-link" id="logout">
+                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ENCABEZADO -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-texto text-center">
+                <span class="badge mb-2">
+                    <i class="fa-solid fa-id-card"></i> Información Personal
+                </span>
+                <h1>Mi Perfil</h1>
+                <p>Consulta y actualiza tu información personal para mantener tus datos siempre actualizados.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- TARJETA DEL PERFIL DE USUARIO -->
+    <section class="servicios">
+        <div class="container">
+            <div class="perfil-card">
+                
+                <!-- Cabecera con Avatar -->
+                <div class="profile-header">
+                    <div class="profile-avatar">
+                        <i class="fa-solid fa-user-gear"></i>
+                    </div>
+                    <div class="profile-title">
+                        <h2>Datos del Usuario</h2>
+                        <p class="text-muted small mb-0">Gestiona tus datos de cuenta y contacto</p>
+                    </div>
+                </div>
+
+                <form>
+                    <div class="perfil-grid">
+
+                        <div class="campo">
+                            <label for="nombre">Nombre Completo</label>
+                            <div class="input-icon-wrapper">
+                                <i class="fa-solid fa-user input-icon"></i>
+                                <input id="nombre" type="text" placeholder="Tu nombre completo" required>
+                            </div>
+                        </div>
+
+                        <div class="campo">
+                            <label for="email">Correo Electrónico</label>
+                            <div class="input-icon-wrapper">
+                                <i class="fa-solid fa-envelope input-icon"></i>
+                                <input id="email" type="email" placeholder="ejemplo@correo.com" required>
+                            </div>
+                        </div>
+
+                        <div class="campo">
+                            <label for="tipoDocumento">Tipo Documento</label>
+                            <div class="input-icon-wrapper">
+                                <i class="fa-solid fa-address-card input-icon"></i>
+                                <input id="tipoDocumento" type="text" placeholder="Ej. Cédula de Ciudadanía">
+                            </div>
+                        </div>
+
+                        <div class="campo">
+                            <label for="numeroDocumento">Número Documento</label>
+                            <div class="input-icon-wrapper">
+                                <i class="fa-solid fa-hashtag input-icon"></i>
+                                <input id="numeroDocumento" type="text" placeholder="Ej. 1020304050">
+                            </div>
+                        </div>
+
+                        <div class="campo">
+                            <label for="telefono">Teléfono</label>
+                            <div class="input-icon-wrapper">
+                                <i class="fa-solid fa-phone input-icon"></i>
+                                <input id="telefono" type="text" placeholder="Ej. 3001234567">
+                            </div>
+                        </div>
+
+                        <div class="campo">
+                            <label for="ciudad">Ciudad</label>
+                            <div class="input-icon-wrapper">
+                                <i class="fa-solid fa-city input-icon"></i>
+                                <input id="ciudad" type="text" placeholder="Ej. Medellín">
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Botones y Mensaje -->
+                    <div class="profile-actions-wrapper">
+                        <button id="guardarPerfil" type="submit" class="btn-guardar">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Cambios
+                        </button>
+
+                        <button id="cancelarPerfil" type="button" class="btn-outline">
+                            Cancelar
+                        </button>
+                    </div>
+
+                    <p id="mensajePerfil" role="status" aria-live="polite" class="mensaje-estado"></p>
+                </form>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-col">
+                <div class="logo-footer">
+                    <i class="fa-solid fa-heart-pulse"></i>
+                    <span>SaludClick</span>
+                </div>
+                <p>Tu bienestar, a un solo clic.</p>
+            </div>
+            <div class="footer-col">
+                <p><i class="fa-solid fa-location-dot"></i> Medellín - Colombia</p>
+                <p><i class="fa-solid fa-shield-halved"></i> Plataforma de demostración</p>
+            </div>
+            <div class="footer-col">
+                <p>Accesos rápidos</p>
+                <div class="redes">
+                    <a href="dashboard.html" aria-label="Inicio"><i class="fa-solid fa-house"></i></a>
+                    <a href="medicamentos.html" aria-label="Medicamentos"><i class="fa-solid fa-pills"></i></a>
+                    <a href="pedidos.html" aria-label="Pedidos"><i class="fa-solid fa-cart-shopping"></i></a>
+                    <a href="formulas.html" aria-label="Fórmulas"><i class="fa-solid fa-file-medical"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2026 SaludClick · Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- SCRIPTS -->
+    <script type="module" src="../js/perfil.js"></script>
+    <script type="module" src="../js/menu.js"></script>
+    <script type="module" src="../js/main.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Pedidos | SaludClick</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+</head>
+
+<body>
+
+<header class="navbar">
+    <div class="container nav-container">
+
+        <div class="logo">
+            <i class="fa-solid fa-heart-pulse"></i>
+            <span>SaludClick</span>
+        </div>
+
+        <button
+            type="button"
+            class="menu-toggle"
+            id="menuToggle"
+            aria-label="Abrir menú"
+        >
+            <i class="fa-solid fa-bars"></i>
+        </button>
+
+        <nav id="menu">
+            <a href="dashboard.html">Inicio</a>
+            <a href="medicamentos.html">Medicamentos</a>
+            <a href="pedidos.html" class="active">Pedidos</a>
+            <a href="historial.html">Historial</a>
+            <a href="perfil.html">Perfil</a>
+        </nav>
+
+    </div>
+</header>
+
+
+<section class="checkout-hero">
+    <div class="container">
+
+        <div class="checkout-hero-content">
+
+            <div class="checkout-hero-icon">
+                <i class="fa-solid fa-cart-shopping"></i>
+            </div>
+
+            <div>
+                <span class="checkout-hero-badge">
+                    <i class="fa-solid fa-bag-shopping"></i>
+                    Compra segura
+                </span>
+
+                <h1>Finaliza tu pedido</h1>
+
+                <p>
+                    Revisa tus productos, selecciona la entrega
+                    y completa tu compra de forma sencilla.
+                </p>
+            </div>
+
+        </div>
+
+    </div>
+</section>
+
+
+<main class="checkout-main">
+
+    <div class="container">
+
+
+        <!-- CARRITO -->
+        <section id="checkout" class="checkout-card">
+
+            <div class="checkout-card-header">
+
+                <div>
+                    <span class="checkout-kicker">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                        Tu compra
+                    </span>
+
+                    <h2>Resumen del pedido</h2>
+
+                    <p>
+                        Comprueba los productos y el total antes de continuar.
+                    </p>
+                </div>
+
+                <div class="checkout-security">
+                    <i class="fa-solid fa-shield-heart"></i>
+
+                    <div>
+                        <strong>Compra segura</strong>
+                        <span>Pago simulado</span>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <div class="cart-container">
+
+                <div class="cart-table-wrapper">
+
+                    <table class="checkout-cart-table">
+
+                        <thead>
+                            <tr>
+                                <th>Medicamento</th>
+                                <th>Cantidad</th>
+                                <th>Precio</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="carritoPedido"></tbody>
+
+                    </table>
+
+                </div>
+
+
+                <div class="checkout-total">
+
+                    <div>
+                        <span>Total de la compra</span>
+                        <small>Impuestos y costos según configuración del pedido</small>
+                    </div>
+
+                    <strong id="totalPedido">$0</strong>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ENTREGA + PAGO -->
+        <section class="checkout-options">
+
+
+            <!-- ENTREGA -->
+            <div class="checkout-panel">
+
+                <div class="checkout-panel-header">
+
+                    <div class="checkout-panel-icon delivery-icon">
+                        <i class="fa-solid fa-truck-fast"></i>
+                    </div>
+
+                    <div>
+                        <span>01</span>
+                        <h3>Información de entrega</h3>
+                        <p>
+                            Indica cómo deseas recibir tu pedido.
+                        </p>
+                    </div>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="tipoEntrega">
+                        Tipo de entrega
+                    </label>
+
+                    <div class="input-icon">
+
+                        <i class="fa-solid fa-location-dot"></i>
+
+                        <select id="tipoEntrega">
+
+                            <option value="RECOGER">
+                                Recoger en farmacia
+                            </option>
+
+                            <option value="DOMICILIO">
+                                Domicilio
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="direccion">
+                        Dirección
+                    </label>
+
+                    <div class="input-icon">
+
+                        <i class="fa-solid fa-house"></i>
+
+                        <input
+                            id="direccion"
+                            type="text"
+                            placeholder="Solo para domicilio"
+                            autocomplete="street-address"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="observaciones">
+                        Observaciones
+                    </label>
+
+                    <textarea
+                        id="observaciones"
+                        rows="4"
+                        placeholder="Información adicional para tu pedido..."
+                    ></textarea>
+
+                </div>
+
+
+                <div class="delivery-info">
+
+                    <i class="fa-solid fa-circle-info"></i>
+
+                    <span>
+                        Si seleccionas domicilio, recuerda ingresar
+                        una dirección válida.
+                    </span>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- PAGO -->
+            <div class="checkout-panel payment-panel">
+
+                <div class="checkout-panel-header">
+
+                    <div class="checkout-panel-icon payment-icon">
+                        <i class="fa-solid fa-credit-card"></i>
+                    </div>
+
+                    <div>
+                        <span>02</span>
+                        <h3>Información de pago</h3>
+                        <p>
+                            Pasarela de pago exclusivamente para demostración.
+                        </p>
+                    </div>
+
+                </div>
+
+
+                <div class="payment-security">
+
+                    <div class="payment-security-icon">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+
+                    <div>
+
+                        <strong>Pago 100% simulado</strong>
+
+                        <p>
+                            No se realiza ningún cobro real.
+                            Usa la tarjeta de prueba indicada.
+                        </p>
+
+                        <div class="test-card">
+                            <i class="fa-regular fa-credit-card"></i>
+
+                            <span>
+                                4242 4242 4242 4242
+                            </span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="titular">
+                        Titular de la tarjeta
+                    </label>
+
+                    <div class="input-icon">
+
+                        <i class="fa-solid fa-user"></i>
+
+                        <input
+                            id="titular"
+                            type="text"
+                            autocomplete="cc-name"
+                            placeholder="Nombre del titular"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="numero">
+                        Número de tarjeta
+                    </label>
+
+                    <div class="input-icon">
+
+                        <i class="fa-regular fa-credit-card"></i>
+
+                        <input
+                            id="numero"
+                            type="text"
+                            inputmode="numeric"
+                            maxlength="19"
+                            placeholder="4242 4242 4242 4242"
+                            autocomplete="cc-number"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <div class="payment-fields">
+
+                    <div class="form-group">
+
+                        <label for="vencimiento">
+                            Vencimiento
+                        </label>
+
+                        <input
+                            id="vencimiento"
+                            type="text"
+                            placeholder="12/30"
+                            maxlength="5"
+                            autocomplete="cc-exp"
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="cvv">
+                            CVV
+                        </label>
+
+                        <input
+                            id="cvv"
+                            type="password"
+                            inputmode="numeric"
+                            maxlength="4"
+                            placeholder="123"
+                            autocomplete="off"
+                        >
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ACCIONES -->
+        <section class="checkout-final">
+
+            <div class="checkout-final-info">
+
+                <div class="checkout-final-icon">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+
+                <div>
+                    <strong>Listo para finalizar</strong>
+
+                    <p>
+                        Revisa tu información antes de confirmar
+                        el pedido.
+                    </p>
+                </div>
+
+            </div>
+
+
+            <button
+                id="pagarPedido"
+                type="button"
+                class="checkout-pay-button"
+            >
+
+                <i class="fa-solid fa-lock"></i>
+
+                <span>Pagar y crear pedido</span>
+
+                <i class="fa-solid fa-arrow-right"></i>
+
+            </button>
+
+        </section>
+
+
+        <p
+            id="mensajeCheckout"
+            class="checkout-message"
+            role="status"
+            aria-live="polite"
+        ></p>
+
+
+        <div id="resultadoPago" hidden></div>
+
+
+
+        <!-- HISTORIAL -->
+        <section class="orders-history">
+
+            <div class="orders-history-header">
+
+                <div>
+
+                    <span class="checkout-kicker">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        Actividad
+                    </span>
+
+                    <h2>Mis pedidos</h2>
+
+                    <p>
+                        Consulta las compras realizadas desde SaludClick.
+                    </p>
+
+                </div>
+
+                <a href="historial.html" class="history-button">
+                    Ver historial completo
+                    <i class="fa-solid fa-arrow-right"></i>
+                </a>
+
+            </div>
+
+
+            <div class="orders-table-wrapper">
+
+                <table class="orders-table">
+
+                    <thead>
+
+                        <tr>
+                            <th>ID</th>
+                            <th>Fecha</th>
+                            <th>Total</th>
+                            <th>Estado</th>
+                            <th>Pago</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="tablaPedidos"></tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+    </div>
+
+</main>
+
+
+<footer class="footer"><div class="container footer-container">
+<div class="footer-col"><div class="logo-footer"><i class="fa-solid fa-heart-pulse"></i><span>SaludClick</span></div><p>Tu bienestar, a un solo clic.</p></div>
+<div class="footer-col"><p><i class="fa-solid fa-location-dot"></i> Medellín - Colombia</p><p><i class="fa-solid fa-shield-halved"></i> Plataforma de demostración</p></div>
+<div class="footer-col"><p>Accesos rápidos</p><div class="redes"><a href="dashboard.html" aria-label="Inicio"><i class="fa-solid fa-house"></i></a><a href="medicamentos.html" aria-label="Medicamentos"><i class="fa-solid fa-pills"></i></a><a href="pedidos.html" aria-label="Pedidos"><i class="fa-solid fa-cart-shopping"></i></a><a href="formulas.html" aria-label="Fórmulas"><i class="fa-solid fa-file-medical"></i></a></div></div>
+</div><div class="footer-bottom"><p>© 2026 SaludClick · Todos los derechos reservados.</p></div></footer>
+
+
+<script type="module" src="../js/pedidos.js"></script>
+<script type="module" src="../js/menu.js"></script>
+
+</body>
+</html>

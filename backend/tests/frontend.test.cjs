@@ -1,4 +1,4 @@
-const { test } = require('node:test');
+﻿const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -6,16 +6,16 @@ const os = require('node:os');
 const http = require('node:http');
 const { spawn } = require('node:child_process');
 
-// Navegador aislado y servidor estático: no accede a MySQL ni usa sesiones reales.
+// Navegador aislado y servidor estÃ¡tico: no accede a MySQL ni usa sesiones reales.
 test('controles del frontend en Edge headless', { timeout: 120000 }, async t => {
     const edge = process.env.EDGE_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
-    if (!fs.existsSync(edge)) { t.skip('Microsoft Edge no está instalado; define EDGE_PATH para ejecutar esta prueba.'); return; }
-    const root = path.resolve(__dirname, '../../frontend');
+    if (!fs.existsSync(edge)) { t.skip('Microsoft Edge no estÃ¡ instalado; define EDGE_PATH para ejecutar esta prueba.'); return; }
+    const root = path.resolve(__dirname, '../../frontend/public');
     let loginCorrecto = false;
     const server = http.createServer((req, res) => {
         const pathname = new URL(req.url, 'http://localhost').pathname;
         if (pathname === '/api/auth/login' && loginCorrecto) {
-            // Respuesta controlada únicamente en este servidor de pruebas.
+            // Respuesta controlada Ãºnicamente en este servidor de pruebas.
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true, token: 'frontend-test-only', usuario: { nombre: 'Prueba', correo: 'prueba@example.com' } }));
             return;
@@ -76,30 +76,30 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     const state = () => evaluate(`JSON.parse(localStorage.getItem('saludclick_pedido_temporal_v1'))`);
     await go('/index.html');
     await evaluate(`localStorage.setItem('saludclick_token', 'frontend-test-only'); localStorage.setItem('saludclick_user', JSON.stringify({nombre:'Prueba',correo:'prueba@example.com'}))`);
-    await t.test('inicio: buscar, Enter, vacío, solicitar y servicios', async () => {
+    await t.test('inicio: buscar, Enter, vacÃ­o, solicitar y servicios', async () => {
         await click('#buscarInicio'); assert.equal(await evaluate('location.pathname'), '/index.html');
         assert.ok(await evaluate('document.querySelector("#buscadorInicio").validationMessage'));
         await value('#buscadorInicio', 'acetaminofen'); await click('#buscarInicio');
         await until(async () => { try { return (await visibleNames()).length === 1; } catch { return false; } });
-        assert.deepEqual(await visibleNames(), ['Acetaminofén']);
+        assert.deepEqual(await visibleNames(), ['AcetaminofÃ©n']);
         assert.equal(await evaluate('location.search'), '?buscar=acetaminofen');
         await go('/index.html'); await value('#buscadorInicio', 'acetaminofen'); await enter('#buscadorInicio');
         await until(async () => { try { return (await visibleNames()).length === 1; } catch { return false; } });
-        assert.deepEqual(await visibleNames(), ['Acetaminofén']);
+        assert.deepEqual(await visibleNames(), ['AcetaminofÃ©n']);
         await go('/index.html'); await click('.hero-botones a');
         await until(async () => { try { return (await visibleNames()).length === 5; } catch { return false; } });
         await go('/index.html'); await click('.hero-botones a[href="#servicios"]');
         await until(() => evaluate('scrollY > 0'));
         assert.equal(await evaluate('getComputedStyle(document.documentElement).scrollBehavior'), 'smooth');
-        for (const action of ['domicilio', 'formula']) { await click(`[data-servicio="${action}"]`); assert.match(await evaluate('document.querySelector("#mensajeServicio").textContent'), /no está disponible/); }
+        for (const action of ['domicilio', 'formula']) { await click(`[data-servicio="${action}"]`); assert.match(await evaluate('document.querySelector("#mensajeServicio").textContent'), /no estÃ¡ disponible/); }
     });
     await go('/pages/medicamentos.html');
-    await t.test('cinco búsquedas por nombre, Enter, limpiar y parámetro', async () => {
+    await t.test('cinco bÃºsquedas por nombre, Enter, limpiar y parÃ¡metro', async () => {
         assert.equal((await visibleNames()).length, 5);
-        for (const [query, expected] of [['acetaminofen','Acetaminofén'],['IBUPROFENO','Ibuprofeno'],['loratadina','Loratadina'],['Omeprazol','Omeprazol'],['Amoxicilina','Amoxicilina']]) {
+        for (const [query, expected] of [['acetaminofen','AcetaminofÃ©n'],['IBUPROFENO','Ibuprofeno'],['loratadina','Loratadina'],['Omeprazol','Omeprazol'],['Amoxicilina','Amoxicilina']]) {
             await value('#buscadorMedicamentos', query); await click('#buscarMedicamentos'); assert.deepEqual(await visibleNames(), [expected]);
         }
-        await value('#buscadorMedicamentos','Acetaminofén'); await enter('#buscadorMedicamentos'); assert.deepEqual(await visibleNames(),['Acetaminofén']);
+        await value('#buscadorMedicamentos','AcetaminofÃ©n'); await enter('#buscadorMedicamentos'); assert.deepEqual(await visibleNames(),['AcetaminofÃ©n']);
         await value('#buscadorMedicamentos','500 mg'); await click('#buscarMedicamentos'); assert.equal((await visibleNames()).length,0);
         await click('#limpiarMedicamentos'); assert.equal((await visibleNames()).length,5);
         await go('/pages/medicamentos.html?buscar=IBUPROFENO'); assert.deepEqual(await visibleNames(),['Ibuprofeno']);
@@ -110,14 +110,14 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         for (const id of [1,2,3,4,5]) await click(`[data-medicamento-id="${id}"]`);
         assert.equal((await state()).borrador.length,5);
         await click('[data-medicamento-id="1"]'); assert.equal((await state()).borrador.length,5); assert.equal((await state()).borrador[0].cantidad,2);
-        await click('[aria-label="Aumentar Acetaminofén"]'); assert.equal((await state()).borrador[0].cantidad,3);
-        await click('[aria-label="Disminuir Acetaminofén"]'); await click('[aria-label="Disminuir Acetaminofén"]'); assert.equal((await state()).borrador[0].cantidad,1);
-        assert.equal(await evaluate(`document.querySelector('[aria-label="Disminuir Acetaminofén"]').disabled`),true);
-        await value('[aria-label="Cantidad de Acetaminofén"]','-2');
-        await evaluate(`document.querySelector('[aria-label="Cantidad de Acetaminofén"]').dispatchEvent(new Event("change"))`);
+        await click('[aria-label="Aumentar AcetaminofÃ©n"]'); assert.equal((await state()).borrador[0].cantidad,3);
+        await click('[aria-label="Disminuir AcetaminofÃ©n"]'); await click('[aria-label="Disminuir AcetaminofÃ©n"]'); assert.equal((await state()).borrador[0].cantidad,1);
+        assert.equal(await evaluate(`document.querySelector('[aria-label="Disminuir AcetaminofÃ©n"]').disabled`),true);
+        await value('[aria-label="Cantidad de AcetaminofÃ©n"]','-2');
+        await evaluate(`document.querySelector('[aria-label="Cantidad de AcetaminofÃ©n"]').dispatchEvent(new Event("change"))`);
         assert.equal((await state()).borrador[0].cantidad,1);
         await go('/pages/medicamentos.html'); assert.equal((await state()).borrador.length,5); assert.equal(await evaluate('document.querySelector("#totalSeleccionado").textContent'),'5');
-        await click('[aria-label="Eliminar Acetaminofén"]'); assert.equal((await state()).borrador.length,4);
+        await click('[aria-label="Eliminar AcetaminofÃ©n"]'); assert.equal((await state()).borrador.length,4);
         await click('#vaciarPedido'); assert.equal((await state()).borrador.length,0);
         assert.equal(await evaluate('document.querySelector("#confirmarPedido").disabled'),true);
     });
@@ -132,14 +132,14 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         assert.ok((await evaluate('document.querySelector("#tablaPedidos").textContent')).includes(pedido.id));
         await go('/pages/historial.html'); assert.ok((await evaluate('document.querySelector("#tablaHistorial").textContent')).includes(pedido.id));
     });
-    await t.test('perfil: validación, guardar sin falso éxito y cancelar', async () => {
+    await t.test('perfil: validaciÃ³n, guardar sin falso Ã©xito y cancelar', async () => {
         await go('/pages/perfil.html'); assert.equal(await evaluate('document.querySelector("#email").value'),'prueba@example.com');
         await value('#nombre','Editado'); await click('#guardarPerfil');
-        assert.match(await evaluate('document.querySelector("#mensajePerfil").textContent'),/servicio de datos no está disponible/);
+        assert.match(await evaluate('document.querySelector("#mensajePerfil").textContent'),/servicio de datos no estÃ¡ disponible/);
         assert.equal(await evaluate('JSON.parse(localStorage.getItem("saludclick_user")).nombre'),'Prueba');
         await click('#cancelarPerfil'); assert.equal(await evaluate('document.querySelector("#nombre").value'),'Prueba');
     });
-    await t.test('menús móviles, navegación local y dashboard sin listeners duplicados', async () => {
+    await t.test('menÃºs mÃ³viles, navegaciÃ³n local y dashboard sin listeners duplicados', async () => {
         await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
         for (const route of ['/index.html','/pages/medicamentos.html','/pages/pedidos.html','/pages/historial.html','/pages/perfil.html']) {
             await go(route); await click('#menuToggle'); assert.equal(await evaluate('getComputedStyle(document.querySelector("#menu")).display'),'flex');
@@ -154,21 +154,21 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         await click('#logoutDropdown'); await until(() => evaluate('location.pathname === "/login.html"'));
         assert.equal(await evaluate('localStorage.getItem("saludclick_token")'),null); assert.ok(await state());
     });
-    await t.test('registro: contraseñas, documentos y error real de servicio', async () => {
+    await t.test('registro: contraseÃ±as, documentos y error real de servicio', async () => {
         await go('/registro.html'); await click('#mostrarPassword'); assert.equal(await evaluate('document.querySelector("#password").type'),'text');
         await click('#mostrarConfirmarPassword'); assert.equal(await evaluate('document.querySelector("#confirmarPassword").type'),'text');
-        for (const type of ['terminos','privacidad']) { await click(`[data-aviso-legal="${type}"]`); assert.match(await evaluate('document.querySelector("#avisoLegal").textContent'),/no está publicado/); }
+        for (const type of ['terminos','privacidad']) { await click(`[data-aviso-legal="${type}"]`); assert.match(await evaluate('document.querySelector("#avisoLegal").textContent'),/no estÃ¡ publicado/); }
         for (const [id,text] of [['nombre','Prueba Local'],['correo','prueba@example.com'],['telefono','3001234567'],['numeroDocumento','123456'],['password','passwordtest'],['confirmarPassword','passwordtest']]) await value('#'+id,text);
         await click('#aceptoTerminos'); await click('button[type="submit"]'); await until(() => dialogs.some(s=>s.includes('Servicio de datos no disponible')));
         assert.equal(await evaluate('location.pathname'),'/registro.html');
     });
-    await t.test('sesión temporal, persistente y logout usan las claves existentes', async () => {
+    await t.test('sesiÃ³n temporal, persistente y logout usan las claves existentes', async () => {
         const result = await evaluate(`(async()=>{ const a=await import('/js/auth.js'); a.setSession('test-session',{nombre:'Temporal'},false); const temporal=sessionStorage.getItem('saludclick_token')==='test-session' && localStorage.getItem('saludclick_token')===null && a.getToken()==='test-session'; a.setSession('test-persist',{nombre:'Persistente'},true); return temporal && localStorage.getItem('saludclick_token')==='test-persist' && sessionStorage.getItem('saludclick_token')===null; })()`);
         assert.equal(result,true);
         await go('/pages/dashboard.html'); await click('#logoutSidebar'); await until(() => evaluate('location.pathname === "/login.html"'));
         assert.equal(await evaluate('localStorage.getItem("saludclick_token") || sessionStorage.getItem("saludclick_token")'),null);
     });
-    await t.test('login, recuperación y restablecer no simulan éxito con servicio caído', async () => {
+    await t.test('login, recuperaciÃ³n y restablecer no simulan Ã©xito con servicio caÃ­do', async () => {
         for (const item of [
             { route: '/login.html', fields: [['email','prueba@example.com'],['password','passwordtest']] },
             { route: '/recuperar.html', fields: [['emailRecuperar','prueba@example.com']] },
@@ -183,10 +183,10 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
             assert.equal(await evaluate('location.pathname'),item.route.split('?')[0]);
         }
     });
-    await t.test('todos los enlaces internos, scripts y tipos de botón existen', async () => {
+    await t.test('todos los enlaces internos, scripts y tipos de botÃ³n existen', async () => {
         const routes = fs.readdirSync(root).filter(f=>f.endsWith('.html')).map(f=>'/'+f)
             .concat(fs.readdirSync(path.join(root,'pages')).filter(f=>f.endsWith('.html')).map(f=>'/pages/'+f));
-        // Sesión ficticia únicamente en el perfil aislado de esta prueba.
+        // SesiÃ³n ficticia Ãºnicamente en el perfil aislado de esta prueba.
         await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only')`);
         for (const route of routes) {
             if (route === '/restablecer.html') await go(route+'?token=frontend-test-only');
@@ -212,7 +212,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         await value('#email','prueba@example.com'); await value('#password','passwordtest');
         await click('button[type="submit"]');
     }
-    await t.test('sin sesión: buscar/Enter, solicitar, consultar, estado e historial vuelven a su destino tras login', async () => {
+    await t.test('sin sesiÃ³n: buscar/Enter, solicitar, consultar, estado e historial vuelven a su destino tras login', async () => {
         for (const item of [
             { selector: '#buscarInicio', query: 'acetaminofen', destino: '/pages/medicamentos.html?buscar=acetaminofen' },
             { selector: '#buscadorInicio', enter: true, query: 'acetaminofen', destino: '/pages/medicamentos.html?buscar=acetaminofen' },
@@ -229,19 +229,19 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
             await login(); await esperarPagina(item.destino);
             assert.equal(await evaluate('location.pathname + location.search'),item.destino);
             assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),null);
-            if (item.query) assert.deepEqual(await visibleNames(),['Acetaminofén']);
+            if (item.query) assert.deepEqual(await visibleNames(),['AcetaminofÃ©n']);
         }
     });
-    await t.test('domicilio y fórmula requieren login antes de mostrar indisponibilidad', async () => {
+    await t.test('domicilio y fÃ³rmula requieren login antes de mostrar indisponibilidad', async () => {
         for (const accion of ['domicilio','formula']) {
             await go('/index.html'); await sinSesion(); await click(`[data-servicio="${accion}"]`);
             await esperarPagina('/login.html');
             assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),`/index.html?accion=${accion}#servicios`);
             await login(); await esperarPagina('/index.html');
-            assert.match(await evaluate('document.querySelector("#mensajeServicio").textContent'),/no está disponible/);
+            assert.match(await evaluate('document.querySelector("#mensajeServicio").textContent'),/no estÃ¡ disponible/);
         }
     });
-    await t.test('las cinco páginas privadas recuerdan accesos directos y no entran en bucle', async () => {
+    await t.test('las cinco pÃ¡ginas privadas recuerdan accesos directos y no entran en bucle', async () => {
         for (const pagina of ['dashboard','medicamentos','pedidos','historial','perfil']) {
             await go('/index.html'); await sinSesion();
             const route = `/pages/${pagina}.html`;
@@ -251,7 +251,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
             assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),null);
         }
     });
-    await t.test('login fallido y recarga conservan destino; éxito lo consume una sola vez', async () => {
+    await t.test('login fallido y recarga conservan destino; Ã©xito lo consume una sola vez', async () => {
         await go('/index.html'); await sinSesion(); await click('[data-servicio="pedidos"]'); await esperarPagina('/login.html');
         loginCorrecto = false;
         await value('#email','prueba@example.com'); await value('#password','incorrecta');
@@ -270,8 +270,8 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         await login(); await esperarPagina('/pages/dashboard.html');
         assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),null);
     });
-    await t.test('sin sesión no se modifica el pedido aunque la página ya estuviera abierta', async () => {
-        for (const selector of ['[data-medicamento-id="1"]','[aria-label="Aumentar Acetaminofén"]','[aria-label="Disminuir Acetaminofén"]','[aria-label="Eliminar Acetaminofén"]','#vaciarPedido','#confirmarPedido']) {
+    await t.test('sin sesiÃ³n no se modifica el pedido aunque la pÃ¡gina ya estuviera abierta', async () => {
+        for (const selector of ['[data-medicamento-id="1"]','[aria-label="Aumentar AcetaminofÃ©n"]','[aria-label="Disminuir AcetaminofÃ©n"]','[aria-label="Eliminar AcetaminofÃ©n"]','#vaciarPedido','#confirmarPedido']) {
             await go('/pages/medicamentos.html');
             if (!(await state()).borrador.some(item=>item.id===1)) await click('[data-medicamento-id="1"]');
             await click('[data-medicamento-id="1"]');
@@ -280,7 +280,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
             await login(); await esperarPagina('/pages/medicamentos.html');
         }
     });
-    await t.test('sesión: cinco medicamentos, confirmar, logout limpia destino y volver exige login', async () => {
+    await t.test('sesiÃ³n: cinco medicamentos, confirmar, logout limpia destino y volver exige login', async () => {
         await go('/pages/medicamentos.html'); await click('#vaciarPedido');
         for (const id of [1,2,3,4,5]) await click(`[data-medicamento-id="${id}"]`);
         assert.equal((await state()).borrador.length,5);
@@ -306,7 +306,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         await send('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...point});
         await send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...point});
     }
-    await t.test('clics de ratón reales en los cinco servicios privados sin sesión', async () => {
+    await t.test('clics de ratÃ³n reales en los cinco servicios privados sin sesiÃ³n', async () => {
         await send('Emulation.setDeviceMetricsOverride',{width:1280,height:900,deviceScaleFactor:1,mobile:false});
         for (const [accion,destino] of [
             ['medicamentos','/pages/medicamentos.html'],['domicilio','/index.html?accion=domicilio#servicios'],
@@ -322,21 +322,21 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
             t.diagnostic(`${accion}: clic real -> ${await evaluate('location.href')}`);
         }
     });
-    await t.test('clic real en Contactar sin autenticación solicita abrir el correo', async () => {
+    await t.test('clic real en Contactar sin autenticaciÃ³n solicita abrir el correo', async () => {
         await abrirInicioReal(); await evaluate(`sessionStorage.clear(); localStorage.removeItem('saludclick_token')`); await abrirInicioReal();
         await mouseClick('#servicios [data-servicio="contacto"]');
         await until(()=>navigationRequests.includes('mailto:contacto@saludclick.com'));
         assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),null);
         t.diagnostic('Contactar: clic real -> mailto:contacto@saludclick.com (sin enviar correo)');
     });
-    await t.test('clics reales en Iniciar Sesión y Registrarse', async () => {
+    await t.test('clics reales en Iniciar SesiÃ³n y Registrarse', async () => {
         for (const [href,destino] of [['login.html','/login.html'],['registro.html','/registro.html']]) {
             await abrirInicioReal(); await evaluate(`sessionStorage.clear(); localStorage.removeItem('saludclick_token')`); await abrirInicioReal();
             await mouseClick(`.botones-nav a[href="${href}"]`); await esperarPagina(destino);
             t.diagnostic(`${href}: clic real -> ${await evaluate('location.href')}`);
         }
     });
-    await t.test('cinco medicamentos de inicio: botones reales sin y con sesión, Ver todos y responsive', async () => {
+    await t.test('cinco medicamentos de inicio: botones reales sin y con sesiÃ³n, Ver todos y responsive', async () => {
         const tarjetas = [
             ['acetaminofen', '/pages/medicamentos.html?buscar=acetaminofen'],
             ['ibuprofeno', '/pages/medicamentos.html?buscar=ibuprofeno'],
@@ -366,7 +366,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         await go('/index.html'); await mouseClick('.medicamentos-ver-todos'); await esperarPagina('/pages/medicamentos.html');
         assert.equal(await evaluate('location.pathname + location.search'),'/pages/medicamentos.html');
     });
-    await t.test('imágenes locales de los cinco medicamentos cargan en Inicio y Medicamentos', async () => {
+    await t.test('imÃ¡genes locales de los cinco medicamentos cargan en Inicio y Medicamentos', async () => {
         await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only'); localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Prueba'}))`);
         await go('/index.html');
         const inicioImagenes = await evaluate(`[...document.querySelectorAll('#catalogoInicio .medicamento-imagen')].map(img=>({src:img.getAttribute('src'),complete:img.complete,width:img.naturalWidth,height:img.naturalHeight}))`);
@@ -379,3 +379,4 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     });
     await t.test('sin excepciones JavaScript propias', () => assert.deepEqual(errors,[]));
 });
+
