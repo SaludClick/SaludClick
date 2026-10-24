@@ -1,25 +1,42 @@
+
 const path = require("path");
-require("dotenv").config({ path: path.join(__dirname, ".env") });
+
+require("dotenv").config({
+    path: path.join(__dirname, ".env")
+});
+
 const app = require("./src/app");
 const pool = require("./src/config/database");
 
 const PORT = process.env.PORT || 3000;
 
 async function startServer() {
+    let client;
+
     try {
-        const connection = await pool.getConnection();
+        client = await pool.connect();
 
-        console.log("✅ Conexión a MySQL exitosa");
+        await client.query("SELECT 1");
 
-        connection.release();
+        console.log("✅ Conexión a Neon PostgreSQL exitosa");
+
+        client.release();
+        client = null;
 
         app.listen(PORT, () => {
-            console.log(`🚀 Servidor ejecutándose en http://localhost:${PORT}`);
+            console.log(
+                `🚀 Servidor ejecutándose en http://localhost:${PORT}`
+            );
         });
-
     } catch (error) {
-        console.error("❌ Error conectando a MySQL:");
+        if (client) {
+            client.release();
+        }
+
+        console.error("❌ Error conectando a Neon PostgreSQL:");
         console.error(error.message);
+
+        process.exitCode = 1;
     }
 }
 
