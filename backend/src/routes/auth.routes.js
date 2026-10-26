@@ -5,12 +5,15 @@ const router = express.Router();
 const { validarJWT } = require("../middlewares/auth.middleware");
 
 const authController = require("../controllers/auth.controller");
+const {
+    verificarRecaptcha
+} = require("../middlewares/recaptcha.middleware");
 
 // Registro
 router.post("/register", authController.register);
 
 // Inicio de sesión
-router.post("/login", authController.login);
+router.post("/login", verificarRecaptcha, authController.login);
 
 // Inicio de sesión con Google
 router.post("/google", authController.googleLogin);

@@ -1,0 +1,205 @@
+
+---
+import Layout from "../../layouts/Layout.astro";
+
+const title = "Gestión de cuentas | SaludClick";
+const bodyClass = "";
+---
+
+<Layout title={title} bodyClass={bodyClass}>
+  <Fragment slot="head">
+    <meta
+      name="description"
+      content="Gestión de cuentas de usuarios y farmacias de SaludClick."
+    />
+  </Fragment>
+
+  <header class="navbar">
+    <div class="container nav-container">
+      <a href="/pages/dashboard" class="logo">
+        <i class="fa-solid fa-heart-pulse"></i>
+        <span>SaludClick</span>
+      </a>
+
+      <button
+        class="menu-toggle"
+        id="menuToggle"
+        type="button"
+        aria-label="Abrir menú"
+        aria-expanded="false"
+        aria-controls="menu"
+      >
+        <i class="fa-solid fa-bars"></i>
+      </button>
+
+      <nav class="main-nav" id="menu">
+        <a class="nav-link" href="/pages/dashboard">
+          <i class="fa-solid fa-house"></i>
+          Inicio
+        </a>
+
+        <a class="nav-link" href="/pages/admin">
+          <i class="fa-solid fa-chart-line"></i>
+          Administración
+        </a>
+
+        <a
+          class="nav-link active"
+          href="/pages/admin-cuentas"
+          aria-current="page"
+        >
+          <i class="fa-solid fa-users-gear"></i>
+          Cuentas
+        </a>
+
+        <button class="nav-link logout-link" id="logout" type="button">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          Cerrar sesión
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-content admin-page">
+    <div class="container">
+      <section class="page-header admin-page-header">
+        <span class="badge">
+          <i class="fa-solid fa-shield-halved"></i>
+          Gestión administrativa
+        </span>
+
+        <h1>Gestión de cuentas</h1>
+
+        <p>
+          Consulta las cuentas de usuarios y farmacias. Las cuentas con
+          pedidos o pagos registrados estarán protegidas contra eliminación.
+        </p>
+
+        <div class="admin-header-meta">
+          <span>
+            <i class="fa-solid fa-database"></i>
+            Cuentas registradas en SaludClick
+          </span>
+
+          <button id="refreshAccounts" class="btn-outline" type="button">
+            <i class="fa-solid fa-rotate"></i>
+            Actualizar
+          </button>
+        </div>
+      </section>
+
+      <div
+        id="accountsMessage"
+        class="admin-message"
+        role="status"
+        aria-live="polite"
+      ></div>
+
+      <section class="admin-stats" id="accountStats">
+        <article class="admin-stat">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <span>Cargando cuentas...</span>
+        </article>
+      </section>
+
+      <section class="card admin-orders-card admin-section">
+        <div class="admin-orders-header">
+          <div>
+            <span class="admin-eyebrow">DIRECTORIO DE CUENTAS</span>
+            <h2>Usuarios y farmacias</h2>
+            <p>Revisa los datos y el historial antes de tomar una decisión.</p>
+          </div>
+        </div>
+
+        <div class="admin-filters">
+          <label for="accountSearch">
+            <span>Buscar cuenta</span>
+            <div class="admin-input-wrap">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input
+                id="accountSearch"
+                type="search"
+                placeholder="Nombre, correo o ID..."
+                autocomplete="off"
+              />
+            </div>
+          </label>
+
+          <label for="accountTypeFilter">
+            <span>Tipo de cuenta</span>
+            <select id="accountTypeFilter">
+              <option value="">Todos los tipos</option>
+              <option value="2">Usuarios</option>
+              <option value="3">Farmacias</option>
+            </select>
+          </label>
+        </div>
+
+        <p id="accountResults" class="admin-results" aria-live="polite">
+          Preparando listado...
+        </p>
+
+        <div class="orders-table-wrapper">
+          <table class="orders-table admin-orders-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Cuenta</th>
+                <th>Tipo</th>
+                <th>Estado</th>
+                <th>Pedidos</th>
+                <th>Pagos</th>
+                <th>Fórmulas</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+
+            <tbody id="accountsTable">
+              <tr>
+                <td colspan="8" class="admin-table-loading">
+                  <i class="fa-solid fa-spinner fa-spin"></i>
+                  Cargando cuentas...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="admin-table-footer">
+          <span>
+            <i class="fa-solid fa-circle-info"></i>
+            Las cuentas con historial comercial no se pueden eliminar desde
+            este panel.
+          </span>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-container">
+      <div class="footer-col brand-col">
+        <div class="logo-footer">
+          <i class="fa-solid fa-heart-pulse"></i>
+          <span>SaludClick</span>
+        </div>
+        <p class="tagline">Tu bienestar, a un solo clic.</p>
+      </div>
+
+      <div class="footer-col contact-col">
+        <p>
+          <i class="fa-solid fa-location-dot"></i>
+          Medellín - Colombia
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; 2026 SaludClick - Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
+  <script is:inline type="module" src="/js/menu.js"></script>
+  <script is:inline type="module" src="/js/admin-cuentas.js"></script>
+  <script is:inline type="module" src="/js/main.js"></script>
+</Layout>
