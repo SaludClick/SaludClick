@@ -1,15 +1,15 @@
-const { test } = require("node:test");
+﻿const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const source = fs.readFileSync(path.join(__dirname, "../../frontend/js/pedido-temporal.js"), "utf8");
+const source = fs.readFileSync(path.join(__dirname, "../../frontend/public/js/pedido-temporal.js"), "utf8");
 const modulePromise = import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`);
 function storage() {
     const values = new Map();
     return { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
 }
 
-test("agrega sin duplicar, actualiza cantidades, elimina y vacía", async () => {
+test("agrega sin duplicar, actualiza cantidades, elimina y vacÃ­a", async () => {
     const m = await modulePromise, s = storage();
     m.actualizarPedido(s, "agregar", 1);
     let state = m.actualizarPedido(s, "agregar", 1);
@@ -24,7 +24,7 @@ test("agrega sin duplicar, actualiza cantidades, elimina y vacía", async () => 
     assert.deepEqual(m.actualizarPedido(s, "vaciar").borrador, []);
 });
 
-test("rechaza cantidades inválidas y medicamentos inexistentes sin guardar", async () => {
+test("rechaza cantidades invÃ¡lidas y medicamentos inexistentes sin guardar", async () => {
     const m = await modulePromise, s = storage();
     m.actualizarPedido(s, "agregar", 1);
     const before = s.getItem(m.STORAGE_KEY);
@@ -35,7 +35,7 @@ test("rechaza cantidades inválidas y medicamentos inexistentes sin guardar", as
     assert.equal(s.getItem(m.STORAGE_KEY), before);
 });
 
-test("confirma con identificador, fecha y cantidades; persiste y no confirma vacío", async () => {
+test("confirma con identificador, fecha y cantidades; persiste y no confirma vacÃ­o", async () => {
     const m = await modulePromise, s = storage();
     assert.throws(() => m.actualizarPedido(s, "confirmar"));
     m.actualizarPedido(s, "agregar", 4);
@@ -68,3 +68,5 @@ test("datos corruptos o manipulados no se sobrescriben", async () => {
         assert.equal(s.getItem(m.STORAGE_KEY), raw);
     }
 });
+
+

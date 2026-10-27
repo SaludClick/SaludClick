@@ -1,28 +1,69 @@
 import { setSession, consumirDestinoPendiente } from "./auth.js";
 
 // ==========================================
+// CONFIGURACIÓN DE RECAPTCHA V3
+// ==========================================
+
+const RECAPTCHA_SITE_KEY =
+    "6LcV6P0tAAAAAFouUz5_1uTOeq2SkWIlvewMiFZw";
+
+function obtenerTokenRecaptcha() {
+    return new Promise((resolve, reject) => {
+        if (!window.grecaptcha) {
+            reject(
+                new Error("reCAPTCHA todavía no está disponible. Recarga la página e inténtalo nuevamente.")
+            );
+            return;
+        }
+
+        window.grecaptcha.ready(async () => {
+            try {
+                const token = await window.grecaptcha.execute(
+                    RECAPTCHA_SITE_KEY,
+                    { action: "login" }
+                );
+
+                if (!token) {
+                    throw new Error("No se pudo completar la validación de seguridad.");
+                }
+
+                resolve(token);
+            } catch (error) {
+                reject(error);
+            }
+        });
+    });
+}
+
+// ==========================================
 // FUNCIÓN PARA OBTENER RUTA SEGÚN ROL
 // ==========================================
 
 function obtenerRutaPorRol(usuario) {
-    const rolId = Number(usuario?.rol_id);
+    const rolId = Number(usuario?.rol_id ?? usuario?.rol);
 
     switch (rolId) {
         case 1: // Administrador
         case 3: // Farmacia / Personal
             return "pages/admin.html";
+
         case 2: // Paciente / Cliente
             return "pages/dashboard.html";
+
         default:
             return "index.html";
     }
 }
 
 // ==========================================
-// FUNCIÓN PARA GUARDAR SESIÓN Y REDIRIGIR
+// GUARDAR SESIÓN Y REDIRIGIR
 // ==========================================
 
-function iniciarSesion(resultado, recordar = true, continuarAccion = false) {
+function iniciarSesion(
+    resultado,
+    recordar = true,
+    continuarAccion = false
+) {
     setSession(
         resultado.token,
         resultado.usuario,
@@ -31,9 +72,12 @@ function iniciarSesion(resultado, recordar = true, continuarAccion = false) {
 
     alert(`¡Bienvenido, ${resultado.usuario.nombre || "Usuario"}!`);
 
-    // Prioriza una ruta pendiente grabada previamente; si no hay, asigna según su rol
-    const destinoPendiente = continuarAccion ? consumirDestinoPendiente() : null;
-    const rutaDestino = destinoPendiente || obtenerRutaPorRol(resultado.usuario);
+    const destinoPendiente = continuarAccion
+        ? consumirDestinoPendiente()
+        : null;
+
+    const rutaDestino =
+        destinoPendiente || obtenerRutaPorRol(resultado.usuario);
 
     window.location.href = rutaDestino;
 }
@@ -57,7 +101,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const passwordInput = document.getElementById("password");
         const recordarInput = document.getElementById("recordar");
 
-        const correo = emailInput?.value.trim().toLowerCase() || "";
+        const correo =
+            emailInput?.value.trim().toLowerCase() || "";
+
         const password = passwordInput?.value || "";
 
         if (!correo || !password) {
@@ -66,12 +112,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
+            const recaptchaToken = await obtenerTokenRecaptcha();
+
             const respuesta = await fetch("/api/auth/login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ correo, password })
+                body: JSON.stringify({
+                    correo,
+                    password,
+                    recaptchaToken
+                })
             });
 
             const resultado = await respuesta.json();
@@ -85,17 +137,24 @@ document.addEventListener("DOMContentLoaded", () => {
             ) {
                 alert(
                     resultado.mensaje ||
-                    "Error al iniciar sesión. Verifique sus credenciales."
+                    "Error al iniciar sesión. Verifica tus credenciales."
                 );
                 return;
             }
 
-            const recordar = recordarInput ? recordarInput.checked : true;
+            const recordar = recordarInput
+                ? recordarInput.checked
+                : true;
+
             iniciarSesion(resultado, recordar, true);
 
         } catch (error) {
             console.error("Error en login:", error);
-            alert("No fue posible conectar con el servidor.");
+
+            alert(
+                error.message ||
+                "No fue posible conectar con el servidor."
+            );
         }
     });
 });
@@ -107,6 +166,7 @@ document.addEventListener("DOMContentLoaded", () => {
 window.handleGoogleCredentialResponse = async function (response) {
     if (!response || !response.credential) {
         console.error("Google no entregó credential:", response);
+
         alert("Google no devolvió una credencial válida.");
         return;
     }
@@ -126,6 +186,7 @@ window.handleGoogleCredentialResponse = async function (response) {
 
         if (!respuesta.ok || !resultado.ok) {
             console.error("Error Google:", resultado);
+
             alert(
                 resultado.mensaje ||
                 "No fue posible iniciar sesión con Google."
@@ -137,6 +198,16 @@ window.handleGoogleCredentialResponse = async function (response) {
 
     } catch (error) {
         console.error("Error en Google Login:", error);
+
         alert("No fue posible conectar con el servidor.");
     }
 };
+
+// ==========================================
+// DIAGNÓSTICO DEL CALLBACK DE GOOGLE
+// ==========================================
+
+console.log(
+    "Callback de Google disponible:",
+    typeof window.handleGoogleCredentialResponse
+);

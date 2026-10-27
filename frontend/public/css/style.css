@@ -3802,7 +3802,7 @@ a {
 
     width: 285px;
 
-    display: flex !important;
+    display: none;
     flex-direction: column;
     gap: 4px;
 
@@ -6179,4 +6179,149 @@ textarea:focus {
         gap: 15px;
     }
 
+}
+
+/* =========================================================
+   SALUDCLICK — REFINAMIENTO VISUAL SEGURO
+   Esta capa solo mejora la presentación. Se conservan las reglas
+   originales, clases, identificadores y estados usados por JavaScript.
+========================================================= */
+:root {
+    --sc-primary: #087f8c;
+    --sc-primary-dark: #066773;
+    --sc-primary-soft: #e7f6f7;
+    --sc-accent: #18a999;
+    --sc-text: #243447;
+    --sc-muted: #64748b;
+    --sc-border: #e2e8f0;
+    --sc-surface: #ffffff;
+    --sc-page: #f4f7fb;
+    --sc-radius: 16px;
+    --sc-shadow: 0 8px 24px rgba(15, 45, 65, .08);
+    --sc-shadow-hover: 0 14px 32px rgba(15, 45, 65, .13);
+}
+
+body {
+    color: var(--sc-text);
+    background-color: var(--sc-page);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #173247;
+    line-height: 1.25;
+    letter-spacing: -.018em;
+}
+
+p { line-height: 1.65; }
+
+img { border-radius: 8px; }
+
+:where(a, button, input, select, textarea) {
+    transition: color .18s ease, background-color .18s ease, border-color .18s ease,
+                box-shadow .18s ease, transform .18s ease;
+}
+
+a { text-underline-offset: 3px; }
+
+:where(button, .btn, [class*="btn-"]) { cursor: pointer; }
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid rgba(8, 127, 140, .3);
+    outline-offset: 3px;
+}
+
+:where(input, select, textarea, .form-control, .form-select) {
+    border-color: #d5dee8;
+    border-radius: 10px;
+}
+
+:where(input, select, textarea, .form-control, .form-select):focus {
+    border-color: var(--sc-primary);
+    box-shadow: 0 0 0 3px rgba(8, 127, 140, .12);
+}
+
+:where(.card, .medicamento-card, .perfil-card, .form-container,
+       .dashboard-profile, .dashboard-info-grid, .dashboard-stat,
+       .servicio-card, .beneficio-card, .page-content, .modal-content) {
+    border-radius: var(--sc-radius);
+}
+
+:where(.card, .medicamento-card, .perfil-card, .form-container,
+       .dashboard-profile, .dashboard-stat, .servicio-card,
+       .beneficio-card, .page-content) {
+    box-shadow: var(--sc-shadow);
+}
+
+:where(.card, .medicamento-card, .servicio-card, .beneficio-card) {
+    border: 1px solid rgba(226, 232, 240, .9);
+}
+
+:where(.card, .medicamento-card, .servicio-card, .beneficio-card):hover {
+    box-shadow: var(--sc-shadow-hover);
+}
+
+:where(.btn-primary, .btn-success, .btn-solicitar-medicamento,
+       .logout-sidebar, .btn-guardar, .btn-confirmar) {
+    font-weight: 650;
+    border-radius: 10px;
+}
+
+.btn-primary {
+    background-color: var(--sc-primary);
+    border-color: var(--sc-primary);
+}
+.btn-primary:hover {
+    background-color: var(--sc-primary-dark);
+    border-color: var(--sc-primary-dark);
+}
+
+:where(.btn-outline, .btn-outline-primary) { border-radius: 10px; }
+
+.navbar {
+    box-shadow: 0 4px 18px rgba(15, 45, 65, .07);
+}
+
+:where(.logo, .navbar .logo) { letter-spacing: -.025em; }
+
+:where(.sidebar, .user-dropdown, .user-menu .dropdown) {
+    box-shadow: 0 12px 30px rgba(15, 45, 65, .12);
+}
+
+:where(.sidebar nav a, .sidebar a, .user-dropdown a, .user-menu .dropdown a) {
+    border-radius: 9px;
+}
+
+:where(.hero, .dashboard-welcome, .dashboard-hero) {
+    border-radius: 20px;
+}
+
+:where(.page-header, .section-heading, .dashboard-section-header) {
+    margin-bottom: 18px;
+}
+
+:where(table, .table) { border-color: var(--sc-border); }
+:where(th, .table th) {
+    color: #334e62;
+    font-weight: 700;
+}
+:where(td, th, .table td, .table th) { vertical-align: middle; }
+
+:where(.badge, .medicamento-estado, [class*="estado-"]) {
+    font-weight: 650;
+    letter-spacing: .01em;
+}
+
+:where(.form-container, .perfil-card, .dashboard-profile) { padding: clamp(18px, 3vw, 30px); }
+
+::selection { background: rgba(24, 169, 153, .2); color: #173247; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+    }
 }

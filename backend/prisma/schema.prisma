@@ -1,0 +1,233 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Categoria {
+  id           Int           @id @default(autoincrement())
+  nombre       String        @unique @db.VarChar(100)
+  descripcion  String?       @db.VarChar(255)
+  created_at   DateTime?     @default(now()) @db.Timestamp(0)
+  updated_at   DateTime?     @default(now()) @db.Timestamp(0)
+  medicamentos Medicamento[]
+
+  @@map("categorias")
+}
+
+model Rol {
+  id          Int       @id @default(autoincrement())
+  nombre      String    @unique @db.VarChar(50)
+  descripcion String?   @db.VarChar(255)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+  updated_at  DateTime? @default(now()) @db.Timestamp(0)
+  usuarios    Usuario[]
+
+  @@map("roles")
+}
+
+model Usuario {
+  id                  Int                 @id @default(autoincrement())
+  nombre              String              @db.VarChar(100)
+  apellido            String              @db.VarChar(100)
+  correo              String              @unique @db.VarChar(150)
+  telefono            String?             @db.VarChar(20)
+  cedula              String?             @unique @db.VarChar(30)
+  tipo_documento      String?             @db.VarChar(10)
+  ciudad              String?             @db.VarChar(100)
+  password            String              @db.VarChar(255)
+  rol_id              Int
+  estado              EstadoUsuario?
+  created_at          DateTime?           @default(now()) @db.Timestamp(0)
+  updated_at          DateTime?           @default(now()) @db.Timestamp(0)
+  pagos               Pago[]
+  recordatorios       Recordatorio[]
+  solicitudes         Solicitud[]
+  tokens_recuperacion TokenRecuperacion[]
+  formulas_medicas    FormulaMedica[]
+  rol                 Rol                 @relation(fields: [rol_id], references: [id])
+
+  @@index([rol_id])
+  @@map("usuarios")
+}
+
+model Medicamento {
+  id                 Int                @id @default(autoincrement())
+  nombre             String             @db.VarChar(150)
+  descripcion        String?
+  categoria_id       Int
+  precio             Decimal            @db.Decimal(10, 2)
+  stock              Int
+  imagen             String?            @db.VarChar(255)
+  estado             EstadoMedicamento? @default(DISPONIBLE)
+  created_at         DateTime?          @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?          @default(now()) @db.Timestamp(0)
+  detalles_solicitud DetalleSolicitud[]
+  categoria          Categoria          @relation(fields: [categoria_id], references: [id])
+  recordatorios      Recordatorio[]
+
+  @@index([categoria_id])
+  @@index([estado])
+  @@map("medicamentos")
+}
+
+model Solicitud {
+  id            Int                @id @default(autoincrement())
+  usuario_id    Int
+  fecha         DateTime?          @default(now()) @db.Timestamp(0)
+  estado        EstadoSolicitud?   @default(PENDIENTE)
+  tipo_entrega  TipoEntrega?
+  direccion     String?            @db.VarChar(255)
+  observaciones String?
+  created_at    DateTime?          @default(now()) @db.Timestamp(0)
+  updated_at    DateTime?          @default(now()) @db.Timestamp(0)
+  detalles      DetalleSolicitud[]
+  pagos         Pago[]
+  usuario       Usuario            @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([estado])
+  @@map("solicitudes")
+}
+
+model DetalleSolicitud {
+  id             Int         @id @default(autoincrement())
+  solicitud_id   Int
+  medicamento_id Int
+  cantidad       Int
+  precio         Decimal     @db.Decimal(10, 2)
+  subtotal       Decimal     @db.Decimal(10, 2)
+  created_at     DateTime?   @default(now()) @db.Timestamp(0)
+  medicamento    Medicamento @relation(fields: [medicamento_id], references: [id])
+  solicitud      Solicitud   @relation(fields: [solicitud_id], references: [id])
+
+  @@index([solicitud_id])
+  @@index([medicamento_id])
+  @@map("detalle_solicitud")
+}
+
+model Pago {
+  id              Int        @id @default(autoincrement())
+  solicitud_id    Int
+  usuario_id      Int
+  referencia      String     @unique @db.VarChar(80)
+  metodo          MetodoPago
+  marca           String     @db.VarChar(30)
+  ultimos_digitos String     @db.Char(4)
+  monto           Decimal    @db.Decimal(10, 2)
+  estado          EstadoPago
+  simulacion      Boolean
+  created_at      DateTime?  @default(now()) @db.Timestamp(0)
+  solicitud       Solicitud  @relation(fields: [solicitud_id], references: [id])
+  usuario         Usuario    @relation(fields: [usuario_id], references: [id])
+
+  @@index([solicitud_id])
+  @@index([usuario_id])
+  @@map("pagos")
+}
+
+model Recordatorio {
+  id             Int                    @id @default(autoincrement())
+  usuario_id     Int
+  medicamento_id Int
+  hora           DateTime               @db.Time(0)
+  frecuencia     FrecuenciaRecordatorio
+  fecha_inicio   DateTime               @db.Date
+  fecha_fin      DateTime?              @db.Date
+  estado         EstadoRecordatorio?    @default(ACTIVO)
+  created_at     DateTime?              @default(now()) @db.Timestamp(0)
+  updated_at     DateTime?              @default(now()) @db.Timestamp(0)
+  medicamento    Medicamento            @relation(fields: [medicamento_id], references: [id])
+  usuario        Usuario                @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([medicamento_id])
+  @@map("recordatorios")
+}
+
+model TokenRecuperacion {
+  id         Int       @id @default(autoincrement())
+  usuario_id Int
+  token_hash String    @unique @db.Char(64)
+  expira_en  DateTime  @db.Timestamp(0)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  usuario    Usuario   @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([expira_en])
+  @@map("tokens_recuperacion")
+}
+
+model playing_with_neon {
+  id    Int    @id @default(autoincrement())
+  name  String
+  value Float? @db.Real
+}
+
+enum EstadoMedicamento {
+  DISPONIBLE
+  AGOTADO
+  INACTIVO
+}
+
+enum MetodoPago {
+  TARJETA
+}
+
+enum EstadoPago {
+  APROBADO
+  RECHAZADO
+  PENDIENTE
+}
+
+enum FrecuenciaRecordatorio {
+  CADA_8_HORAS
+  CADA_12_HORAS
+  CADA_24_HORAS
+}
+
+enum EstadoRecordatorio {
+  ACTIVO
+  INACTIVO
+}
+
+enum EstadoSolicitud {
+  PENDIENTE
+  APROBADA
+  PREPARANDO
+  LISTA
+  ENTREGADA
+  CANCELADA
+}
+
+enum TipoEntrega {
+  RECOGER
+  DOMICILIO
+}
+
+enum EstadoUsuario {
+  ACTIVO
+  INACTIVO
+}
+
+model FormulaMedica {
+  id              Int      @id @default(autoincrement())
+  usuario_id      Int
+  nombre_archivo  String   @db.VarChar(255)
+  nombre_original String   @db.VarChar(180)
+  tipo_mime       String   @db.VarChar(100)
+  ruta_archivo    String   @db.VarChar(500)
+  tamano          Int
+  descripcion     String?
+  estado          String   @default("PENDIENTE") @db.VarChar(20)
+  fecha_subida    DateTime @default(now()) @db.Timestamp(0)
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@index([usuario_id])
+  @@index([estado])
+  @@map("formulas_medicas")
+}

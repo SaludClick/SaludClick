@@ -1,4 +1,3 @@
-
 const pool = require("../config/database");
 
 // LISTAR MEDICAMENTOS
@@ -7,11 +6,10 @@ async function listarMedicamentos(ids) {
         return [];
     }
 
-    const placeholders = ids
-        .map((_, index) => `$${index + 1}`)
-        .join(",");
+    const placeholders =
+        ids.map(() => "?").join(",");
 
-    const result = await pool.query(
+    const [rows] = await pool.query(
         `SELECT
             id,
             nombre,
@@ -26,7 +24,7 @@ async function listarMedicamentos(ids) {
         ids
     );
 
-    return result.rows;
+    return rows;
 }
 
 // CREAR PEDIDO Y PAGO
@@ -39,45 +37,56 @@ async function crearPedidoConPago({
     total,
     pago
 }) {
-    const client = await pool.connect();
+    const connection =
+        await pool.getConnection();
 
     try {
-        await client.query("BEGIN");
+        await connection.beginTransaction();
 
-        // Verificar disponibilidad y bloquear los productos.
+        // -----------------------------------------
+        // VERIFICAR STOCK
+        // -----------------------------------------
+
         for (const item of items) {
-            const result = await client.query(
-                `SELECT id, nombre, precio, stock, estado
-                 FROM medicamentos
-                 WHERE id = $1
-                 FOR UPDATE`,
-                [item.medicamento_id]
-            );
+            const [rows] =
+                await connection.query(
+                    `SELECT
+                        id,
+                        nombre,
+                        precio,
+                        stock,
+                        estado
+                     FROM medicamentos
+                     WHERE id = ?
+                     FOR UPDATE`,
+                    [item.medicamento_id]
+                );
 
-            const medicamento = result.rows[0];
+            const med = rows[0];
 
             if (
-                !medicamento ||
-                medicamento.estado !== "DISPONIBLE"
+                !med ||
+                med.estado !== "DISPONIBLE"
             ) {
                 throw new Error(
-                    `El medicamento ${item.medicamento_id} no está disponible.`
+                    `El medicamento ${medicamentoId} no está disponible.`
                 );
             }
 
-            if (
-                Number(medicamento.stock) <
-                Number(item.cantidad)
-            ) {
+            if (med.stock < item.cantidad) {
                 throw new Error(
                     `Stock insuficiente para ${medicamento.nombre}. Disponible: ${medicamento.stock}.`
                 );
             }
         }
 
-        // Crear solicitud.
-        const pedidoResult = await client.query(
-            `INSERT INTO solicitudes
+        // -----------------------------------------
+        // CREAR SOLICITUD
+        // -----------------------------------------
+
+        const [pedidoResult] =
+            await connection.query(
+                `INSERT INTO solicitudes
                 (
                     usuario_id,
                     estado,
@@ -85,30 +94,33 @@ async function crearPedidoConPago({
                     direccion,
                     observaciones
                 )
-             VALUES ($1, 'APROBADA', $2, $3, $4)
-             RETURNING id`,
-            [
-                usuarioId,
-                tipoEntrega,
-                direccion || null,
-                observaciones || null
-            ]
-        );
+                VALUES (?, 'APROBADA', ?, ?, ?)`,
+                [
+                    usuarioId,
+                    tipoEntrega,
+                    direccion || null,
+                    observaciones || null
+                ]
+            );
 
-        const solicitudId = pedidoResult.rows[0].id;
+        const solicitudId =
+            pedidoResult.insertId;
 
-        // Guardar detalles y descontar inventario.
+        // -----------------------------------------
+        // CREAR DETALLES Y ACTUALIZAR STOCK
+        // -----------------------------------------
+
         for (const item of items) {
-            await client.query(
+            await connection.query(
                 `INSERT INTO detalle_solicitud
-                    (
-                        solicitud_id,
-                        medicamento_id,
-                        cantidad,
-                        precio,
-                        subtotal
-                    )
-                 VALUES ($1, $2, $3, $4, $5)`,
+                (
+                    solicitud_id,
+                    medicamento_id,
+                    cantidad,
+                    precio,
+                    subtotal
+                )
+                VALUES (?, ?, ?, ?, ?)`,
                 [
                     solicitudId,
                     item.medicamento_id,
@@ -118,27 +130,24 @@ async function crearPedidoConPago({
                 ]
             );
 
-            const stockResult = await client.query(
+            await connection.query(
                 `UPDATE medicamentos
-                 SET stock = stock - $1
-                 WHERE id = $2
-                   AND stock >= $1`,
+                 SET stock = stock - ?
+                 WHERE id = ?`,
                 [
                     item.cantidad,
                     item.medicamento_id
                 ]
             );
-
-            if (stockResult.rowCount === 0) {
-                throw new Error(
-                    `No se pudo actualizar el stock del medicamento ${item.medicamento_id}.`
-                );
-            }
         }
 
-        // Registrar el pago simulado.
-        const pagoResult = await client.query(
-            `INSERT INTO pagos
+        // -----------------------------------------
+        // CREAR PAGO
+        // -----------------------------------------
+
+        const [pagoResult] =
+            await connection.query(
+                `INSERT INTO pagos
                 (
                     solicitud_id,
                     usuario_id,
@@ -150,149 +159,218 @@ async function crearPedidoConPago({
                     estado,
                     simulacion
                 )
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1)
-             RETURNING id`,
-            [
-                solicitudId,
-                usuarioId,
-                pago.referencia,
-                pago.metodo,
-                pago.marca,
-                pago.ultimos_digitos,
-                total,
-                pago.estado
-            ]
-        );
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+                [
+                    solicitudId,
+                    usuarioId,
+                    pago.referencia,
+                    pago.metodo,
+                    pago.marca,
+                    pago.ultimos_digitos,
+                    total,
+                    pago.estado
+                ]
+            );
 
-        await client.query("COMMIT");
+        await connection.commit();
 
         return {
             solicitudId,
-            pagoId: pagoResult.rows[0].id
+            pagoId: pagoResult.insertId
         };
+
     } catch (error) {
-        await client.query("ROLLBACK");
+        await connection.rollback();
         throw error;
+
     } finally {
-        client.release();
+        connection.release();
     }
 }
 
 // LISTAR PEDIDOS DEL USUARIO
 async function listarPedidosUsuario(usuarioId) {
-    const result = await pool.query(
-        `SELECT
-            s.id,
-            s.fecha,
-            s.estado,
-            s.tipo_entrega,
-            s.direccion,
-            COALESCE(SUM(ds.subtotal), 0) AS total,
-            p.estado AS pago_estado,
-            p.metodo AS pago_metodo,
-            p.marca AS pago_marca,
-            p.ultimos_digitos
-         FROM solicitudes s
-         LEFT JOIN detalle_solicitud ds
-            ON ds.solicitud_id = s.id
-         LEFT JOIN pagos p
-            ON p.solicitud_id = s.id
-         WHERE s.usuario_id = $1
-         GROUP BY s.id, p.id
-         ORDER BY s.fecha DESC`,
-        [usuarioId]
-    );
+    const [rows] =
+        await pool.query(
+            `SELECT
+                s.id,
+                s.fecha,
+                s.estado,
+                s.tipo_entrega,
+                s.direccion,
 
-    return result.rows;
+                COALESCE(
+                    SUM(ds.subtotal),
+                    0
+                ) AS total,
+
+                p.estado AS pago_estado,
+                p.metodo AS pago_metodo,
+                p.marca AS pago_marca,
+                p.ultimos_digitos
+
+             FROM solicitudes s
+
+             LEFT JOIN detalle_solicitud ds
+                ON ds.solicitud_id = s.id
+
+             LEFT JOIN pagos p
+                ON p.solicitud_id = s.id
+
+             WHERE s.usuario_id = ?
+
+             GROUP BY
+                s.id,
+                p.id
+
+             ORDER BY s.fecha DESC`,
+            [usuarioId]
+        );
+
+    return rows;
 }
 
 // DETALLE DE UN PEDIDO
-async function detallePedidoUsuario(usuarioId, pedidoId) {
-    const result = await pool.query(
-        `SELECT
-            s.id,
-            s.fecha,
-            s.estado,
-            s.tipo_entrega,
-            s.direccion,
-            s.observaciones,
-            ds.medicamento_id,
-            m.nombre,
-            m.imagen,
-            ds.cantidad,
-            ds.precio,
-            ds.subtotal,
-            p.referencia,
-            p.estado AS pago_estado,
-            p.metodo,
-            p.marca,
-            p.ultimos_digitos
-         FROM solicitudes s
-         JOIN detalle_solicitud ds
-            ON ds.solicitud_id = s.id
-         JOIN medicamentos m
-            ON m.id = ds.medicamento_id
-         LEFT JOIN pagos p
-            ON p.solicitud_id = s.id
-         WHERE s.usuario_id = $1
-           AND s.id = $2
-         ORDER BY ds.id`,
-        [usuarioId, pedidoId]
-    );
+// =================================================
 
-    return result.rows;
+async function detallePedidoUsuario(
+    usuarioId,
+    pedidoId
+) {
+    const [rows] =
+        await pool.query(
+            `SELECT
+                s.id,
+                s.fecha,
+                s.estado,
+                s.tipo_entrega,
+                s.direccion,
+                s.observaciones,
+
+                ds.medicamento_id,
+                m.nombre,
+                m.imagen,
+                ds.cantidad,
+                ds.precio,
+                ds.subtotal,
+
+                p.referencia,
+                p.estado AS pago_estado,
+                p.metodo,
+                p.marca,
+                p.ultimos_digitos
+
+             FROM solicitudes s
+
+             JOIN detalle_solicitud ds
+                ON ds.solicitud_id = s.id
+
+             JOIN medicamentos m
+                ON m.id = ds.medicamento_id
+
+             LEFT JOIN pagos p
+                ON p.solicitud_id = s.id
+
+             WHERE
+                s.usuario_id = ?
+                AND s.id = ?
+
+             ORDER BY ds.id`,
+            [
+                usuarioId,
+                pedidoId
+            ]
+        );
+
+    return rows;
 }
 
 // ELIMINAR PEDIDO DEL USUARIO
-async function eliminarPedidoUsuario(usuarioId, pedidoId) {
-    const client = await pool.connect();
+// =================================================
+
+async function eliminarPedidoUsuario(
+    usuarioId,
+    pedidoId
+) {
+    const connection =
+        await pool.getConnection();
 
     try {
-        await client.query("BEGIN");
+        await connection.beginTransaction();
 
-        // Confirmar que el pedido pertenece al usuario.
-        const pedidoResult = await client.query(
-            `SELECT id
-             FROM solicitudes
-             WHERE id = $1
-               AND usuario_id = $2
-             LIMIT 1
-             FOR UPDATE`,
-            [pedidoId, usuarioId]
-        );
+        // -----------------------------------------
+        // VERIFICAR PROPIEDAD DEL PEDIDO
+        // -----------------------------------------
 
-        if (pedidoResult.rowCount === 0) {
-            throw new Error("Pedido no encontrado.");
+        const [pedidos] =
+            await connection.query(
+                `SELECT id
+                 FROM solicitudes
+                 WHERE id = ?
+                   AND usuario_id = ?
+                 LIMIT 1`,
+                [
+                    pedidoId,
+                    usuarioId
+                ]
+            );
+
+        if (!pedidos.length) {
+            throw new Error(
+                "Pedido no encontrado."
+            );
         }
 
-        await client.query(
+        // -----------------------------------------
+        // ELIMINAR PAGO
+        // -----------------------------------------
+
+        await connection.query(
             `DELETE FROM pagos
-             WHERE solicitud_id = $1
-               AND usuario_id = $2`,
-            [pedidoId, usuarioId]
+             WHERE solicitud_id = ?
+               AND usuario_id = ?`,
+            [
+                pedidoId,
+                usuarioId
+            ]
         );
 
-        await client.query(
+        // -----------------------------------------
+        // ELIMINAR DETALLES
+        // -----------------------------------------
+
+        await connection.query(
             `DELETE FROM detalle_solicitud
-             WHERE solicitud_id = $1`,
-            [pedidoId]
+             WHERE solicitud_id = ?`,
+            [
+                pedidoId
+            ]
         );
 
-        await client.query(
+        // -----------------------------------------
+        // ELIMINAR SOLICITUD
+        // -----------------------------------------
+
+        await connection.query(
             `DELETE FROM solicitudes
-             WHERE id = $1
-               AND usuario_id = $2`,
-            [pedidoId, usuarioId]
+             WHERE id = ?
+               AND usuario_id = ?`,
+            [
+                pedidoId,
+                usuarioId
+            ]
         );
 
-        await client.query("COMMIT");
+        await connection.commit();
 
         return true;
+
     } catch (error) {
-        await client.query("ROLLBACK");
+        await connection.rollback();
         throw error;
+
     } finally {
-        client.release();
+        connection.release();
     }
 }
 

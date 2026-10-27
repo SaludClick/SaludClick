@@ -1,12 +1,7 @@
-
 const path = require("path");
-
-require("dotenv").config({
-    path: path.join(__dirname, ".env")
-});
-
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 const app = require("./src/app");
-const pool = require("./src/config/database");
+const prisma = require("./src/config/prisma");
 
 const PORT = process.env.PORT || 3000;
 
@@ -14,14 +9,11 @@ async function startServer() {
     let client;
 
     try {
-        client = await pool.connect();
+        const connection = await pool.getConnection();
 
-        await client.query("SELECT 1");
+        console.log("✅ Conexión a MySQL exitosa");
 
-        console.log("✅ Conexión a Neon PostgreSQL exitosa");
-
-        client.release();
-        client = null;
+        connection.release();
 
         app.listen(PORT, () => {
             console.log(
@@ -29,11 +21,7 @@ async function startServer() {
             );
         });
     } catch (error) {
-        if (client) {
-            client.release();
-        }
-
-        console.error("❌ Error conectando a Neon PostgreSQL:");
+        console.error("❌ Error conectando a MySQL:");
         console.error(error.message);
 
         process.exitCode = 1;
@@ -41,3 +29,11 @@ async function startServer() {
 }
 
 startServer();
+
+async function shutdown() {
+    await prisma.$disconnect();
+    process.exit(0);
+}
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);

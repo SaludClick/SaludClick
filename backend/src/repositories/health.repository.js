@@ -1,13 +1,12 @@
-
 const pool = require("../config/database");
 
 const health = async () => {
-    const result = await pool.query("SELECT NOW() AS fecha");
+    const [rows] = await pool.query("SELECT NOW() AS fecha");
 
     return {
         ok: true,
         mensaje: "API funcionando correctamente",
-        servidor: result.rows[0].fecha
+        servidor: rows[0].fecha
     };
 };
 
