@@ -1,5 +1,3 @@
-
-<<<<<<< HEAD
 const pool = require("../config/database");
 
 async function pedidos() {
@@ -47,7 +45,7 @@ async function estadoPedido(id, estado) {
 module.exports = {
     pedidos,
     estadoPedido
-=======
+};
 const prisma = require("../config/prisma");
 
 async function pedidos() {
@@ -214,5 +212,4 @@ module.exports = {
     listarCuentas,
     buscarCuentaParaEliminar,
     eliminarCuenta
->>>>>>> feature/neon-prisma
 };
