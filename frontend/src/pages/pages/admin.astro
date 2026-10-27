@@ -1,149 +1,366 @@
+
 ---
 import Layout from "../../layouts/Layout.astro";
+
 const title = "Administración | SaludClick";
 const bodyClass = "";
 ---
+
 <Layout title={title} bodyClass={bodyClass}>
   <Fragment slot="head">
-
+    <meta
+      name="description"
+      content="Panel administrativo de SaludClick para gestionar pedidos, ventas y fórmulas médicas."
+    />
   </Fragment>
-  <!-- =====================================================
-         NAVBAR
-    ====================================================== -->
-    <header class="navbar">
-        <div class="container nav-container">
-            <a href="dashboard.html" class="logo">
-                <i class="fa-solid fa-heart-pulse"></i>
-                <span>SaludClick</span>
-            </a>
-            <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menú">
-                <i class="fa-solid fa-bars"></i>
-            </button>
-            <nav class="main-nav" id="menu">
-                <a class="nav-link" href="dashboard.html"><i class="fa-solid fa-house"></i> Inicio</a>
-                <a class="nav-link" href="medicamentos.html"><i class="fa-solid fa-pills"></i> Medicamentos</a>
-                <a class="nav-link" href="pedidos.html"><i class="fa-solid fa-cart-shopping"></i> Pedidos</a>
-                <a class="nav-link active" href="admin.html"><i class="fa-solid fa-chart-line"></i> Administración</a>
-                <button class="nav-link logout-link" id="logout" type="button">
-                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
-                </button>
-            </nav>
+
+  <!-- NAVEGACIÓN -->
+  <header class="navbar">
+    <div class="container nav-container">
+      <a href="/pages/dashboard" class="logo">
+        <i class="fa-solid fa-heart-pulse"></i>
+        <span>SaludClick</span>
+      </a>
+
+      <button
+        class="menu-toggle"
+        id="menuToggle"
+        type="button"
+        aria-label="Abrir menú"
+        aria-expanded="false"
+        aria-controls="menu"
+      >
+        <i class="fa-solid fa-bars"></i>
+      </button>
+
+      <nav class="main-nav" id="menu">
+        <a class="nav-link" href="/pages/dashboard">
+          <i class="fa-solid fa-house"></i>
+          Inicio
+        </a>
+
+        <a class="nav-link" href="/pages/medicamentos">
+          <i class="fa-solid fa-pills"></i>
+          Medicamentos
+        </a>
+
+        <a class="nav-link" href="/pages/pedidos">
+          <i class="fa-solid fa-cart-shopping"></i>
+          Pedidos
+        </a>
+
+        <a class="nav-link active" href="/pages/admin" aria-current="page">
+          <i class="fa-solid fa-chart-line"></i>
+          Administración
+        </a>
+        
+        <a class="nav-link" href="/pages/admin-cuentas">
+          <i class="fa-solid fa-users-gear"></i>
+          Cuentas
+        </a>
+
+
+        <button class="nav-link logout-link" id="logout" type="button">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          Cerrar sesión
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="page-content admin-page">
+    <div class="container">
+
+      <!-- ENCABEZADO -->
+      <section class="page-header admin-page-header">
+        <span class="badge">
+          <i class="fa-solid fa-shield-halved"></i>
+          Panel administrativo
+        </span>
+
+        <h1>Centro de control de SaludClick</h1>
+
+        <p>
+          Supervisa los indicadores de la plataforma, consulta las ventas,
+          administra los pedidos y revisa las fórmulas médicas pendientes.
+        </p>
+
+        <div class="admin-header-meta">
+          <span>
+            <i class="fa-solid fa-database"></i>
+            Información del sistema
+          </span>
+
+          <button
+            id="refreshAdmin"
+            class="btn-outline"
+            type="button"
+          >
+            <i class="fa-solid fa-rotate"></i>
+            Actualizar información
+          </button>
         </div>
-    </header>
+      </section>
 
-    <!-- =====================================================
-         CONTENIDO PRINCIPAL
-    ====================================================== -->
-    <main class="page-content">
-        <div class="container">
-            <section class="page-header">
-                <span class="badge">Panel administrativo</span>
-                <h1>Operación de SaludClick</h1>
-                <p>Consulta indicadores, pedidos y documentos pendientes. Los datos se obtienen directamente de MySQL.</p>
-            </section>
+      <!-- MENSAJES DE ESTADO -->
+      <div
+        id="adminMessage"
+        class="admin-message"
+        role="status"
+        aria-live="polite"
+      ></div>
 
-            <div id="adminMessage" role="status"></div>
-
-            <section class="admin-stats" id="adminStats"></section>
-
-            <section class="admin-columns">
-                <div class="card">
-                    <div class="section-heading">
-                        <div>
-                            <h2>Pedidos por estado</h2>
-                            <p>Distribución actual de solicitudes.</p>
-                        </div>
-                        <button id="refreshAdmin" class="btn-outline" type="button">
-                            <i class="fa-solid fa-rotate"></i> Actualizar
-                        </button>
-                    </div>
-                    <div id="orderStates"></div>
-                </div>
-
-                <div class="card">
-                    <h2>Fórmulas pendientes</h2>
-                    <p>Revisa el estado de los documentos enviados por usuarios.</p>
-                    <div id="adminFormulas"></div>
-                </div>
-            </section>
-
-            <section class="card">
-                <div class="section-heading">
-                    <div>
-                        <h2>Operación de pedidos</h2>
-                        <p>Últimos 50 pedidos y su estado operativo.</p>
-                    </div>
-                </div>
-                <div class="orders-table-wrapper">
-                    <table class="orders-table">
-                        <thead>
-                            <tr>
-                                <th>Pedido</th>
-                                <th>Usuario</th>
-                                <th>Fecha</th>
-                                <th>Total</th>
-                                <th>Pago</th>
-                                <th>Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adminOrders"></tbody>
-                    </table>
-                </div>
-            </section>
+      <!-- INDICADORES PRINCIPALES -->
+      <section class="admin-section">
+        <div class="admin-section-heading">
+          <div>
+            <h2>Resumen general</h2>
+            <p>Indicadores principales de SaludClick.</p>
+          </div>
         </div>
-    </main>
 
-    <!-- =====================================================
-         FOOTER
-    ====================================================== -->
-    <footer id="contacto" class="footer">
-        <div class="container footer-container">
+        <div class="admin-stats" id="adminStats">
+          <article class="admin-stat">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <span>Cargando indicadores...</span>
+          </article>
+        </div>
+      </section>
 
-            <!-- Columna 1: Info e Identidad -->
-            <div class="footer-col brand-col">
-                <div class="logo-footer">
-                    <i class="fa-solid fa-heart-pulse"></i>
-                    <span>SaludClick</span>
-                </div>
-                <p class="tagline">Tu bienestar, a un solo clic.</p>
+      <!-- GRÁFICO DE VENTAS -->
+      <section class="card admin-chart-card">
+        <div class="section-heading">
+          <div>
+            <span class="admin-eyebrow">ANÁLISIS FINANCIERO</span>
+            <h2>Resumen de ventas</h2>
+            <p>
+              Evolución mensual de los pagos aprobados registrados.
+            </p>
+          </div>
+
+          <span class="status-badge">
+            <i class="fa-solid fa-chart-column"></i>
+            Ventas
+          </span>
+        </div>
+
+        <div
+          id="salesChart"
+          class="admin-sales-chart"
+          role="img"
+          aria-label="Gráfico de ventas mensuales"
+        >
+          <p class="empty-state">Cargando información de ventas...</p>
+        </div>
+
+        <p class="admin-chart-note">
+          Los valores representan pagos aprobados devueltos por el backend.
+          Los meses sin actividad dependerán de los datos que proporcione el servidor.
+        </p>
+      </section>
+
+      <!-- PEDIDOS Y FÓRMULAS -->
+      <section class="admin-columns admin-section">
+
+        <!-- DISTRIBUCIÓN DE PEDIDOS -->
+        <article class="card admin-panel-card">
+          <div class="section-heading">
+            <div>
+              <span class="admin-eyebrow">OPERACIONES</span>
+              <h2>Pedidos por estado</h2>
+              <p>Distribución actual de las solicitudes.</p>
             </div>
+          </div>
 
-            <!-- Columna 2: Ubicación y Contacto -->
-            <div class="footer-col contact-col">
-                <p><i class="fa-solid fa-location-dot"></i> Medellín - Colombia</p>
-                <p>
-                    <i class="fa-solid fa-envelope"></i>
-                    <a href="mailto:juandavidmospa12@gmail.com" class="email-link">juandavidmospa12@gmail.com</a>
-                </p>
+          <div id="orderStates">
+            <p class="empty-state">Cargando pedidos...</p>
+          </div>
+        </article>
+
+        <!-- FÓRMULAS MÉDICAS -->
+        <article class="card admin-panel-card">
+          <div class="section-heading">
+            <div>
+              <span class="admin-eyebrow">DOCUMENTACIÓN</span>
+              <h2>Fórmulas médicas</h2>
+              <p>
+                Revisa las fórmulas y gestiona las que requieren atención.
+              </p>
             </div>
+          </div>
 
-            <!-- Columna 3: Enlaces Activos a Redes Sociales -->
-            <div class="footer-col social-col">
-                <p class="social-title">Síguenos en nuestras redes</p>
-                <div class="redes">
-                    <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
-                        <i class="fa-brands fa-facebook-f"></i>
-                    </a>
-                    <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-                        <i class="fa-brands fa-instagram"></i>
-                    </a>
-                    <a href="https://wa.me/573208447006" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
-                        <i class="fa-brands fa-whatsapp"></i>
-                    </a>
-                </div>
-            </div>
+          <div id="adminFormulas">
+            <p class="empty-state">Cargando fórmulas...</p>
+          </div>
+        </article>
+      </section>
 
+      <!-- GESTIÓN DETALLADA DE PEDIDOS -->
+      <section class="card admin-orders-card admin-section">
+        <div class="admin-orders-header">
+          <div>
+            <span class="admin-eyebrow">GESTIÓN COMERCIAL</span>
+            <h2>Administración de pedidos</h2>
+            <p>
+              Consulta los últimos pedidos y actualiza su estado operativo.
+            </p>
+          </div>
+
+          <span class="status-badge">
+            <i class="fa-solid fa-list-check"></i>
+            Últimos pedidos
+          </span>
         </div>
 
-        <div class="footer-bottom">
-            <p>&copy; 2026 SaludClick - Todos los derechos reservados.</p>
-        </div>
-    </footer>
+        <!-- BÚSQUEDA Y FILTROS -->
+        <div class="admin-filters">
+          <label for="orderSearch">
+            <span>Buscar pedido o cliente</span>
 
-    <!-- =====================================================
-         JAVASCRIPT
-    ====================================================== -->
-    <script is:inline type="module" src="/js/menu.js"></script>
-    <script is:inline type="module" src="/js/admin.js"></script>
-    <script is:inline type="module" src="/js/main.js"></script>
+            <div class="admin-input-wrap">
+              <i class="fa-solid fa-magnifying-glass"></i>
+
+              <input
+                id="orderSearch"
+                type="search"
+                placeholder="Número, nombre o correo..."
+                autocomplete="off"
+              />
+            </div>
+          </label>
+
+          <label for="orderStatusFilter">
+            <span>Filtrar por estado</span>
+
+            <select id="orderStatusFilter">
+              <option value="">Todos los estados</option>
+              <option value="PENDIENTE">Pendiente</option>
+              <option value="APROBADA">Aprobada</option>
+              <option value="PREPARANDO">Preparando</option>
+              <option value="LISTA">Lista</option>
+              <option value="ENTREGADA">Entregada</option>
+              <option value="CANCELADA">Cancelada</option>
+            </select>
+          </label>
+        </div>
+
+        <p
+          id="orderResults"
+          class="admin-results"
+          aria-live="polite"
+        >
+          Preparando listado de pedidos...
+        </p>
+
+        <!-- TABLA -->
+        <div class="orders-table-wrapper">
+          <table class="orders-table admin-orders-table">
+            <thead>
+              <tr>
+                <th scope="col">Pedido</th>
+                <th scope="col">Cliente</th>
+                <th scope="col">Fecha</th>
+                <th scope="col">Total</th>
+                <th scope="col">Pago</th>
+                <th scope="col">Estado</th>
+              </tr>
+            </thead>
+
+            <tbody id="adminOrders">
+              <tr>
+                <td colspan="6" class="admin-table-loading">
+                  <i class="fa-solid fa-spinner fa-spin"></i>
+                  Cargando pedidos...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="admin-table-footer">
+          <span>
+            <i class="fa-solid fa-circle-info"></i>
+            Se muestran los pedidos devueltos por el servidor.
+          </span>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- PIE DE PÁGINA -->
+  <footer id="contacto" class="footer">
+    <div class="container footer-container">
+
+      <div class="footer-col brand-col">
+        <div class="logo-footer">
+          <i class="fa-solid fa-heart-pulse"></i>
+          <span>SaludClick</span>
+        </div>
+
+        <p class="tagline">Tu bienestar, a un solo clic.</p>
+      </div>
+
+      <div class="footer-col contact-col">
+        <p>
+          <i class="fa-solid fa-location-dot"></i>
+          Medellín - Colombia
+        </p>
+
+        <p>
+          <i class="fa-solid fa-envelope"></i>
+          <a
+            href="mailto:juandavidmospa12@gmail.com"
+            class="email-link"
+          >
+            juandavidmospa12@gmail.com
+          </a>
+        </p>
+      </div>
+
+      <div class="footer-col social-col">
+        <p class="social-title">Síguenos en nuestras redes</p>
+
+        <div class="redes">
+          <a
+            href="https://facebook.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Facebook"
+          >
+            <i class="fa-brands fa-facebook-f"></i>
+          </a>
+
+          <a
+            href="https://instagram.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Instagram"
+          >
+            <i class="fa-brands fa-instagram"></i>
+          </a>
+
+          <a
+            href="https://wa.me/573208447006"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="WhatsApp"
+          >
+            <i class="fa-brands fa-whatsapp"></i>
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; 2026 SaludClick - Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
+  <!-- SCRIPTS EXISTENTES -->
+  <script is:inline type="module" src="/js/menu.js"></script>
+  <script is:inline type="module" src="/js/admin.js"></script>
+  <script is:inline type="module" src="/js/main.js"></script>
 </Layout>
