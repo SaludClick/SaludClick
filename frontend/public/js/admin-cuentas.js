@@ -6,11 +6,7 @@ import { apiFetch } from "/js/api.js";
 // CONFIGURACIÓN
 // ============================================
 
-const API_URL = (
-    window.SALUDCLICK_API_URL || "http://localhost:3000"
-).replace(/\/+$/, "");
-
-const CUENTAS_URL = `${API_URL}/api/admin/cuentas`;
+const CUENTAS_URL = "/api/admin/cuentas";
 
 const ROLES = {
     ADMIN: 1,

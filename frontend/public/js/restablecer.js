@@ -1,3 +1,5 @@
+import { apiUrl } from "./api.js";
+
 document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("restablecerForm");
     const token = new URLSearchParams(window.location.search).get("token");
@@ -26,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         boton.disabled = true;
         try {
-            const respuesta = await fetch("/api/auth/restablecer", {
+            const respuesta = await fetch(apiUrl("/api/auth/restablecer"), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ token, password })

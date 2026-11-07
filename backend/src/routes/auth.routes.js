@@ -16,7 +16,7 @@ router.post("/register", authController.register);
 router.post("/login", verificarRecaptcha, authController.login);
 
 // Inicio de sesión con Google
-router.post("/google", authController.googleLogin);
+router.post("/google", verificarRecaptcha, authController.googleLogin);
 
 // Recuperación de contraseña
 router.post("/recuperar", authController.solicitarRecuperacion);

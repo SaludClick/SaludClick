@@ -3,7 +3,7 @@ const USER_KEY = "saludclick_user";
 const DESTINO_KEY = "saludclick_destino_pendiente_v1";
 const PAGINAS_PRIVADAS = new Set([
     "/pages/dashboard.html", "/pages/medicamentos.html", "/pages/pedidos.html",
-    "/pages/historial.html", "/pages/perfil.html"
+    "/pages/historial.html", "/pages/perfil.html", "/pages/formulas.html"
 ]);
 
 // Lista cerrada: nunca navegar a una URL externa ni regresar al login.

@@ -28,13 +28,6 @@
         async
         defer
     ></script>
-
-    <!-- Google reCAPTCHA v3 -->
-    <script
-        src="https://www.google.com/recaptcha/api.js?render=6LcV6P0tAAAAAFouUz5_1uTOeq2SkWIlvewMiFZw"
-        async
-        defer
-    ></script>
 </head>
 
 <body class="bg-light">
@@ -137,6 +130,12 @@
                                 >
                                     Mantener sesión iniciada
                                 </label>
+                            </div>
+
+                            <!-- reCAPTCHA v2 Checkbox -->
+                            <div class="mb-3" aria-label="Verificación de seguridad">
+                                <div id="loginRecaptcha"></div>
+                                <div id="recaptchaError" class="small text-danger mt-2" role="alert" aria-live="polite"></div>
                             </div>
 
                             <!-- Ingresar -->

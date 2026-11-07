@@ -1,28 +1,35 @@
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
-const app = require("./src/app");
+const pool = require("./src/config/database");
 const prisma = require("./src/config/prisma");
+const app = require("./src/app");
+const http = require("node:http");
+const { Server } = require("socket.io");
+const { attachChatSocket } = require("./src/sockets/chat.socket");
+const { getAllowedOrigins } = require("./src/config/cors");
 
 const PORT = process.env.PORT || 3000;
+const httpServer = http.createServer(app);
+const allowedOrigins = getAllowedOrigins();
+const io = new Server(httpServer, { cors: { origin(origin, callback) { callback(null, !origin || allowedOrigins.has(origin)); }, methods: ["GET", "POST"] } });
+
+attachChatSocket(io);
 
 async function startServer() {
-    let client;
-
     try {
-        const connection = await pool.getConnection();
+        await pool.query("SELECT 1");
+        console.log("✅ Conexión a PostgreSQL exitosa");
+        await prisma.$connect();
+        console.log("✅ Conexión de Prisma a PostgreSQL exitosa");
 
-        console.log("✅ Conexión a MySQL exitosa");
-
-        connection.release();
-
-        app.listen(PORT, () => {
+        httpServer.listen(PORT, () => {
             console.log(
                 `🚀 Servidor ejecutándose en http://localhost:${PORT}`
             );
         });
     } catch (error) {
-        console.error("❌ Error conectando a MySQL:");
-        console.error(error.message);
+        console.error("❌ Error conectando a PostgreSQL:");
+        console.error(`${error.name}${error.code ? ` (${error.code})` : ""}`);
 
         process.exitCode = 1;
     }
@@ -31,9 +38,12 @@ async function startServer() {
 startServer();
 
 async function shutdown() {
+    await pool.end();
     await prisma.$disconnect();
     process.exit(0);
 }
 
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
+
+module.exports = { httpServer, io };

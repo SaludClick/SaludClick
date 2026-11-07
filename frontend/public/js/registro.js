@@ -1,3 +1,5 @@
+import { apiUrl } from "./api.js";
+
 document.addEventListener("DOMContentLoaded", () => {
 
     const form = document.getElementById("registroForm");
@@ -51,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
 
-            const respuesta = await fetch("/api/auth/register", {
+            const respuesta = await fetch(apiUrl("/api/auth/register"), {
 
                 method: "POST",
 

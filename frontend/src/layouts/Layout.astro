@@ -4,6 +4,10 @@ const { title = "SaludClick", bodyClass = "" } = Astro.props;
 <!doctype html>
 <html lang="es">
   <head>
+    <script is:inline define:vars={{ apiUrl: import.meta.env.PUBLIC_API_URL || "", recaptchaSiteKey: import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || null }}>
+      window.SALUDCLICK_API_URL = window.SALUDCLICK_API_URL || apiUrl;
+      if (recaptchaSiteKey) window.SALUDCLICK_RECAPTCHA_SITE_KEY = recaptchaSiteKey;
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>

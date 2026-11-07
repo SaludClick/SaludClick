@@ -8,10 +8,10 @@ const requireAdmin = [
             req.usuario?.rol_id ?? req.usuario?.rol
         );
 
-        if (rol !== 1) {
+        if (![1, 3].includes(rol)) {
             return res.status(403).json({
                 ok: false,
-                mensaje: "Acceso restringido al administrador del sistema."
+                mensaje: "Acceso restringido al personal administrativo."
             });
         }
 

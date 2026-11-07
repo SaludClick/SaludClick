@@ -9,6 +9,7 @@ const dashboardRoutes = require("./dashboard.routes");
 const formulaRoutes = require("./formula.routes");
 const adminRoutes = require("./admin.routes");
 const farmaciaRoutes = require("./farmacia.routes");
+const chatRoutes = require("./chat.routes");
 
 router.use("/health", healthRoutes);
 router.use("/auth", authRoutes);
@@ -18,5 +19,6 @@ router.use("/dashboard", dashboardRoutes);
 router.use("/formulas", formulaRoutes);
 router.use("/admin", adminRoutes);
 router.use("/farmacia", farmaciaRoutes);
+router.use("/chat", chatRoutes);
 
 module.exports = router;

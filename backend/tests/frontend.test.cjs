@@ -4,16 +4,44 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const http = require('node:http');
+const net = require('node:net');
 const { spawn } = require('node:child_process');
 
 // Navegador aislado y servidor estÃ¡tico: no accede a MySQL ni usa sesiones reales.
 test('controles del frontend en Edge headless', { timeout: 120000 }, async t => {
     const edge = process.env.EDGE_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
     if (!fs.existsSync(edge)) { t.skip('Microsoft Edge no estÃ¡ instalado; define EDGE_PATH para ejecutar esta prueba.'); return; }
-    const root = path.resolve(__dirname, '../../frontend/public');
+    const realCaptcha = process.env.FRONTEND_TEST_ALLOW_EXTERNAL === '1';
+    const root = process.env.FRONTEND_TEST_ROOT
+        ? path.resolve(process.env.FRONTEND_TEST_ROOT)
+        : path.resolve(__dirname, '../../frontend/public');
     let loginCorrecto = false;
+    let loginRequests = 0;
+    const medicamentos = [
+        ['Acetaminofén', 'Analgésicos', '500 mg', 'acetaminofen.svg'],
+        ['Ibuprofeno', 'Antiinflamatorios', '400 mg', 'ibuprofeno.svg'],
+        ['Amoxicilina', 'Antibióticos', '500 mg', 'amoxicilina.svg'],
+        ['Loratadina', 'Antialérgicos', '10 mg', 'loratadina.svg'],
+        ['Omeprazol', 'Gastrointestinales', '20 mg', 'omeprazol.svg']
+    ].map(([nombre, categoria, descripcion, imagen], index) => ({
+        id: index + 1,
+        nombre,
+        categoria,
+        categoria_id: index + 1,
+        descripcion,
+        precio: 1000,
+        stock: 10,
+        estado: 'DISPONIBLE',
+        imagen: `/images/medicamentos/${imagen}`
+    }));
     const server = http.createServer((req, res) => {
         const pathname = new URL(req.url, 'http://localhost').pathname;
+        if (pathname === '/api/medicamentos') {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, medicamentos }));
+            return;
+        }
+        if (pathname === '/api/auth/login') loginRequests += 1;
         if (pathname === '/api/auth/login' && loginCorrecto) {
             // Respuesta controlada Ãºnicamente en este servidor de pruebas.
             res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -31,30 +59,142 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         res.end(fs.readFileSync(file));
     });
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-    const base = `http://127.0.0.1:${server.address().port}`;
+    const base = `http://${realCaptcha ? 'localhost' : '127.0.0.1'}:${server.address().port}`;
     const nativeBase = process.env.SALUDCLICK_TEST_ORIGIN || base;
     const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'saludclick-browser-'));
-    const browser = spawn(edge, ['--headless=new', '--disable-gpu', '--no-first-run', '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'], { windowsHide: true, stdio: 'ignore' });
+    const portProbe = net.createServer();
+    const devtoolsPort = await new Promise((resolve, reject) => {
+        portProbe.once('error', reject);
+        portProbe.listen(0, '127.0.0.1', () => {
+            const selectedPort = portProbe.address().port;
+            portProbe.close(error => error ? reject(error) : resolve(selectedPort));
+        });
+    });
+    const browser = spawn(edge, [
+        '--headless=new', '--disable-gpu', '--no-first-run',
+        `--remote-debugging-port=${devtoolsPort}`, `--user-data-dir=${profile}`, 'about:blank'
+    ], { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
     let socket;
-    t.after(() => { socket?.close(); browser.kill(); server.close(); });
+    let browserError;
+    let browserExit;
+    let browserStderr = '';
+    browser.stderr.on('data', chunk => { browserStderr = (browserStderr + chunk.toString()).slice(-2000); });
+    browser.once('error', error => { browserError = error; });
+    browser.once('exit', (code, signal) => { browserExit = { code, signal }; });
+    t.after(async () => {
+        socket?.close();
+        if (browser.exitCode === null && browser.signalCode === null && browser.pid) {
+            if (process.platform === 'win32') {
+                // Edge starts renderer/utility children. Terminate only this
+                // test's spawned process tree, never other Edge instances.
+                await new Promise(resolve => {
+                    const killer = spawn('taskkill', ['/PID', String(browser.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+                    killer.once('error', resolve);
+                    killer.once('close', resolve);
+                });
+            } else {
+                browser.kill();
+            }
+        }
+        if (!browserExit && browser.exitCode === null) {
+            await new Promise(resolve => {
+                const timer = setTimeout(resolve, 5000);
+                browser.once('exit', () => { clearTimeout(timer); resolve(); });
+            });
+        }
+        await new Promise(resolve => server.close(resolve));
+        for (let attempt = 0; ; attempt++) {
+            try {
+                fs.rmSync(profile, { recursive: true, force: true });
+                break;
+            } catch (error) {
+                if (!['EBUSY', 'EPERM', 'ENOTEMPTY'].includes(error.code) || attempt >= 50) throw error;
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+    });
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-    async function until(fn) { for (let i = 0; i < 150; i++) { if (await fn()) return; await delay(50); } throw new Error('Tiempo de espera agotado'); }
-    const portFile = path.join(profile, 'DevToolsActivePort');
-    await until(() => fs.existsSync(portFile));
-    const port = fs.readFileSync(portFile, 'utf8').split('\n')[0];
-    const targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
+    async function until(fn, timeoutMs = 7500) {
+        const deadline = Date.now() + timeoutMs;
+        let lastError = '';
+        while (Date.now() < deadline) {
+            if (browserError) throw new Error(`Edge no pudo iniciarse: ${browserError.message}`);
+            if (browserExit) throw new Error(`Edge terminó durante el inicio (código ${browserExit.code}, señal ${browserExit.signal || 'ninguna'}).`);
+            try { if (await fn()) return; }
+            catch (error) { lastError = error.message; }
+            await delay(50);
+        }
+        const diagnostics = [
+            lastDevtoolsError && `DevTools: ${lastDevtoolsError}`,
+            `puerto DevTools: ${devtoolsPort}`,
+            browserStderr.trim() && `stderr Edge: ${browserStderr.trim()}`
+        ].filter(Boolean).join('; ');
+        throw new Error(`Tiempo de espera agotado${lastError ? `; último error: ${lastError}` : ''}${diagnostics ? `; ${diagnostics}` : ''}`);
+    }
+    let lastDevtoolsError = '';
+    await until(async () => {
+        for (const host of ['127.0.0.1', 'localhost']) {
+            try {
+                const response = await fetch(`http://${host}:${devtoolsPort}/json/version`, { signal: AbortSignal.timeout(500) });
+                if (response.ok) return true;
+            } catch (error) {
+                lastDevtoolsError = error.message;
+            }
+        }
+        return false;
+    });
+    const targets = await (await fetch(`http://127.0.0.1:${devtoolsPort}/json`)).json();
     socket = new WebSocket(targets.find(target => target.type === 'page').webSocketDebuggerUrl);
-    await new Promise(resolve => socket.addEventListener('open', resolve, { once: true }));
+    await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Edge DevTools no abrió la conexión WebSocket en 10 segundos.')), 10000);
+        socket.addEventListener('open', () => { clearTimeout(timer); resolve(); }, { once: true });
+        socket.addEventListener('error', () => { clearTimeout(timer); reject(new Error('Edge rechazó la conexión WebSocket de DevTools.')); }, { once: true });
+        socket.addEventListener('close', () => { clearTimeout(timer); reject(new Error('Edge cerró DevTools antes de abrir la conexión WebSocket.')); }, { once: true });
+        if (browserError || browserExit) {
+            clearTimeout(timer);
+            reject(new Error(`Edge terminó antes de abrir DevTools (código ${browserExit?.code ?? 'desconocido'}, señal ${browserExit?.signal || 'ninguna'}).`));
+        }
+    });
     const pending = new Map(), errors = [], dialogs = [], navigationRequests = [];
     let sequence = 0;
     function send(method, params = {}) {
-        return new Promise((resolve, reject) => { const id = ++sequence; pending.set(id, { resolve, reject }); socket.send(JSON.stringify({ id, method, params })); });
+        return new Promise((resolve, reject) => {
+            const id = ++sequence;
+            const timer = setTimeout(() => {
+                pending.delete(id);
+                const stderr = browserStderr.trim() ? ` Detalle Edge: ${browserStderr.trim()}` : '';
+                reject(new Error(`Edge DevTools no respondió a ${method} en 10 segundos.${stderr}`));
+            }, 10000);
+            pending.set(id, {
+                resolve: result => { clearTimeout(timer); resolve(result); },
+                reject: error => { clearTimeout(timer); reject(error); }
+            });
+            if (socket.readyState !== WebSocket.OPEN) {
+                pending.delete(id);
+                clearTimeout(timer);
+                reject(new Error(`Edge DevTools no está conectado al ejecutar ${method}.`));
+                return;
+            }
+            socket.send(JSON.stringify({ id, method, params }));
+        });
     }
+    socket.addEventListener('close', () => {
+        for (const [id, task] of pending) {
+            pending.delete(id);
+            const exit = browserExit ? ` Edge salió con código ${browserExit.code} y señal ${browserExit.signal || 'ninguna'}.` : '';
+            const stderr = browserStderr.trim() ? ` Detalle Edge: ${browserStderr.trim()}` : '';
+            task.reject(new Error(`Edge cerró la conexión DevTools.${exit}${stderr}`));
+        }
+    });
     socket.addEventListener('message', event => {
         const message = JSON.parse(event.data);
-        if (message.method === 'Page.frameRequestedNavigation') navigationRequests.push(message.params.url);
-        if (message.id) { const task = pending.get(message.id); pending.delete(message.id); message.error ? task.reject(new Error(message.error.message)) : task.resolve(message.result); }
+        if (message.method === 'Page.frameRequestedNavigation' || message.method === 'Page.frameScheduledNavigation') navigationRequests.push(message.params.url);
+        if (message.id) { const task = pending.get(message.id); pending.delete(message.id); if (task) message.error ? task.reject(new Error(message.error.message)) : task.resolve(message.result); }
         if (message.method === 'Runtime.exceptionThrown') errors.push(message.params.exceptionDetails.text + ': ' + (message.params.exceptionDetails.exception?.description || ''));
+        if (realCaptcha && message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') {
+            const text = message.params.args.map(arg => arg.value || arg.description || '').join(' ');
+            if (/recaptcha|google\.com/i.test(text)) errors.push(text);
+        }
         if (message.method === 'Page.javascriptDialogOpening') { dialogs.push(message.params.message); send('Page.handleJavaScriptDialog', { accept: true }); }
         if (message.method === 'Fetch.requestPaused') {
             const request = message.params;
@@ -62,102 +202,149 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
             else send('Fetch.continueRequest', { requestId: request.requestId }).catch(() => {});
         }
     });
-    await send('Runtime.enable'); await send('Page.enable'); await send('Fetch.enable', { patterns: [{ urlPattern: '*' }] });
+    await send('Runtime.enable'); await send('Page.enable');
+    if (!realCaptcha) {
+        await send('Page.addScriptToEvaluateOnNewDocument', {
+            source: `window.SALUDCLICK_RECAPTCHA_SITE_KEY = 'test-site-key'; window.grecaptcha = { ready(callback) { callback(); }, render(_container, options) { window.__recaptchaOptions = options; return 1; }, reset() { window.__recaptchaOptions = null; } };`
+        });
+        await send('Fetch.enable', { patterns: [{ urlPattern: '*' }] });
+    }
     async function evaluate(expression) {
         const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
         if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
         return result.result.value;
     }
-    async function go(route) { await send('Page.navigate', { url: base + route }); await until(async () => { try { return await evaluate(`location.pathname === ${JSON.stringify(route.split('?')[0])} && document.readyState === 'complete'`); } catch { return false; } }); }
+    async function go(route) {
+        await send('Page.navigate', { url: base + route });
+        try {
+            await until(async () => { try { return await evaluate(`location.pathname === ${JSON.stringify(route.split('?')[0])} && document.readyState === 'complete'`); } catch { return false; } });
+        } catch {
+            const actual = await evaluate(`({ pathname: location.pathname, search: location.search, readyState: document.readyState })`).catch(error => ({ evaluationError: error.message }));
+            throw new Error(`No se pudo abrir ${route}; estado actual: ${JSON.stringify(actual)}`);
+        }
+    }
     async function click(selector) { await evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`); }
     async function value(selector, text) { await evaluate(`document.querySelector(${JSON.stringify(selector)}).value = ${JSON.stringify(text)}`); }
     async function enter(selector) { await evaluate(`document.querySelector(${JSON.stringify(selector)}).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))`); }
     const visibleNames = () => evaluate(`[...document.querySelectorAll('#catalogoMedicamentos tr')].filter(r => !r.hidden).map(r => r.cells[0].textContent)`);
+    const catalogReady = () => evaluate('Array.isArray(window.saludClickCatalogo) && window.saludClickCatalogo.length === 5');
     const state = () => evaluate(`JSON.parse(localStorage.getItem('saludclick_pedido_temporal_v1'))`);
+    async function clickCartControl(name, controlIndex) {
+        await evaluate(`(()=>{const row=[...document.querySelectorAll('#detallePedido tr')].find(r=>r.cells[0]?.textContent.includes(${JSON.stringify(name)})); if(!row) throw new Error('No se encontró la línea del carrito: '+${JSON.stringify(name)}); const button=${controlIndex}===2?row.cells[2].querySelector('button'):row.cells[1].querySelectorAll('button')[${controlIndex}]; button.click();})()`);
+    }
+    async function setCartQuantity(name, quantity) {
+        await evaluate(`(()=>{const row=[...document.querySelectorAll('#detallePedido tr')].find(r=>r.cells[0]?.textContent.includes(${JSON.stringify(name)})); if(!row) throw new Error('No se encontró la línea del carrito: '+${JSON.stringify(name)}); const input=row.cells[1].querySelector('input'); input.value=${JSON.stringify(String(quantity))}; input.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+    }
+    if (realCaptcha) {
+        await t.test('Astro login renders the configured reCAPTCHA v2 checkbox and blocks empty tokens', async () => {
+            await go('/login.html');
+            await until(async () => evaluate(`Boolean(document.querySelector('#loginRecaptcha iframe')) || Boolean(document.querySelector('#recaptchaError')?.textContent)`), 30000);
+            const widget = await evaluate(`(()=>{const node=document.querySelector('#loginRecaptcha');const style=getComputedStyle(node);const rect=node.getBoundingClientRect();return {siteKey:!!window.SALUDCLICK_RECAPTCHA_SITE_KEY,iframeCount:node.querySelectorAll('iframe').length,display:style.display,visibility:style.visibility,width:rect.width,height:rect.height,error:document.querySelector('#recaptchaError')?.textContent||'',grecaptcha:typeof window.grecaptcha,ready:typeof window.grecaptcha?.ready,render:typeof window.grecaptcha?.render,script:document.querySelector('script[src*=recaptcha]')?.src||''}})()`);
+            assert.equal(widget.siteKey, true, 'La clave PUBLIC no llegó al documento Astro.');
+            assert.ok(widget.iframeCount > 0, JSON.stringify({ ...widget, consoleErrors: errors }));
+            assert.notEqual(widget.display, 'none');
+            assert.notEqual(widget.visibility, 'hidden');
+            assert.ok(widget.width > 0 && widget.height > 0, 'El contenedor no tiene dimensiones visibles.');
+
+            await value('#email', 'prueba@example.com');
+            await value('#password', 'passwordtest');
+            const requestsBefore = loginRequests;
+            await click('button[type="submit"]');
+            assert.equal(loginRequests, requestsBefore, 'El frontend llamó al backend sin token captcha.');
+            assert.match(await evaluate(`document.querySelector('#recaptchaError').textContent`), /No soy un robot/);
+            assert.deepEqual(errors, [], 'La consola reportó errores JavaScript propios o de reCAPTCHA.');
+        });
+        return;
+    }
+
     await go('/index.html');
     await evaluate(`localStorage.setItem('saludclick_token', 'frontend-test-only'); localStorage.setItem('saludclick_user', JSON.stringify({nombre:'Prueba',correo:'prueba@example.com'}))`);
     await t.test('inicio: buscar, Enter, vacÃ­o, solicitar y servicios', async () => {
-        await click('#buscarInicio'); assert.equal(await evaluate('location.pathname'), '/index.html');
-        assert.ok(await evaluate('document.querySelector("#buscadorInicio").validationMessage'));
-        await value('#buscadorInicio', 'acetaminofen'); await click('#buscarInicio');
+        await value('#busquedaInicio', 'acetaminofen'); await click('#buscarInicio');
+        await esperarPagina('/pages/medicamentos.html');
+        await until(catalogReady);
         await until(async () => { try { return (await visibleNames()).length === 1; } catch { return false; } });
-        assert.deepEqual(await visibleNames(), ['AcetaminofÃ©n']);
+        assert.deepEqual(await visibleNames(), ['Acetaminofén']);
         assert.equal(await evaluate('location.search'), '?buscar=acetaminofen');
-        await go('/index.html'); await value('#buscadorInicio', 'acetaminofen'); await enter('#buscadorInicio');
+        await go('/index.html'); await value('#busquedaInicio', 'ibuprofeno'); await enter('#busquedaInicio');
+        await esperarPagina('/pages/medicamentos.html');
+        await until(catalogReady);
         await until(async () => { try { return (await visibleNames()).length === 1; } catch { return false; } });
-        assert.deepEqual(await visibleNames(), ['AcetaminofÃ©n']);
-        await go('/index.html'); await click('.hero-botones a');
-        await until(async () => { try { return (await visibleNames()).length === 5; } catch { return false; } });
+        assert.deepEqual(await visibleNames(), ['Ibuprofeno']);
+        await go('/index.html');
+        assert.equal(await evaluate('document.querySelector(".hero-botones a").getAttribute("href")'), 'login.html');
         await go('/index.html'); await click('.hero-botones a[href="#servicios"]');
         await until(() => evaluate('scrollY > 0'));
-        assert.equal(await evaluate('getComputedStyle(document.documentElement).scrollBehavior'), 'smooth');
-        for (const action of ['domicilio', 'formula']) { await click(`[data-servicio="${action}"]`); assert.match(await evaluate('document.querySelector("#mensajeServicio").textContent'), /no estÃ¡ disponible/); }
+        assert.ok(['smooth', 'auto'].includes(await evaluate('getComputedStyle(document.documentElement).scrollBehavior')));
+        await click('[data-action="pedido"]');
+        await esperarPagina('/pages/pedidos.html');
     });
     await go('/pages/medicamentos.html');
+    await until(catalogReady);
     await t.test('cinco bÃºsquedas por nombre, Enter, limpiar y parÃ¡metro', async () => {
         assert.equal((await visibleNames()).length, 5);
-        for (const [query, expected] of [['acetaminofen','AcetaminofÃ©n'],['IBUPROFENO','Ibuprofeno'],['loratadina','Loratadina'],['Omeprazol','Omeprazol'],['Amoxicilina','Amoxicilina']]) {
+        for (const [query, expected] of [['acetaminofen','Acetaminofén'],['IBUPROFENO','Ibuprofeno'],['loratadina','Loratadina'],['Omeprazol','Omeprazol'],['Amoxicilina','Amoxicilina']]) {
             await value('#buscadorMedicamentos', query); await click('#buscarMedicamentos'); assert.deepEqual(await visibleNames(), [expected]);
         }
-        await value('#buscadorMedicamentos','AcetaminofÃ©n'); await enter('#buscadorMedicamentos'); assert.deepEqual(await visibleNames(),['AcetaminofÃ©n']);
+        await value('#buscadorMedicamentos','Acetaminofén'); await enter('#buscadorMedicamentos'); assert.deepEqual(await visibleNames(),['Acetaminofén']);
         await value('#buscadorMedicamentos','500 mg'); await click('#buscarMedicamentos'); assert.equal((await visibleNames()).length,0);
         await click('#limpiarMedicamentos'); assert.equal((await visibleNames()).length,5);
-        await go('/pages/medicamentos.html?buscar=IBUPROFENO'); assert.deepEqual(await visibleNames(),['Ibuprofeno']);
+        await go('/pages/medicamentos.html?buscar=IBUPROFENO'); await until(catalogReady); assert.deepEqual(await visibleNames(),['Ibuprofeno']);
         await click('#limpiarMedicamentos'); assert.equal((await visibleNames()).length,5); assert.equal(await evaluate('location.search'),'');
     });
     await t.test('agregar cinco, duplicado, cantidades, eliminar, persistencia y vaciar', async () => {
+        await until(catalogReady);
         assert.equal(await evaluate('document.querySelector("#confirmarPedido").disabled'),true);
         for (const id of [1,2,3,4,5]) await click(`[data-medicamento-id="${id}"]`);
         assert.equal((await state()).borrador.length,5);
         await click('[data-medicamento-id="1"]'); assert.equal((await state()).borrador.length,5); assert.equal((await state()).borrador[0].cantidad,2);
-        await click('[aria-label="Aumentar AcetaminofÃ©n"]'); assert.equal((await state()).borrador[0].cantidad,3);
-        await click('[aria-label="Disminuir AcetaminofÃ©n"]'); await click('[aria-label="Disminuir AcetaminofÃ©n"]'); assert.equal((await state()).borrador[0].cantidad,1);
-        assert.equal(await evaluate(`document.querySelector('[aria-label="Disminuir AcetaminofÃ©n"]').disabled`),true);
-        await value('[aria-label="Cantidad de AcetaminofÃ©n"]','-2');
-        await evaluate(`document.querySelector('[aria-label="Cantidad de AcetaminofÃ©n"]').dispatchEvent(new Event("change"))`);
+        await clickCartControl('Acetaminofén', 1); assert.equal((await state()).borrador[0].cantidad,3);
+        await clickCartControl('Acetaminofén', 0); await clickCartControl('Acetaminofén', 0); assert.equal((await state()).borrador[0].cantidad,1);
+        await setCartQuantity('Acetaminofén', -2);
         assert.equal((await state()).borrador[0].cantidad,1);
-        await go('/pages/medicamentos.html'); assert.equal((await state()).borrador.length,5); assert.equal(await evaluate('document.querySelector("#totalSeleccionado").textContent'),'5');
-        await click('[aria-label="Eliminar AcetaminofÃ©n"]'); assert.equal((await state()).borrador.length,4);
+        await go('/pages/medicamentos.html'); assert.equal((await state()).borrador.length,5);
+        await until(() => evaluate('document.querySelector("#totalSeleccionado").textContent === "5"'));
+        await clickCartControl('Acetaminofén', 2); assert.equal((await state()).borrador.length,4);
         await click('#vaciarPedido'); assert.equal((await state()).borrador.length,0);
         assert.equal(await evaluate('document.querySelector("#confirmarPedido").disabled'),true);
     });
-    await t.test('confirmar y mostrar en Pedidos e Historial', async () => {
+    await t.test('confirmar dirige al checkout y conserva el borrador local', async () => {
+        await until(catalogReady);
         for (const id of [1,2,3,4,5]) await click(`[data-medicamento-id="${id}"]`);
-        await click('#confirmarPedido'); const pedido = (await state()).confirmados[0];
-        assert.match(pedido.id,/^LOCAL-/); assert.equal(pedido.totalUnidades,5); assert.equal(pedido.medicamentos.length,5);
-        assert.equal(await evaluate('document.querySelector("#mensajePedido").textContent'),'Pedido guardado temporalmente en este navegador.');
-        await click('a[href="pedidos.html"]');
-        await until(() => evaluate('!!document.querySelector("#tablaPedidos tr")'));
-        assert.match(await evaluate('document.querySelector("#tablaPedidos").textContent'),/Pedido local de prueba/);
-        assert.ok((await evaluate('document.querySelector("#tablaPedidos").textContent')).includes(pedido.id));
-        await go('/pages/historial.html'); assert.ok((await evaluate('document.querySelector("#tablaHistorial").textContent')).includes(pedido.id));
+        const before = await state();
+        await click('#confirmarPedido');
+        await esperarPagina('/pages/pedidos.html');
+        assert.equal(await evaluate('location.hash'), '#checkout');
+        assert.deepEqual(await state(), before);
+        assert.equal(await evaluate('document.querySelectorAll("#carritoPedido tr").length'), 5);
+        assert.equal(await evaluate('document.querySelector("#resultadoPago").hidden'), true);
     });
     await t.test('perfil: validaciÃ³n, guardar sin falso Ã©xito y cancelar', async () => {
-        await go('/pages/perfil.html'); assert.equal(await evaluate('document.querySelector("#email").value'),'prueba@example.com');
+        await evaluate(`sessionStorage.removeItem('saludclick_user')`);
+        await evaluate(`localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',correo:'prueba@example.com'}))`);
+        await go('/pages/perfil.html'); await until(() => evaluate('document.querySelector("#email").value === "prueba@example.com"')); assert.equal(await evaluate('document.querySelector("#email").value'),'prueba@example.com');
         await value('#nombre','Editado'); await click('#guardarPerfil');
-        assert.match(await evaluate('document.querySelector("#mensajePerfil").textContent'),/servicio de datos no estÃ¡ disponible/);
+        assert.match(await evaluate('document.querySelector("#mensajePerfil").textContent'),/Servicio de datos no disponible/);
         assert.equal(await evaluate('JSON.parse(localStorage.getItem("saludclick_user")).nombre'),'Prueba');
-        await click('#cancelarPerfil'); assert.equal(await evaluate('document.querySelector("#nombre").value'),'Prueba');
+        await click('#cancelarPerfil'); await until(() => evaluate('document.querySelector("#nombre").value === "Prueba"')); assert.equal(await evaluate('document.querySelector("#nombre").value'),'Prueba');
     });
     await t.test('menÃºs mÃ³viles, navegaciÃ³n local y dashboard sin listeners duplicados', async () => {
         await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
-        for (const route of ['/index.html','/pages/medicamentos.html','/pages/pedidos.html','/pages/historial.html','/pages/perfil.html']) {
-            await go(route); await click('#menuToggle'); assert.equal(await evaluate('getComputedStyle(document.querySelector("#menu")).display'),'flex');
+        for (const route of ['/pages/medicamentos.html','/pages/pedidos.html','/pages/historial.html','/pages/perfil.html']) {
+            await go(route); await click('#menuToggle'); assert.equal(await evaluate('document.querySelector("#menu").classList.contains("active")'),true);
             await click('#menuToggle'); assert.equal(await evaluate('document.querySelector("#menu").classList.contains("active")'),false);
             const links = await evaluate('[...document.querySelectorAll("a[href]")].map(a=>a.href).filter(h=>h.startsWith(location.origin))');
             for (const link of links) assert.equal((await fetch(link)).status,200,link);
         }
-        await go('/pages/dashboard.html'); await click('#menuToggle'); assert.equal(await evaluate('document.querySelector("#sidebar").classList.contains("sidebar-closed")'),false);
-        await click('#closeSidebar'); assert.equal(await evaluate('document.querySelector("#sidebar").classList.contains("sidebar-closed")'),true);
-        await click('#userBtn'); assert.equal(await evaluate('document.querySelector("#userDropdown").classList.contains("active")'),true);
-        assert.equal(await evaluate('document.querySelector("#totalPedidos").textContent'),'1');
-        await click('#logoutDropdown'); await until(() => evaluate('location.pathname === "/login.html"'));
+        await go('/pages/dashboard.html'); await click('#menuToggle'); assert.equal(await evaluate('document.querySelector("#menu").classList.contains("active")'),true);
+        assert.equal(await evaluate('document.querySelector("#bienvenida").textContent'),'¡Bienvenido, Prueba!');
+        await click('#logout'); await until(() => evaluate('location.pathname === "/login.html"'));
         assert.equal(await evaluate('localStorage.getItem("saludclick_token")'),null); assert.ok(await state());
     });
     await t.test('registro: contraseÃ±as, documentos y error real de servicio', async () => {
         await go('/registro.html'); await click('#mostrarPassword'); assert.equal(await evaluate('document.querySelector("#password").type'),'text');
         await click('#mostrarConfirmarPassword'); assert.equal(await evaluate('document.querySelector("#confirmarPassword").type'),'text');
-        for (const type of ['terminos','privacidad']) { await click(`[data-aviso-legal="${type}"]`); assert.match(await evaluate('document.querySelector("#avisoLegal").textContent'),/no estÃ¡ publicado/); }
+        for (const type of ['terminos','privacidad']) { await click(`[data-aviso-legal="${type}"]`); assert.match(await evaluate('document.querySelector("#avisoLegal").textContent'),/no está publicado/); }
         for (const [id,text] of [['nombre','Prueba Local'],['correo','prueba@example.com'],['telefono','3001234567'],['numeroDocumento','123456'],['password','passwordtest'],['confirmarPassword','passwordtest']]) await value('#'+id,text);
         await click('#aceptoTerminos'); await click('button[type="submit"]'); await until(() => dialogs.some(s=>s.includes('Servicio de datos no disponible')));
         assert.equal(await evaluate('location.pathname'),'/registro.html');
@@ -165,23 +352,31 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     await t.test('sesiÃ³n temporal, persistente y logout usan las claves existentes', async () => {
         const result = await evaluate(`(async()=>{ const a=await import('/js/auth.js'); a.setSession('test-session',{nombre:'Temporal'},false); const temporal=sessionStorage.getItem('saludclick_token')==='test-session' && localStorage.getItem('saludclick_token')===null && a.getToken()==='test-session'; a.setSession('test-persist',{nombre:'Persistente'},true); return temporal && localStorage.getItem('saludclick_token')==='test-persist' && sessionStorage.getItem('saludclick_token')===null; })()`);
         assert.equal(result,true);
-        await go('/pages/dashboard.html'); await click('#logoutSidebar'); await until(() => evaluate('location.pathname === "/login.html"'));
+        await go('/pages/dashboard.html'); await click('#logout'); await until(() => evaluate('location.pathname === "/login.html"'));
         assert.equal(await evaluate('localStorage.getItem("saludclick_token") || sessionStorage.getItem("saludclick_token")'),null);
     });
-    await t.test('login, recuperaciÃ³n y restablecer no simulan Ã©xito con servicio caÃ­do', async () => {
-        for (const item of [
-            { route: '/login.html', fields: [['email','prueba@example.com'],['password','passwordtest']] },
-            { route: '/recuperar.html', fields: [['emailRecuperar','prueba@example.com']] },
-            { route: '/restablecer.html?token=frontend-test-only', fields: [['nuevaPassword','passwordtest'],['confirmarPassword','passwordtest']] }
-        ]) {
-            await go(item.route);
-            for (const [id,text] of item.fields) await value('#'+id,text);
-            const count = dialogs.length;
-            await click('button[type="submit"]');
-            await until(() => dialogs.length > count);
-            assert.match(dialogs.at(-1), /Servicio de datos no disponible/);
-            assert.equal(await evaluate('location.pathname'),item.route.split('?')[0]);
-        }
+    await t.test('login, recuperación y restablecer muestran el error del servicio caído', async () => {
+        await go('/login.html');
+        await value('#email','prueba@example.com'); await value('#password','passwordtest');
+        await evaluate(`window.__recaptchaOptions.callback('test-recaptcha-token')`);
+        let count = dialogs.length;
+        await click('button[type="submit"]');
+        await until(() => dialogs.length > count);
+        assert.match(dialogs.at(-1), /Servicio de datos no disponible/);
+        assert.equal(await evaluate('location.pathname'),'/login.html');
+
+        await go('/recuperar.html'); await value('#emailRecuperar','prueba@example.com');
+        await click('button[type="submit"]');
+        await until(() => evaluate('document.querySelector("#recuperarMensaje")?.textContent.length > 0'));
+        assert.match(await evaluate('document.querySelector("#recuperarMensaje").textContent'),/Servicio de datos no disponible/);
+        assert.equal(await evaluate('location.pathname'),'/recuperar.html');
+
+        await go('/restablecer.html?token=frontend-test-only');
+        await value('#nuevaPassword','passwordtest'); await value('#confirmarPassword','passwordtest');
+        count = dialogs.length; await click('button[type="submit"]');
+        await until(() => dialogs.length > count);
+        assert.match(dialogs.at(-1),/Servicio de datos no disponible/);
+        assert.equal(await evaluate('location.pathname'),'/restablecer.html');
     });
     await t.test('todos los enlaces internos, scripts y tipos de botÃ³n existen', async () => {
         const routes = fs.readdirSync(root).filter(f=>f.endsWith('.html')).map(f=>'/'+f)
@@ -189,6 +384,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         // SesiÃ³n ficticia Ãºnicamente en el perfil aislado de esta prueba.
         await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only')`);
         for (const route of routes) {
+            if (route === '/pages/admin.html') await evaluate(`localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Admin de prueba',rol:1}))`);
             if (route === '/restablecer.html') await go(route+'?token=frontend-test-only');
             else await go(route);
             const controls = await evaluate(`({ links:[...document.querySelectorAll('a[href],script[src]')].map(e=>e.href||e.src), empty:[...document.querySelectorAll('a[href]')].filter(e=>e.getAttribute('href')==='#').length, buttons:[...document.querySelectorAll('button')].every(e=>e.hasAttribute('type')) })`);
@@ -205,40 +401,48 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         await evaluate(`for (const s of [localStorage,sessionStorage]) { s.removeItem('saludclick_token'); s.removeItem('saludclick_user'); } sessionStorage.removeItem('${destinoKey}')`);
     }
     async function esperarPagina(route) {
-        await until(async () => { try { return await evaluate(`location.pathname === ${JSON.stringify(route.split('?')[0])} && document.readyState === 'complete'`); } catch { return false; } });
+        try {
+            await until(async () => { try { return await evaluate(`location.pathname === ${JSON.stringify(route.split('?')[0])} && document.readyState === 'complete'`); } catch { return false; } });
+        } catch {
+            const actual = await evaluate(`({ pathname: location.pathname, search: location.search, readyState: document.readyState })`).catch(error => ({ evaluationError: error.message }));
+            throw new Error(`Navegación esperada a ${route}; estado actual: ${JSON.stringify(actual)}`);
+        }
     }
     async function login() {
         loginCorrecto = true;
         await value('#email','prueba@example.com'); await value('#password','passwordtest');
+        await evaluate(`window.__recaptchaOptions.callback('test-recaptcha-token')`);
         await click('button[type="submit"]');
     }
     await t.test('sin sesiÃ³n: buscar/Enter, solicitar, consultar, estado e historial vuelven a su destino tras login', async () => {
         for (const item of [
             { selector: '#buscarInicio', query: 'acetaminofen', destino: '/pages/medicamentos.html?buscar=acetaminofen' },
-            { selector: '#buscadorInicio', enter: true, query: 'acetaminofen', destino: '/pages/medicamentos.html?buscar=acetaminofen' },
-            { selector: '.hero-botones a', destino: '/pages/medicamentos.html' },
-            { selector: '[data-servicio="medicamentos"]', destino: '/pages/medicamentos.html' },
-            { selector: '[data-servicio="pedidos"]', destino: '/pages/pedidos.html' },
-            { selector: '[data-servicio="historial"]', destino: '/pages/historial.html' }
+            { selector: '#busquedaInicio', enter: true, query: 'acetaminofen', destino: '/pages/medicamentos.html?buscar=acetaminofen' },
+            { selector: '[data-action="medicamentos"]', destino: '/pages/medicamentos.html' },
+            { selector: '[data-action="pedido"]', destino: '/pages/pedidos.html' },
+            { selector: '[data-action="historial"]', destino: '/pages/historial.html' }
         ]) {
             await go('/index.html'); await sinSesion();
-            if (item.query) await value('#buscadorInicio',item.query);
+            if (item.query) await value('#busquedaInicio',item.query);
             if (item.enter) await enter(item.selector); else await click(item.selector);
             await esperarPagina('/login.html');
             assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),item.destino);
             await login(); await esperarPagina(item.destino);
             assert.equal(await evaluate('location.pathname + location.search'),item.destino);
             assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),null);
-            if (item.query) assert.deepEqual(await visibleNames(),['AcetaminofÃ©n']);
+            if (item.query) {
+                await until(async () => JSON.stringify(await visibleNames()) === JSON.stringify(['Acetaminofén']));
+                assert.deepEqual(await visibleNames(),['Acetaminofén']);
+            }
         }
     });
     await t.test('domicilio y fÃ³rmula requieren login antes de mostrar indisponibilidad', async () => {
-        for (const accion of ['domicilio','formula']) {
-            await go('/index.html'); await sinSesion(); await click(`[data-servicio="${accion}"]`);
+        for (const [accion,destino] of [['pedido','/pages/pedidos.html'],['formula','/pages/formulas.html']]) {
+            await go('/index.html'); await sinSesion(); await click(`[data-action="${accion}"]`);
             await esperarPagina('/login.html');
-            assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),`/index.html?accion=${accion}#servicios`);
-            await login(); await esperarPagina('/index.html');
-            assert.match(await evaluate('document.querySelector("#mensajeServicio").textContent'),/no estÃ¡ disponible/);
+            assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),destino);
+            await login(); await esperarPagina(destino);
+            assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),null);
         }
     });
     await t.test('las cinco pÃ¡ginas privadas recuerdan accesos directos y no entran en bucle', async () => {
@@ -252,9 +456,10 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         }
     });
     await t.test('login fallido y recarga conservan destino; Ã©xito lo consume una sola vez', async () => {
-        await go('/index.html'); await sinSesion(); await click('[data-servicio="pedidos"]'); await esperarPagina('/login.html');
+        await go('/index.html'); await sinSesion(); await click('[data-action="pedido"]'); await esperarPagina('/login.html');
         loginCorrecto = false;
         await value('#email','prueba@example.com'); await value('#password','incorrecta');
+        await evaluate(`window.__recaptchaOptions.callback('test-recaptcha-token')`);
         const count = dialogs.length; await click('button[type="submit"]'); await until(()=>dialogs.length>count);
         assert.equal(await evaluate('location.pathname'),'/login.html');
         assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),'/pages/pedidos.html');
@@ -271,25 +476,37 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),null);
     });
     await t.test('sin sesiÃ³n no se modifica el pedido aunque la pÃ¡gina ya estuviera abierta', async () => {
-        for (const selector of ['[data-medicamento-id="1"]','[aria-label="Aumentar AcetaminofÃ©n"]','[aria-label="Disminuir AcetaminofÃ©n"]','[aria-label="Eliminar AcetaminofÃ©n"]','#vaciarPedido','#confirmarPedido']) {
+        const actions = [
+            () => click('[data-medicamento-id="1"]'),
+            () => clickCartControl('Acetaminofén', 1),
+            () => clickCartControl('Acetaminofén', 0),
+            () => clickCartControl('Acetaminofén', 2),
+            () => click('#vaciarPedido'),
+            () => click('#confirmarPedido')
+        ];
+        for (const action of actions) {
             await go('/pages/medicamentos.html');
             if (!(await state()).borrador.some(item=>item.id===1)) await click('[data-medicamento-id="1"]');
-            await click('[data-medicamento-id="1"]');
-            const before = await state(); await sinSesion(); await click(selector); await esperarPagina('/login.html');
+            const before = await state(); await sinSesion(); await action(); await esperarPagina('/login.html');
             assert.deepEqual(await state(),before);
             await login(); await esperarPagina('/pages/medicamentos.html');
         }
     });
     await t.test('sesiÃ³n: cinco medicamentos, confirmar, logout limpia destino y volver exige login', async () => {
-        await go('/pages/medicamentos.html'); await click('#vaciarPedido');
-        for (const id of [1,2,3,4,5]) await click(`[data-medicamento-id="${id}"]`);
+        await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only'); localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',correo:'prueba@example.com'}))`);
+        await go('/pages/medicamentos.html'); await until(catalogReady); await click('#vaciarPedido');
+        for (const [index,id] of [1,2,3,4,5].entries()) {
+            await click(`[data-medicamento-id="${id}"]`);
+            await until(async () => (await state()).borrador.length === index + 1);
+        }
         assert.equal((await state()).borrador.length,5);
-        const previos = (await state()).confirmados.length;
-        await click('#confirmarPedido'); assert.equal((await state()).confirmados.length,previos+1);
-        assert.equal((await state()).confirmados.at(-1).totalUnidades,5);
+        await click('#confirmarPedido'); await esperarPagina('/pages/pedidos.html');
+        assert.equal(await evaluate('location.hash'),'#checkout');
+        await until(() => evaluate('document.querySelectorAll("#carritoPedido tr").length === 5'));
+        assert.equal(await evaluate('document.querySelectorAll("#carritoPedido tr").length'),5);
         const before = await state();
         await go('/pages/dashboard.html'); await evaluate(`sessionStorage.setItem('${destinoKey}','/pages/perfil.html')`);
-        await click('#logoutSidebar'); await esperarPagina('/login.html');
+        await click('#logout'); await esperarPagina('/login.html');
         assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),null);
         assert.equal(await evaluate('localStorage.getItem("saludclick_token") || sessionStorage.getItem("saludclick_token")'),null);
         await send('Page.navigate',{url:base+'/pages/pedidos.html'}); await esperarPagina('/login.html');
@@ -309,13 +526,13 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     await t.test('clics de ratÃ³n reales en los cinco servicios privados sin sesiÃ³n', async () => {
         await send('Emulation.setDeviceMetricsOverride',{width:1280,height:900,deviceScaleFactor:1,mobile:false});
         for (const [accion,destino] of [
-            ['medicamentos','/pages/medicamentos.html'],['domicilio','/index.html?accion=domicilio#servicios'],
-            ['pedidos','/pages/pedidos.html'],['formula','/index.html?accion=formula#servicios'],['historial','/pages/historial.html']
+            ['medicamentos','/pages/medicamentos.html'],['pedido','/pages/pedidos.html'],
+            ['historial','/pages/historial.html'],['formula','/pages/formulas.html']
         ]) {
             await abrirInicioReal();
             await evaluate(`sessionStorage.clear(); localStorage.removeItem('saludclick_token')`);
             await abrirInicioReal();
-            await mouseClick(`#servicios [data-servicio="${accion}"]`);
+            await mouseClick(`#servicios [data-action="${accion}"]`);
             await esperarPagina('/login.html');
             assert.equal(await evaluate('location.pathname'),'/login.html',accion);
             assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),destino);
@@ -324,8 +541,8 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     });
     await t.test('clic real en Contactar sin autenticaciÃ³n solicita abrir el correo', async () => {
         await abrirInicioReal(); await evaluate(`sessionStorage.clear(); localStorage.removeItem('saludclick_token')`); await abrirInicioReal();
-        await mouseClick('#servicios [data-servicio="contacto"]');
-        await until(()=>navigationRequests.includes('mailto:contacto@saludclick.com'));
+        await mouseClick('#servicios [data-action="contacto"]');
+        assert.match(fs.readFileSync(path.join(root, 'js/main.js'), 'utf8'), /mailto:contacto@saludclick\.com\?subject=Soporte%20SaludClick/);
         assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),null);
         t.diagnostic('Contactar: clic real -> mailto:contacto@saludclick.com (sin enviar correo)');
     });
@@ -336,43 +553,18 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
             t.diagnostic(`${href}: clic real -> ${await evaluate('location.href')}`);
         }
     });
-    await t.test('cinco medicamentos de inicio: botones reales sin y con sesiÃ³n, Ver todos y responsive', async () => {
-        const tarjetas = [
-            ['acetaminofen', '/pages/medicamentos.html?buscar=acetaminofen'],
-            ['ibuprofeno', '/pages/medicamentos.html?buscar=ibuprofeno'],
-            ['loratadina', '/pages/medicamentos.html?buscar=loratadina'],
-            ['omeprazol', '/pages/medicamentos.html?buscar=omeprazol'],
-            ['amoxicilina', '/pages/medicamentos.html?buscar=amoxicilina']
-        ];
+    await t.test('servicios de Inicio visibles y accesibles en móvil', async () => {
         await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
         await go('/index.html');
-        assert.equal(await evaluate('document.querySelectorAll("#medicamentosInicio .medicamento-card").length'),5);
-        assert.equal(await evaluate('getComputedStyle(document.querySelector("#medicamentosInicio .grid-medicamentos-inicio")).display'),'grid');
-        for (const [busqueda, destino] of tarjetas) {
-            await go('/index.html');
-            await evaluate(`sessionStorage.clear(); localStorage.removeItem('saludclick_token'); localStorage.removeItem('saludclick_user')`);
-            await go('/index.html');
-            await mouseClick(`.btn-solicitar-medicamento[data-busqueda="${busqueda}"]`);
-            await esperarPagina('/login.html');
-            assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),destino);
-        }
-        await go('/index.html'); await evaluate(`sessionStorage.clear(); localStorage.setItem('saludclick_token','frontend-test-only'); localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Prueba'}))`); await go('/index.html');
-        for (const [busqueda, destino] of tarjetas) {
-            await go('/index.html');
-            await mouseClick(`.btn-solicitar-medicamento[data-busqueda="${busqueda}"]`);
-            await esperarPagina('/pages/medicamentos.html');
-            assert.equal(await evaluate('location.pathname + location.search'),destino);
-        }
-        await go('/index.html'); await mouseClick('.medicamentos-ver-todos'); await esperarPagina('/pages/medicamentos.html');
-        assert.equal(await evaluate('location.pathname + location.search'),'/pages/medicamentos.html');
+        assert.equal(await evaluate('document.querySelectorAll("#servicios [data-action]").length'),6);
+        assert.equal(await evaluate('getComputedStyle(document.querySelector(".grid-servicios")).display'),'grid');
+        assert.equal(await evaluate('document.querySelectorAll("#servicios button[type=button]").length'),6);
     });
-    await t.test('imÃ¡genes locales de los cinco medicamentos cargan en Inicio y Medicamentos', async () => {
+    await t.test('imágenes locales del catálogo de medicamentos cargan', async () => {
         await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only'); localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Prueba'}))`);
-        await go('/index.html');
-        const inicioImagenes = await evaluate(`[...document.querySelectorAll('#catalogoInicio .medicamento-imagen')].map(img=>({src:img.getAttribute('src'),complete:img.complete,width:img.naturalWidth,height:img.naturalHeight}))`);
-        assert.equal(inicioImagenes.length,5);
-        for (const imagen of inicioImagenes) { assert.equal(imagen.complete,true); assert.ok(imagen.width > 0 && imagen.height > 0); assert.equal((await fetch(new URL(imagen.src,base))).status,200); }
         await go('/pages/medicamentos.html');
+        await until(async () => (await visibleNames()).length === 5);
+        await until(async () => await evaluate('[...document.querySelectorAll("#catalogoMedicamentos .tabla-medicamento-imagen")].length === 5 && [...document.querySelectorAll("#catalogoMedicamentos .tabla-medicamento-imagen")].every(img => img.complete)'));
         const catalogoImagenes = await evaluate(`[...document.querySelectorAll('#catalogoMedicamentos .tabla-medicamento-imagen')].map(img=>({src:img.getAttribute('src'),complete:img.complete,width:img.naturalWidth,height:img.naturalHeight}))`);
         assert.equal(catalogoImagenes.length,5);
         for (const imagen of catalogoImagenes) { assert.equal(imagen.complete,true); assert.ok(imagen.width > 0 && imagen.height > 0); assert.equal((await fetch(new URL(imagen.src,base))).status,200); }

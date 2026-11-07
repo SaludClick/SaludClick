@@ -1,0 +1,11 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Chat from "../../components/Chat.jsx";
+const title = "Chat con farmacia | SaludClick";
+---
+<Layout title={title} bodyClass="">
+  <header class="navbar"><div class="container nav-container"><a href="/pages/dashboard.html" class="logo"><i class="fa-solid fa-heart-pulse"></i><span>SaludClick</span></a><button type="button" id="menuToggle" class="menu-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="menu"><i class="fa-solid fa-bars"></i></button><nav class="main-nav" id="menu"><a class="nav-link" href="/pages/dashboard.html"><i class="fa-solid fa-house"></i>Inicio</a><a class="nav-link active" href="/pages/chat.html"><i class="fa-solid fa-comments"></i>Chat farmacia</a><a class="nav-link" href="/pages/pedidos.html"><i class="fa-solid fa-cart-shopping"></i>Pedidos</a><button type="button" id="logout" class="nav-link logout-link"><i class="fa-solid fa-right-from-bracket"></i>Cerrar sesión</button></nav></div></header>
+  <Chat client:load />
+  <script is:inline type="module" src="/js/menu.js"></script>
+  <script is:inline type="module" src="/js/main.js"></script>
+</Layout>

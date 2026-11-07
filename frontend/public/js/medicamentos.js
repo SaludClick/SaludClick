@@ -784,6 +784,16 @@ if (checkAuthGuard()) {
                 buscar
             );
 
+            buscador.addEventListener(
+                'keydown',
+                event => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        buscar();
+                    }
+                }
+            );
+
 
             document
                 .getElementById(
@@ -808,6 +818,14 @@ if (checkAuthGuard()) {
 
                         filtroCategoria.value =
                             '';
+
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete('buscar');
+                        window.history.replaceState(
+                            window.history.state,
+                            '',
+                            `${url.pathname}${url.search}${url.hash}`
+                        );
 
                         buscar();
                     }

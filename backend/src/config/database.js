@@ -12,11 +12,18 @@ if (!process.env.DATABASE_URL) {
     );
 }
 
+// pg-connection-string advierte que estos modos serán alias de semántica
+// libpq. Normalizarlos evita el cambio futuro a una validación más débil y
+// deja la comprobación del certificado habilitada sin opciones SSL inseguras.
+const databaseUrl = new URL(process.env.DATABASE_URL);
+const sslmode = databaseUrl.searchParams.get("sslmode")?.toLowerCase();
+if (["prefer", "require", "verify-ca"].includes(sslmode)) {
+    databaseUrl.searchParams.set("sslmode", "verify-full");
+    process.env.DATABASE_URL = databaseUrl.toString();
+}
+
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
-    },
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000

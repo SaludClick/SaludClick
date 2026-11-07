@@ -1,7 +1,7 @@
 const pool = require("../config/database");
 
 const health = async () => {
-    const [rows] = await pool.query("SELECT NOW() AS fecha");
+    const { rows } = await pool.query("SELECT NOW() AS fecha");
 
     return {
         ok: true,

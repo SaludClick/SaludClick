@@ -3,9 +3,31 @@ const assert = require('node:assert/strict');
 const http = require('node:http');
 const Module = require('node:module');
 const jwt = require('jsonwebtoken');
+const { createRecaptchaMiddleware } = require('../src/middlewares/recaptcha.middleware');
 
 const secretBefore = process.env.JWT_SECRET;
 const TEST_SECRET = 'saludclick-api-contract-test-secret';
+const TEST_RECAPTCHA_SECRET = 'test-only-recaptcha-secret';
+const testRecaptchaMiddleware = createRecaptchaMiddleware({
+    getSecret: () => TEST_RECAPTCHA_SECRET,
+    getAllowedHostnames: () => 'localhost',
+    fetchImpl: async (url, options) => {
+        assert.equal(url, 'https://www.google.com/recaptcha/api/siteverify');
+        assert.equal(options.method, 'POST');
+        assert.equal(
+            new URLSearchParams(options.body).get('secret'),
+            TEST_RECAPTCHA_SECRET
+        );
+        assert.equal(
+            new URLSearchParams(options.body).get('response'),
+            'test-recaptcha-token'
+        );
+        return {
+            ok: true,
+            json: async () => ({ success: true, challenge_ts: new Date().toISOString(), hostname: 'localhost' })
+        };
+    }
+});
 const formulaRepository = {
     crear: async () => 71,
     listarUsuario: async () => [{ id: 71, nombre: 'mock.pdf', estado: 'PENDIENTE' }],
@@ -24,6 +46,9 @@ const fakeModules = new Map([
         restablecerPassword: async (token, password) => { if (!token || !password) throw new Error('El enlace de recuperación es inválido o ya expiró.'); },
         profile: async id => ({ id, nombre: 'Usuario de prueba' }),
         updateProfile: async (id, data) => ({ id, ...data })
+    }],
+    ['../middlewares/recaptcha.middleware', {
+        verificarRecaptcha: testRecaptchaMiddleware
     }],
     ['../services/user.service', {
         profile: async id => ({ id, nombre: 'Usuario de prueba' }),
@@ -113,8 +138,8 @@ test('los 22 endpoints conservan método, respuesta y códigos HTTP', async t =>
     const cases = [
         ['GET', '/api/health/', undefined, 200, 'ok'],
         ['POST', '/api/auth/register', {}, 201, 'id'],
-        ['POST', '/api/auth/login', {}, 200, 'token'],
-        ['POST', '/api/auth/google', { credential: 'accepted' }, 200, 'token'],
+        ['POST', '/api/auth/login', { recaptchaToken: 'test-recaptcha-token' }, 200, 'token'],
+        ['POST', '/api/auth/google', { credential: 'accepted', recaptchaToken: 'test-recaptcha-token' }, 200, 'token'],
         ['POST', '/api/auth/recuperar', { correo: 'user@example.test' }, 200, 'mensaje'],
         ['POST', '/api/auth/restablecer', { token: 'recovery-token', password: 'password' }, 200, 'mensaje'],
         ['GET', '/api/auth/profile', undefined, 200, 'usuario'],
@@ -142,6 +167,26 @@ test('los 22 endpoints conservan método, respuesta y códigos HTTP', async t =>
             if (status !== 404) assert.equal(data.ok, true);
         });
     }
+});
+
+test('login vacío y JSON malformado responden 400 sin detalles internos', async () => {
+    const empty = await call('/api/auth/login', { method: 'POST', auth: false });
+    assert.equal(empty.response.status, 400);
+    assert.deepEqual(empty.data, {
+        ok: false,
+        mensaje: 'Debes completar la validación de seguridad.'
+    });
+
+    const malformed = await fetch(`${origin}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{'
+    });
+    assert.equal(malformed.status, 400);
+    assert.match(malformed.headers.get('content-type') || '', /application\/json/);
+    const data = await malformed.json();
+    assert.deepEqual(data, { ok: false, mensaje: 'El cuerpo JSON no es válido.' });
+    assert.doesNotMatch(JSON.stringify(data), /SyntaxError|stack|body-parser/i);
 });
 
 test('JWT ausente, inválido y vencido conservan respuestas 401', async t => {
@@ -176,7 +221,7 @@ test('roles administrativos 1 y 3 pasan; usuario normal recibe 403', async t => 
 
 test('errores de controlador conservan sus status, campos y mensajes', async t => {
     const checks = [
-        ['POST', '/api/auth/google', { credential: 'reject' }, 401, 'No se pudo iniciar sesión con Google'],
+        ['POST', '/api/auth/google', { credential: 'reject', recaptchaToken: 'test-recaptcha-token' }, 401, 'No se pudo iniciar sesión con Google'],
         ['POST', '/api/auth/recuperar', { correo: 'fail@example.test' }, 200, 'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.', true],
         ['POST', '/api/auth/restablecer', {}, 400, 'El enlace de recuperación es inválido o ya expiró.'],
         ['PUT', '/api/auth/profile', { nombre: 'Solo nombre' }, 400, 'Nombre y apellido son obligatorios.'],

@@ -1,15 +1,13 @@
-
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const Module = require('node:module');
 
 const originalLoad = Module._load;
 const calls = [];
-
-const fakePrisma = {
-    $queryRaw: async () => {
-        calls.push('SELECT NOW() AS fecha');
-        return [{ fecha: new Date('2026-10-09T12:00:00.000Z') }];
+const fakePool = {
+    query: async (sql) => {
+        calls.push(sql);
+        return { rows: [{ fecha: new Date('2026-10-09T12:00:00.000Z') }] };
     }
 };
 
@@ -20,26 +18,23 @@ let controller;
 before(() => {
     Module._load = function(request, parent, isMain) {
         if (
-            request === '../config/prisma' &&
+            request === '../config/database' &&
             /health\.repository\.js$/.test(parent?.filename || '')
         ) {
-            return fakePrisma;
+            return fakePool;
         }
-
         if (
             request === '../repositories/health.repository' &&
             /health\.service\.js$/.test(parent?.filename || '')
         ) {
             return repository;
         }
-
         if (
             request === '../services/health.service' &&
             /health\.controller\.js$/.test(parent?.filename || '')
         ) {
             return service;
         }
-
         return originalLoad.call(this, request, parent, isMain);
     };
 
@@ -52,12 +47,10 @@ after(() => {
     Module._load = originalLoad;
 });
 
-test('health utiliza Prisma y conserva la respuesta del controlador', async () => {
+test('health consulta PostgreSQL y conserva la respuesta del controlador', async () => {
     calls.length = 0;
-
     const statusCalls = [];
     let body;
-
     const response = {
         status(code) {
             statusCalls.push(code);
@@ -70,10 +63,8 @@ test('health utiliza Prisma y conserva la respuesta del controlador', async () =
     };
 
     await controller.health({}, response);
-
     assert.deepEqual(calls, ['SELECT NOW() AS fecha']);
     assert.deepEqual(statusCalls, [200]);
-
     assert.equal(body.ok, true);
     assert.equal(body.mensaje, 'API funcionando correctamente');
     assert.ok(body.servidor instanceof Date);

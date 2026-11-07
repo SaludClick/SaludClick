@@ -1,41 +1,93 @@
 import { setSession, consumirDestinoPendiente } from "./auth.js";
+import { apiUrl } from "./api.js";
 
 // ==========================================
-// CONFIGURACIÓN DE RECAPTCHA V3
+// CONFIGURACIÓN DE RECAPTCHA V2 CHECKBOX
 // ==========================================
 
-const RECAPTCHA_SITE_KEY =
-    "6LcV6P0tAAAAAFouUz5_1uTOeq2SkWIlvewMiFZw";
+let RECAPTCHA_SITE_KEY = window.SALUDCLICK_RECAPTCHA_SITE_KEY || "";
+let recaptchaLoadPromise = null;
+let recaptchaWidgetId = null;
+let recaptchaToken = "";
 
-function obtenerTokenRecaptcha() {
-    return new Promise((resolve, reject) => {
-        if (!window.grecaptcha) {
-            reject(
-                new Error("reCAPTCHA todavía no está disponible. Recarga la página e inténtalo nuevamente.")
-            );
-            return;
-        }
-
-        window.grecaptcha.ready(async () => {
-            try {
-                const token = await window.grecaptcha.execute(
-                    RECAPTCHA_SITE_KEY,
-                    { action: "login" }
-                );
-
-                if (!token) {
-                    throw new Error("No se pudo completar la validación de seguridad.");
-                }
-
-                resolve(token);
-            } catch (error) {
-                reject(error);
-            }
-        });
-    });
+function mostrarErrorRecaptcha(message) {
+    const target = document.getElementById("recaptchaError");
+    if (target) target.textContent = message;
 }
 
-// ==========================================
+function reiniciarRecaptcha() {
+    recaptchaToken = "";
+    if (recaptchaWidgetId !== null && window.grecaptcha?.reset) window.grecaptcha.reset(recaptchaWidgetId);
+}
+
+function opcionesRecaptcha() {
+    return {
+        sitekey: RECAPTCHA_SITE_KEY,
+        callback(token) { recaptchaToken = token; mostrarErrorRecaptcha(""); },
+        "expired-callback"() { recaptchaToken = ""; mostrarErrorRecaptcha("La verificacion expiro. Marca la casilla otra vez."); },
+        "error-callback"() {
+            recaptchaToken = "";
+            mostrarErrorRecaptcha("Google no pudo inicializar el captcha. Verifica que la clave sea de reCAPTCHA v2 Checkbox y que localhost este autorizado.");
+        }
+    };
+}
+
+function cargarRecaptcha() {
+    if (recaptchaWidgetId !== null && window.grecaptcha?.reset) return Promise.resolve();
+    if (recaptchaLoadPromise) return recaptchaLoadPromise;
+
+    recaptchaLoadPromise = Promise.resolve().then(async () => {
+        if (!RECAPTCHA_SITE_KEY) {
+            const response = await fetch("/recaptcha-config.json", {
+                headers: { Accept: "application/json" },
+                credentials: "same-origin"
+            });
+            if (!response.ok) throw new Error("No fue posible cargar la clave pública de reCAPTCHA.");
+            const config = await response.json();
+            if (typeof config.siteKey !== "string" || !config.siteKey.trim()) {
+                throw new Error("Falta PUBLIC_RECAPTCHA_SITE_KEY en la configuración Astro.");
+            }
+            RECAPTCHA_SITE_KEY = config.siteKey.trim();
+            window.SALUDCLICK_RECAPTCHA_SITE_KEY = RECAPTCHA_SITE_KEY;
+        }
+    }).then(() => new Promise((resolve, reject) => {
+        let script = null;
+        const timeoutId = window.setTimeout(() => fail("La carga de reCAPTCHA tardo demasiado."), 15000);
+        function fail(message) {
+            window.clearTimeout(timeoutId);
+            script?.remove();
+            recaptchaLoadPromise = null;
+            reject(new Error(message));
+        }
+        function render() {
+            if (!window.grecaptcha?.ready) return fail("No fue posible inicializar reCAPTCHA v2.");
+            window.grecaptcha.ready(() => {
+                if (!window.grecaptcha?.render) return fail("No fue posible inicializar el checkbox de reCAPTCHA v2.");
+                try {
+                    recaptchaWidgetId = window.grecaptcha.render("loginRecaptcha", opcionesRecaptcha());
+                    window.clearTimeout(timeoutId);
+                    resolve();
+                } catch (error) {
+                    const detail = error instanceof Error ? error.message : "";
+                    fail(detail
+                        ? `Google no pudo renderizar reCAPTCHA v2: ${detail}`
+                        : "La clave no es compatible con reCAPTCHA v2 Checkbox o el dominio no esta autorizado.");
+                }
+            });
+        }
+        if (window.grecaptcha?.ready && window.grecaptcha?.render) return render();
+        script = document.createElement("script");
+        script.src = "https://www.google.com/recaptcha/api.js?render=explicit";
+        script.async = true;
+        script.onload = render;
+        script.onerror = () => fail("No fue posible cargar reCAPTCHA. Revisa tu conexion.");
+        document.head.appendChild(script);
+    })).catch((error) => {
+        recaptchaLoadPromise = null;
+        throw error;
+    });
+    return recaptchaLoadPromise;
+}// ==========================================
 // FUNCIÓN PARA OBTENER RUTA SEGÚN ROL
 // ==========================================
 
@@ -93,6 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error("No se encontró el formulario formLogin.");
         return;
     }
+    cargarRecaptcha().catch((error) => mostrarErrorRecaptcha(error.message));
 
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -112,9 +165,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            const recaptchaToken = await obtenerTokenRecaptcha();
+            if (!recaptchaToken) {
+                mostrarErrorRecaptcha("Marca la casilla No soy un robot para continuar.");
+                return;
+            }
 
-            const respuesta = await fetch("/api/auth/login", {
+            const respuesta = await fetch(apiUrl("/api/auth/login"), {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -127,6 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             const resultado = await respuesta.json();
+            reiniciarRecaptcha();
 
             if (
                 !respuesta.ok ||
@@ -149,6 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
             iniciarSesion(resultado, recordar, true);
 
         } catch (error) {
+            reiniciarRecaptcha();
             console.error("Error en login:", error);
 
             alert(
@@ -171,18 +229,25 @@ window.handleGoogleCredentialResponse = async function (response) {
         return;
     }
 
+    if (!recaptchaToken) {
+        mostrarErrorRecaptcha("Marca la casilla No soy un robot antes de continuar con Google.");
+        return;
+    }
+
     try {
-        const respuesta = await fetch("/api/auth/google", {
+        const respuesta = await fetch(apiUrl("/api/auth/google"), {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                credential: response.credential
+                credential: response.credential,
+                recaptchaToken
             })
         });
 
         const resultado = await respuesta.json();
+        reiniciarRecaptcha();
 
         if (!respuesta.ok || !resultado.ok) {
             console.error("Error Google:", resultado);
@@ -197,6 +262,7 @@ window.handleGoogleCredentialResponse = async function (response) {
         iniciarSesion(resultado, true, true);
 
     } catch (error) {
+        reiniciarRecaptcha();
         console.error("Error en Google Login:", error);
 
         alert("No fue posible conectar con el servidor.");

@@ -1,3 +1,5 @@
+import { apiUrl } from "./api.js";
+
 document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("recuperarForm");
     const inputEmail = document.getElementById("emailRecuperar");
@@ -33,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
         boton.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Enviando...';
 
         try {
-            const respuesta = await fetch("/api/auth/recuperar", {
+            const respuesta = await fetch(apiUrl("/api/auth/recuperar"), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ correo })

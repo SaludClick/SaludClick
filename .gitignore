@@ -1,5 +1,7 @@
 # Dependencias
 node_modules/
+dist/
+**/dist/
 
 # Variables de entorno
 .env
@@ -59,6 +61,11 @@ id_ed25519
 id_ed25519.*
 **/credentials.json
 **/*service-account*.json
+**/.npmrc
+**/.pypirc
+**/.netrc
+*.token
+*.tokens
 
 # Respaldos de bases de datos (las migraciones .sql se conservan)
 *.bak
