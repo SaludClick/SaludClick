@@ -1,0 +1,18 @@
+SALUDCLICK - IDEMPOTENCIA Y CONCURRENCIA FASE FINAL
+Fecha: 2026-11-08
+
+Resultado de suite: cubiertas por tests con dobles las ramas de pedido nuevo,
+replay, misma clave con huella diferente (409), stock insuficiente, orden estable
+de bloqueos, rollback simulado y fallo al recuperar el pedido. La prueba Edge
+comprueba doble clic de checkout frente a un servidor API simulado.
+
+No se ejecutaron dos escrituras simultáneas contra PostgreSQL, reintento persistente
+entre procesos, recuperación tras reinicio, exclusión real de stock ni rollback de
+una transacción PostgreSQL. TEST_DATABASE_URL no está disponible; estas pruebas
+permanecen BLOQUEADAS y no se marcan aprobadas.
+
+Suites relacionadas:
+backend/tests/order-repository-idempotency.test.cjs
+backend/tests/order-service-characterization.test.cjs
+backend/tests/api-contracts.test.cjs
+backend/tests/frontend.test.cjs

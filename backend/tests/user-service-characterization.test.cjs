@@ -31,3 +31,25 @@ test('servicio de usuario normaliza perfil y conserva la validación actual', as
     assert.deepEqual(await userService.profile(9), { id: 9, nombre: 'Ana' });
     await assert.rejects(userService.profile(10), /Usuario no encontrado\./);
 });
+
+test('servicio de usuario conserva el documento solo cuando se envía expresamente', async t => {
+    const userService = require('../src/services/user.service');
+
+    await t.test('acepta numeroDocumento', async () => {
+        await userService.updateProfile(9, {
+            nombre: 'Ana',
+            apellido: 'Prueba',
+            numeroDocumento: '  CC-123  '
+        });
+        assert.equal(saved.data.numeroDocumento, 'CC-123');
+    });
+
+    await t.test('normaliza el alias cedula', async () => {
+        await userService.updateProfile(9, {
+            nombre: 'Ana',
+            apellido: 'Prueba',
+            cedula: '  CC-456  '
+        });
+        assert.equal(saved.data.numeroDocumento, 'CC-456');
+    });
+});

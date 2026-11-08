@@ -362,6 +362,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         await esperarPagina('/pages/pedidos.html');
         assert.equal(await evaluate('location.hash'), '#checkout');
         assert.deepEqual(await state(), before);
+        await until(() => evaluate('document.querySelectorAll("#carritoPedido tr").length === 5'));
         assert.equal(await evaluate('document.querySelectorAll("#carritoPedido tr").length'), 5);
         assert.equal(await evaluate('document.querySelector("#resultadoPago").hidden'), true);
     });

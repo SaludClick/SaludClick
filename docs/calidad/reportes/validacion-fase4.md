@@ -1,12 +1,12 @@
 # Validación de calidad — Fase 4
 
-**Fecha:** 2026-11-08 · **Commit base:** `70061b5` · **Decisión:** **NO-GO**
+**Fecha:** 2026-11-08 · **Commit base:** `e33f2a6` · **Decisión:** **NO-GO**
 
 ## PostgreSQL y migraciones
 
-La comprobación inicial encontró `TEST_DATABASE_URL` sin configurar. Aunque el CLI de Docker está disponible, el daemon local no responde. No se intentó conectar a Neon ni a otra base, no se aplicaron migraciones y no se inspeccionaron tablas, relaciones o restricciones en un servidor PostgreSQL real.
+Las comprobaciones de `TEST_DATABASE_URL` desde los procesos de esta sesión y en los archivos locales `backend/.env*` no encontraron la variable. Se detuvieron las operaciones de base de datos antes de consultar el contenedor o abrir una conexión. No se intentó conectar a Neon ni a otra base, no se aplicaron migraciones y no se inspeccionaron tablas, relaciones o restricciones en un servidor PostgreSQL real.
 
-La migración `20261107215000_add_order_idempotency` se revisó estáticamente: agrega dos columnas anulables (`UUID` y `CHAR(64)`) y un índice único compuesto por `usuario_id` e `idempotency_key`, consistente con `Solicitud` en `schema.prisma`. `npx prisma validate` aprobó sin conexión con una URL local ficticia; esto no acredita el esquema de una base destino.
+`prisma.config.ts` usa `DATABASE_URL` para migraciones, no `TEST_DATABASE_URL`. Cuando la variable de pruebas esté disponible, el comando de migración deberá recibirla explícitamente como `DATABASE_URL` solo tras validar host, puerto, base y contenedor. La migración `20261107215000_add_order_idempotency` se revisó estáticamente: agrega dos columnas anulables (`UUID` y `CHAR(64)`) y un índice único compuesto por `usuario_id` e `idempotency_key`, consistente con `Solicitud` en `schema.prisma`. `npx prisma validate` aprobó sin conexión con una URL local ficticia; esto no acredita el esquema de una base destino.
 
 ## Pedidos e idempotencia
 
@@ -18,11 +18,13 @@ No se ejecutaron pruebas reales de PostgreSQL. Persistencia entre procesos, rein
 
 | Métrica de `backend/src/` | Resultado | Meta |
 |---|---:|---:|
-| Líneas | 89,75 % | 90 % |
-| Ramas | 80,27 % | 90 % |
-| Funciones | 78,72 % | 90 % |
+| Líneas | 92,45 % | 90 % |
+| Ramas | 81,97 % | 90 % |
+| Funciones | 81,56 % | 90 % |
 
-`backend> npm test`: **225 aprobadas, 0 fallidas, 0 omitidas**. La suite contiene pruebas unitarias, de contrato/API y frontend con dobles; no demuestra integración real con PostgreSQL. No se confirmaron defectos funcionales en las pruebas ejecutadas. La meta de cobertura no se alcanzó.
+`backend> node --test --experimental-test-coverage --test-coverage-include="src/**/*.js" tests/*.test.cjs`: **238 aprobadas, 0 fallidas, 0 omitidas**. Incluye contratos API y 31 subpruebas de Edge headless. El backend de la prueba de navegador es simulado; no demuestra integración con PostgreSQL.
+
+Una primera ejecución encontró una carrera en el test de checkout: esperaba las filas del carrito antes de terminar el render asíncrono. Se sincronizó el test con las cinco filas esperadas sin relajar la aserción. El E2E focalizado y la regresión final aprobaron. No se confirmó un defecto de aplicación.
 
 ## Seguridad
 
@@ -32,10 +34,10 @@ No se ejecutaron pruebas reales de PostgreSQL. Persistencia entre procesos, rein
 
 `frontend> npm run check`: **0 errores, 0 warnings y 2 hints**. `frontend> npm run build`: aprobado; `dist` contiene **14 archivos HTML** y el build no reportó colisiones. Astro generó dos páginas y copió las páginas estáticas restantes desde `public`.
 
-Los manifiestos revisados no definen un runner E2E independiente. Las pruebas frontend dentro de `npm test` sí se ejecutaron, pero no se reportan como E2E de navegador. Las evidencias de accesibilidad `EV-ACC-001`–`EV-ACC-007` son de la fase anterior y no se reejecutaron; la accesibilidad de esta fase queda **no ejecutada**.
+No hay un runner E2E independiente, pero `backend/tests/frontend.test.cjs` ejecuta 31 subpruebas en Edge headless con servidor de API simulado. Las siete verificaciones EV-ACC-001–007 se reejecutaron y aprobaron dentro de esa suite. Esto no cubre backend/PostgreSQL desplegados.
 
 ## Go/No-Go
 
-**NO-GO** para aceptación integral o despliegue. Condiciones pendientes: habilitar un PostgreSQL de pruebas aislado y accesible, ejecutar allí la migración y las verificaciones de integridad/concurrencia/reinicio/rollback, repetir la regresión afectada y alcanzar la meta acordada de cobertura. Ninguna prueba bloqueada se marca como aprobada.
+**NO-GO** para aceptación integral o despliegue. Condiciones pendientes: configurar `TEST_DATABASE_URL` en el entorno de pruebas, verificar el contenedor/destino, ejecutar allí la migración y las verificaciones de integridad/concurrencia/reinicio/rollback, y elevar ramas y funciones al 90 %. Ninguna prueba bloqueada se marca como aprobada.
 
-La evidencia de ejecución resumida está en `../evidencias/EV-QUALITY-003-regresion-fase4.txt`.
+Evidencias: `../evidencias/EV-QUALITY-003-regresion-fase4.txt`, `../evidencias/EV-POSTGRES-001-fasefinal.txt` y `../evidencias/EV-IDEMPOTENCIA-001-fasefinal.txt`. Cobertura detallada: `cobertura-fasefinal.md`.

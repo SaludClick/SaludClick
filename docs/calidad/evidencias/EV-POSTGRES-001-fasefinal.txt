@@ -1,0 +1,22 @@
+SALUDCLICK - VALIDACION POSTGRESQL FASE FINAL
+Fecha: 2026-11-08
+
+TEST_DATABASE_URL: no disponible en el entorno de procesos ni en los archivos
+backend/.env* revisados sin mostrar valores.
+
+Prisma config: prisma.config.ts obtiene el destino de migración de DATABASE_URL,
+no de TEST_DATABASE_URL. Por seguridad, cualquier futura migración debe asignar
+DATABASE_URL desde TEST_DATABASE_URL solo después de comprobar el destino exacto
+127.0.0.1:55432/saludclick_test y el contenedor autorizado.
+
+Resultado: no se consultó el contenedor, no se realizó conexión PostgreSQL, no se
+aplicaron migraciones y no se inspeccionaron tablas, índices, relaciones ni
+restricciones. No se utilizó Neon.
+
+Prisma validate: aprobado sin conexión, con URL local ficticia solo para validación.
+Migración 20261107215000_add_order_idempotency: revisión estática únicamente; agrega
+idempotency_key UUID e idempotency_hash CHAR(64), ambas anulables, y el índice único
+solicitudes_usuario_id_idempotency_key_key.
+
+Estado de las pruebas reales de persistencia: BLOQUEADO hasta configurar
+TEST_DATABASE_URL localmente. No aprobado.
