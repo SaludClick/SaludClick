@@ -1,6 +1,6 @@
 # Matriz de trazabilidad y aceptación
 
-**Fecha:** 2026-11-07 · **Versión:** 1.0.0 · **Suite:** Node.js Test Runner en Windows, Edge headless cuando aplica.
+**Fecha:** 2026-11-08 · **Versión:** 1.1.0 · **Suite:** Node.js Test Runner en Windows.
 
 | Requisito | Suite/verificación | Estado comprobado | Límite |
 |---|---|---|---|
@@ -27,4 +27,6 @@
 | Textos alternativos | `EV-ACC-006.txt` | Aprobado | Imágenes de inicio |
 | Zoom/diseño adaptable | `EV-ACC-007.txt` | Aprobado | Viewport a 320 px en inicio |
 
-La regresión Fase 3 ejecutó 225 pruebas: 225 aprobadas, 0 fallidas y 0 omitidas. Cobertura de `backend/src/` medida con Node Test Runner: 89,75 % líneas, 80,27 % ramas y 78,72 % funciones. La validación no equivale a integración con PostgreSQL real.
+La regresión Fase 4 ejecutó 225 pruebas: 225 aprobadas, 0 fallidas y 0 omitidas. Cobertura de `backend/src/` medida con Node Test Runner: 89,75 % líneas, 80,27 % ramas y 78,72 % funciones. No se alcanzó la meta de 90 %. El checkout/idempotencia se prueba con dobles, no con PostgreSQL real.
+
+`TEST_DATABASE_URL` no está configurada y el daemon Docker local no responde; por tanto, no se ejecutaron migraciones ni pruebas de persistencia/concurrencia/reinicio/rollback reales. No existe runner E2E independiente en los manifiestos revisados y las evidencias EV-ACC-001–007 no se reejecutaron en esta fase. Ver `validacion-fase4.md`; estos criterios permanecen bloqueados o no ejecutados, no aprobados.

@@ -1,0 +1,41 @@
+SALUDCLICK - EVIDENCIA DE CALIDAD FASE 4
+Fecha: 2026-11-08
+Commit base: 70061b5
+
+REGRESION BACKEND
+Comando: backend> npm test
+Resultado: 225 pruebas aprobadas; 0 fallidas; 0 omitidas.
+Incluye contratos API, CORS, autenticacion/roles, checkout e idempotencia con dobles.
+
+COBERTURA
+Comando: backend> node --test --experimental-test-coverage --test-coverage-include="src/**/*.js" tests/*.test.cjs
+Resultado real de backend/src: lineas 89.75%; ramas 80.27%; funciones 78.72%.
+La meta de 90% en las tres metricas no se alcanzo.
+
+POSTGRESQL Y PERSISTENCIA
+TEST_DATABASE_URL no esta configurada. Docker CLI esta presente, pero no se pudo
+conectar al daemon local. No se conecto a una base, no se ejecuto ninguna migracion
+y no se validaron tablas, relaciones ni restricciones en PostgreSQL.
+Prisma validate aprobo sin conexion usando una URL local ficticia.
+Las pruebas de pedidos verifican transacciones e idempotencia con dobles; no prueban
+persistencia real, concurrencia, replay tras reinicio ni rollback de PostgreSQL.
+
+SEGURIDAD
+npm audit en backend: 0 vulnerabilidades.
+npm audit en frontend: 0 vulnerabilidades.
+Revision estatica acotada: middleware JWT Bearer, roles administrativos, CORS con
+origenes explicitos y validadores. No se confirmo un defecto en el codigo revisado.
+
+FRONTEND
+npm run check: 0 errores, 0 warnings, 2 hints.
+npm run build: aprobado; 14 archivos HTML en dist y sin colisiones de rutas.
+El build reporto 2 paginas Astro; las otras paginas HTML se copian desde public.
+
+E2E Y ACCESIBILIDAD
+No hay un runner/script E2E independiente configurado en los manifiestos revisados.
+Las pruebas frontend de la suite Node aprobaron, pero no equivalen a E2E de navegador.
+Las evidencias EV-ACC-001 a EV-ACC-007 son historicas y no se reejecutaron en esta fase.
+
+DECISION
+NO-GO. La aceptacion integral queda bloqueada por falta de PostgreSQL de pruebas
+aislado y por la cobertura inferior a la meta. No se uso Neon ni otra base externa.
