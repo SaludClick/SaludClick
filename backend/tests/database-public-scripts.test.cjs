@@ -139,5 +139,36 @@ test("el aprovisionamiento no crea duplicados de correo", async () => {
   assert.equal(inserted, false);
 });
 
+test("los scripts públicos usan PostgreSQL y el esquema generado incluye defaults e idempotencia", () => {
+  const databaseDir = path.resolve(__dirname, "../database");
+  const install = fs.readFileSync(
+    path.join(databaseDir, "install_schema_public.sql"),
+    "utf8"
+  );
+  const compatibilitySchema = fs.readFileSync(
+    path.join(databaseDir, "saludclick.sql"),
+    "utf8"
+  );
+  const seed = fs.readFileSync(
+    path.join(databaseDir, "seed_demo_public.sql"),
+    "utf8"
+  );
+
+  for (const sql of [install, compatibilitySchema]) {
+    assert.match(sql, /CREATE TABLE "usuarios"/);
+    assert.match(sql, /DEFAULT 'ACTIVO'/);
+    assert.match(sql, /"idempotency_key" UUID/);
+    assert.match(sql, /"solicitudes_usuario_id_idempotency_key_key"/);
+    assert.doesNotMatch(sql, /AUTO_INCREMENT|USE saludclick|ENGINE=|ON UPDATE CURRENT_TIMESTAMP/i);
+  }
+  assert.match(seed, /ON CONFLICT DO NOTHING/);
+  assert.doesNotMatch(seed, /INSERT IGNORE|USE saludclick/i);
+
+  for (const legacy of ["migration_v2.sql", "upgrade_schema_public.sql"]) {
+    const retired = fs.readFileSync(path.join(databaseDir, legacy), "utf8");
+    assert.match(retired, /RAISE EXCEPTION/);
+    assert.doesNotMatch(retired, /UPDATE medicamentos|ALTER TABLE usuarios CHANGE/i);
+  }
+});
 
 

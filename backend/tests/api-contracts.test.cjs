@@ -8,6 +8,8 @@ const { createRecaptchaMiddleware } = require('../src/middlewares/recaptcha.midd
 const secretBefore = process.env.JWT_SECRET;
 const TEST_SECRET = 'saludclick-api-contract-test-secret';
 const TEST_RECAPTCHA_SECRET = 'test-only-recaptcha-secret';
+const ORDER_IDEMPOTENCY_KEY = 'de305d54-75b4-431b-adb2-eb6b9e546014';
+const orderIdempotencyKeys = [];
 const testRecaptchaMiddleware = createRecaptchaMiddleware({
     getSecret: () => TEST_RECAPTCHA_SECRET,
     getAllowedHostnames: () => 'localhost',
@@ -61,7 +63,13 @@ const fakeModules = new Map([
         }
     }],
     ['../services/order.service', {
-        crearPedido: async () => ({ pedidoId: 81, total: 25, pago: { estado: 'APROBADO' } }),
+        crearPedido: async (_userId, _body, key) => {
+            orderIdempotencyKeys.push(key);
+            if (key === 'de305d54-75b4-431b-adb2-eb6b9e546015') {
+                throw Object.assign(new Error('La clave Idempotency-Key ya fue utilizada con otros datos.'), { status: 409 });
+            }
+            return { solicitudId: 81, total: 25, pago: { estado: 'APROBADO' } };
+        },
         listarPedidos: async () => [{ id: 81 }],
         detallePedido: async (_userId, id) => id === 82 ? [{ id: 82 }] : [],
         eliminarPedido: async (_userId, id) => { if (id !== 81) throw new Error('Pedido no encontrado.'); }
@@ -93,10 +101,16 @@ function token(rol = 2, expiresIn = '1h') {
     return jwt.sign({ id: 12, correo: 'api-test@example.test', rol }, TEST_SECRET, { expiresIn });
 }
 
-async function call(path, { method = 'GET', role, auth = true, body } = {}) {
+async function call(path, { method = 'GET', role, auth = true, body, idempotencyKey } = {}) {
     const headers = {};
     if (auth) headers.Authorization = `Bearer ${role === 'expired' ? token(2, -1) : token(role ?? 2)}`;
     if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (method === 'POST' && path === '/api/pedidos/') {
+        const key = idempotencyKey === false
+            ? null
+            : idempotencyKey || ORDER_IDEMPOTENCY_KEY;
+        if (key) headers['Idempotency-Key'] = key;
+    }
     const response = await fetch(`${origin}${path}`, {
         method, headers, body: body === undefined ? undefined : JSON.stringify(body)
     });
@@ -146,7 +160,7 @@ test('los 22 endpoints conservan método, respuesta y códigos HTTP', async t =>
         ['PUT', '/api/auth/profile', { nombre: 'Ana', apellido: 'Prueba' }, 200, 'usuario'],
         ['GET', '/api/pedidos/', undefined, 200, 'pedidos'],
         ['GET', '/api/pedidos/82', undefined, 200, 'pedido'],
-        ['POST', '/api/pedidos/', {}, 201, 'pedidoId'],
+        ['POST', '/api/pedidos/', {}, 201, 'solicitudId'],
         ['DELETE', '/api/pedidos/81', undefined, 200, 'mensaje'],
         ['GET', '/api/medicamentos/', undefined, 200, 'medicamentos'],
         ['GET', '/api/dashboard/me', undefined, 200, 'estadisticas'],
@@ -165,8 +179,40 @@ test('los 22 endpoints conservan método, respuesta y códigos HTTP', async t =>
             assert.equal(response.status, status);
             assert.ok(data && Object.hasOwn(data, key), `falta propiedad ${key}`);
             if (status !== 404) assert.equal(data.ok, true);
+            if (method === 'POST' && path === '/api/pedidos/') {
+                assert.equal(orderIdempotencyKeys.at(-1), ORDER_IDEMPOTENCY_KEY);
+            }
         });
     }
+});
+
+test('crear pedido exige UUID idempotente y rechaza conflictos sin crear otro pedido', async t => {
+    await t.test('sin clave', async () => {
+        const before = orderIdempotencyKeys.length;
+        const { response, data } = await call('/api/pedidos/', {
+            method: 'POST', body: {}, idempotencyKey: false
+        });
+        assert.equal(response.status, 400);
+        assert.equal(data.mensaje, 'La clave Idempotency-Key debe ser un UUID válido.');
+        assert.equal(orderIdempotencyKeys.length, before);
+    });
+
+    await t.test('clave inválida', async () => {
+        const { response, data } = await call('/api/pedidos/', {
+            method: 'POST', body: {}, idempotencyKey: 'not-a-uuid'
+        });
+        assert.equal(response.status, 400);
+        assert.equal(data.ok, false);
+    });
+
+    await t.test('clave previamente usada con otros datos', async () => {
+        const { response, data } = await call('/api/pedidos/', {
+            method: 'POST', body: {},
+            idempotencyKey: 'de305d54-75b4-431b-adb2-eb6b9e546015'
+        });
+        assert.equal(response.status, 409);
+        assert.match(data.mensaje, /otros datos/);
+    });
 });
 
 test('login vacío y JSON malformado responden 400 sin detalles internos', async () => {

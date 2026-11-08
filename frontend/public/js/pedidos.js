@@ -14,6 +14,7 @@ import {
 
 import { apiFetch } from './api.js';
 
+const IDEMPOTENCY_STORAGE_KEY = 'saludclick_pedido_idempotencia';
 
 if (checkAuthGuard()) {
 
@@ -63,6 +64,40 @@ if (checkAuthGuard()) {
 
             const cvv =
                 document.getElementById('cvv');
+
+            function limpiarClavePedido() {
+                sessionStorage.removeItem(IDEMPOTENCY_STORAGE_KEY);
+            }
+
+            function obtenerClavePedido(items) {
+                const fingerprint = JSON.stringify({
+                    tipoEntrega: tipoEntrega.value,
+                    items: [...items].sort(
+                        (a, b) => Number(a.id) - Number(b.id)
+                    )
+                });
+                const saved = sessionStorage.getItem(IDEMPOTENCY_STORAGE_KEY);
+                if (saved) {
+                    try {
+                        const attempt = JSON.parse(saved);
+                        if (
+                            attempt.fingerprint === fingerprint
+                            && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(attempt.key)
+                        ) {
+                            return attempt.key;
+                        }
+                    } catch {
+                        limpiarClavePedido();
+                    }
+                }
+
+                const key = crypto.randomUUID();
+                sessionStorage.setItem(
+                    IDEMPOTENCY_STORAGE_KEY,
+                    JSON.stringify({ key, fingerprint })
+                );
+                return key;
+            }
 
 
             let catalogo = [];
@@ -518,8 +553,13 @@ if (checkAuthGuard()) {
 
             tipoEntrega.addEventListener(
                 'change',
-                actualizarDireccion
+                () => {
+                    limpiarClavePedido();
+                    actualizarDireccion();
+                }
             );
+            direccion.addEventListener('input', limpiarClavePedido);
+            observaciones.addEventListener('input', limpiarClavePedido);
 
 
             // =================================================
@@ -674,6 +714,8 @@ if (checkAuthGuard()) {
                                     cvv.value.trim()
                             }
                         };
+                        const idempotencyKey =
+                            obtenerClavePedido(payload.items);
 
 
                         const result =
@@ -685,10 +727,14 @@ if (checkAuthGuard()) {
                                     body:
                                         JSON.stringify(
                                             payload
-                                        )
+                                        ),
+                                    headers: {
+                                        'Idempotency-Key': idempotencyKey
+                                    }
                                 }
                             );
 
+                        limpiarClavePedido();
 
                         /*
                          * SOLAMENTE después de que
@@ -772,6 +818,9 @@ if (checkAuthGuard()) {
 
 
                     } catch (error) {
+                        if (error.status >= 400 && error.status < 500) {
+                            limpiarClavePedido();
+                        }
 
                         console.error(
                             'Error al crear pedido:',

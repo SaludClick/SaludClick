@@ -1,362 +1,402 @@
-SaludClick coverage report
-Date: 2026-11-07 21:37:09 -05:00
+SaludClick backend source coverage
+Date: 2026-11-07 22:20:33 -05:00
 Project version: 1.0.0
-Command: node --test --experimental-test-coverage tests/*.test.cjs
-Environment: Windows; Node.js; isolated test doubles/servers; no production DB access
+Command: node --experimental-test-coverage --test-coverage-include='src/**/*.js' --test tests/*.test.cjs
+Environment: Windows, Node.js v22.23.1, isolated test doubles/servers; no PostgreSQL connection or migration
+
 TAP version 13
 # Subtest: GET /api/admin/pedidos conserva JSON y admite exclusivamente roles 1 y 3
     # Subtest: rol 1
     ok 1 - rol 1
       ---
-      duration_ms: 110.7555
+      duration_ms: 109.3347
       type: 'test'
       ...
     # Subtest: rol 3
     ok 2 - rol 3
       ---
-      duration_ms: 10.5172
+      duration_ms: 11.4896
       type: 'test'
       ...
     # Subtest: rol normal
     ok 3 - rol normal
       ---
-      duration_ms: 7.0175
+      duration_ms: 16.8245
       type: 'test'
       ...
     # Subtest: sin JWT
     ok 4 - sin JWT
       ---
-      duration_ms: 6.5273
+      duration_ms: 6.0531
       type: 'test'
       ...
     1..4
 ok 1 - GET /api/admin/pedidos conserva JSON y admite exclusivamente roles 1 y 3
   ---
-  duration_ms: 137.5701
+  duration_ms: 147.1416
   type: 'test'
   ...
 # Subtest: PATCH /api/admin/pedidos/:id conserva cada estado admitido y su respuesta
     # Subtest: PENDIENTE
     ok 1 - PENDIENTE
       ---
-      duration_ms: 62.1318
+      duration_ms: 74.2708
       type: 'test'
       ...
     # Subtest: APROBADA
     ok 2 - APROBADA
       ---
-      duration_ms: 6.9433
+      duration_ms: 8.9195
       type: 'test'
       ...
     # Subtest: PREPARANDO
     ok 3 - PREPARANDO
       ---
-      duration_ms: 9.6307
+      duration_ms: 8.005
       type: 'test'
       ...
     # Subtest: LISTA
     ok 4 - LISTA
       ---
-      duration_ms: 7.1044
+      duration_ms: 6.9671
       type: 'test'
       ...
     # Subtest: ENTREGADA
     ok 5 - ENTREGADA
       ---
-      duration_ms: 7.4712
+      duration_ms: 10.9317
       type: 'test'
       ...
     # Subtest: CANCELADA
     ok 6 - CANCELADA
       ---
-      duration_ms: 7.6789
+      duration_ms: 6.7839
       type: 'test'
       ...
     1..6
 ok 2 - PATCH /api/admin/pedidos/:id conserva cada estado admitido y su respuesta
   ---
-  duration_ms: 103.1187
+  duration_ms: 117.8745
   type: 'test'
   ...
 # Subtest: entradas inválidas conservan 400 y no persisten cambios
     # Subtest: /api/admin/pedidos/no-es-id {"estado":"APROBADA"}
     ok 1 - /api/admin/pedidos/no-es-id {"estado":"APROBADA"}
       ---
-      duration_ms: 14.4646
+      duration_ms: 8.0571
       type: 'test'
       ...
     # Subtest: /api/admin/pedidos/42 {"estado":"DESCONOCIDO"}
     ok 2 - /api/admin/pedidos/42 {"estado":"DESCONOCIDO"}
       ---
-      duration_ms: 8.6543
+      duration_ms: 7.1028
       type: 'test'
       ...
     # Subtest: /api/admin/pedidos/42 {}
     ok 3 - /api/admin/pedidos/42 {}
       ---
-      duration_ms: 6.694
+      duration_ms: 13.9619
       type: 'test'
       ...
     1..3
 ok 3 - entradas inválidas conservan 400 y no persisten cambios
   ---
-  duration_ms: 31.0353
+  duration_ms: 30.3073
   type: 'test'
   ...
 # Subtest: no encontrado y fallos de persistencia conservan las respuestas actuales
     # Subtest: UPDATE sin filas afectadas
     ok 1 - UPDATE sin filas afectadas
       ---
-      duration_ms: 10.5554
+      duration_ms: 7.7677
       type: 'test'
       ...
     # Subtest: error al listar
     ok 2 - error al listar
       ---
-      duration_ms: 7.516
+      duration_ms: 5.5062
       type: 'test'
       ...
     # Subtest: error al actualizar
     ok 3 - error al actualizar
       ---
-      duration_ms: 6.5577
+      duration_ms: 8.0841
       type: 'test'
       ...
     1..3
 ok 4 - no encontrado y fallos de persistencia conservan las respuestas actuales
   ---
-  duration_ms: 25.6594
+  duration_ms: 22.4891
   type: 'test'
   ...
+# ◇ injected env (19) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
 # Subtest: los 22 endpoints conservan método, respuesta y códigos HTTP
     # Subtest: GET /api/health/
     ok 1 - GET /api/health/
       ---
-      duration_ms: 173.9151
+      duration_ms: 135.6106
       type: 'test'
       ...
     # Subtest: POST /api/auth/register
     ok 2 - POST /api/auth/register
       ---
-      duration_ms: 75.5239
+      duration_ms: 52.0722
       type: 'test'
       ...
     # Subtest: POST /api/auth/login
     ok 3 - POST /api/auth/login
       ---
-      duration_ms: 13.8466
+      duration_ms: 20.4815
       type: 'test'
       ...
     # Subtest: POST /api/auth/google
     ok 4 - POST /api/auth/google
       ---
-      duration_ms: 12.2737
+      duration_ms: 10.3473
       type: 'test'
       ...
     # Subtest: POST /api/auth/recuperar
     ok 5 - POST /api/auth/recuperar
       ---
-      duration_ms: 8.4299
+      duration_ms: 11.0857
       type: 'test'
       ...
     # Subtest: POST /api/auth/restablecer
     ok 6 - POST /api/auth/restablecer
       ---
-      duration_ms: 7.7407
+      duration_ms: 8.0442
       type: 'test'
       ...
     # Subtest: GET /api/auth/profile
     ok 7 - GET /api/auth/profile
       ---
-      duration_ms: 19.1621
+      duration_ms: 10.4248
       type: 'test'
       ...
     # Subtest: PUT /api/auth/profile
     ok 8 - PUT /api/auth/profile
       ---
-      duration_ms: 10.454
+      duration_ms: 14.95
       type: 'test'
       ...
     # Subtest: GET /api/pedidos/
     ok 9 - GET /api/pedidos/
       ---
-      duration_ms: 7.4094
+      duration_ms: 7.4219
       type: 'test'
       ...
     # Subtest: GET /api/pedidos/82
     ok 10 - GET /api/pedidos/82
       ---
-      duration_ms: 13.0478
+      duration_ms: 13.4719
       type: 'test'
       ...
     # Subtest: POST /api/pedidos/
     ok 11 - POST /api/pedidos/
       ---
-      duration_ms: 13.5729
+      duration_ms: 7.7014
       type: 'test'
       ...
     # Subtest: DELETE /api/pedidos/81
     ok 12 - DELETE /api/pedidos/81
       ---
-      duration_ms: 6.9895
+      duration_ms: 6.0614
       type: 'test'
       ...
     # Subtest: GET /api/medicamentos/
     ok 13 - GET /api/medicamentos/
       ---
-      duration_ms: 6.5689
+      duration_ms: 15.2869
       type: 'test'
       ...
     # Subtest: GET /api/dashboard/me
     ok 14 - GET /api/dashboard/me
       ---
-      duration_ms: 9.5851
+      duration_ms: 11.4605
       type: 'test'
       ...
     # Subtest: GET /api/dashboard/admin
     ok 15 - GET /api/dashboard/admin
       ---
-      duration_ms: 7.9026
+      duration_ms: 7.8769
       type: 'test'
       ...
     # Subtest: GET /api/formulas/admin/all
     ok 16 - GET /api/formulas/admin/all
       ---
-      duration_ms: 7.5556
+      duration_ms: 7.5296
       type: 'test'
       ...
     # Subtest: PATCH /api/formulas/admin/71
     ok 17 - PATCH /api/formulas/admin/71
       ---
-      duration_ms: 8.3892
+      duration_ms: 12.6531
       type: 'test'
       ...
     # Subtest: GET /api/formulas/
     ok 18 - GET /api/formulas/
       ---
-      duration_ms: 15.5148
+      duration_ms: 7.8644
       type: 'test'
       ...
     # Subtest: POST /api/formulas/
     ok 19 - POST /api/formulas/
       ---
-      duration_ms: 10.6799
+      duration_ms: 15.6115
       type: 'test'
       ...
     # Subtest: GET /api/formulas/999
     ok 20 - GET /api/formulas/999
       ---
-      duration_ms: 6.3646
+      duration_ms: 12.884
       type: 'test'
       ...
     # Subtest: GET /api/admin/pedidos
     ok 21 - GET /api/admin/pedidos
       ---
-      duration_ms: 6.8701
+      duration_ms: 7.9943
       type: 'test'
       ...
     # Subtest: PATCH /api/admin/pedidos/81
     ok 22 - PATCH /api/admin/pedidos/81
       ---
-      duration_ms: 11.6543
+      duration_ms: 10.164
       type: 'test'
       ...
     1..22
 ok 5 - los 22 endpoints conservan método, respuesta y códigos HTTP
   ---
-  duration_ms: 462.1328
+  duration_ms: 415.4817
+  type: 'test'
+  ...
+# Subtest: crear pedido exige UUID idempotente y rechaza conflictos sin crear otro pedido
+    # Subtest: sin clave
+    ok 1 - sin clave
+      ---
+      duration_ms: 8.1473
+      type: 'test'
+      ...
+    # Subtest: clave inválida
+    ok 2 - clave inválida
+      ---
+      duration_ms: 10.6183
+      type: 'test'
+      ...
+# Error al crear pedido: Error: La clave Idempotency-Key ya fue utilizada con otros datos.
+#     at Object.crearPedido (C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\tests\\api-contracts.test.cjs:69:37)
+#     at crearPedido (C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\src\\controllers\\order.controller.js:19:46)
+#     at Layer.handleRequest (C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\node_modules\\router\\lib\\layer.js:152:17)
+#     at next (C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\node_modules\\router\\lib\\route.js:157:13)
+#     at Route.dispatch (C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\node_modules\\router\\lib\\route.js:117:3)
+#     at handle (C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\node_modules\\router\\index.js:435:11)
+#     at Layer.handleRequest (C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\node_modules\\router\\lib\\layer.js:152:17)
+#     at C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\node_modules\\router\\index.js:295:15
+#     at processParams (C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\node_modules\\router\\index.js:582:12)
+#     at next (C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\node_modules\\router\\index.js:291:5) {
+#   status: 409
+# }
+    # Subtest: clave previamente usada con otros datos
+    ok 3 - clave previamente usada con otros datos
+      ---
+      duration_ms: 10.6138
+      type: 'test'
+      ...
+    1..3
+ok 6 - crear pedido exige UUID idempotente y rechaza conflictos sin crear otro pedido
+  ---
+  duration_ms: 30.5745
   type: 'test'
   ...
 # Subtest: login vacío y JSON malformado responden 400 sin detalles internos
-ok 6 - login vacío y JSON malformado responden 400 sin detalles internos
+ok 7 - login vacío y JSON malformado responden 400 sin detalles internos
   ---
-  duration_ms: 12.6658
+  duration_ms: 12.4634
   type: 'test'
   ...
 # Subtest: JWT ausente, inválido y vencido conservan respuestas 401
     # Subtest: ausente
     ok 1 - ausente
       ---
-      duration_ms: 6.029
+      duration_ms: 9.7726
       type: 'test'
       ...
     # Subtest: inválido
     ok 2 - inválido
       ---
-      duration_ms: 9.4082
+      duration_ms: 5.1623
       type: 'test'
       ...
     # Subtest: vencido
     ok 3 - vencido
       ---
-      duration_ms: 16.6852
+      duration_ms: 6.1238
       type: 'test'
       ...
     1..3
-ok 7 - JWT ausente, inválido y vencido conservan respuestas 401
+ok 8 - JWT ausente, inválido y vencido conservan respuestas 401
   ---
-  duration_ms: 33.8228
+  duration_ms: 23.1601
   type: 'test'
   ...
 # Subtest: roles administrativos 1 y 3 pasan; usuario normal recibe 403
     # Subtest: rol 1: /api/dashboard/admin
     ok 1 - rol 1: /api/dashboard/admin
       ---
-      duration_ms: 11.144
+      duration_ms: 8.2261
       type: 'test'
       ...
     # Subtest: rol 1: /api/formulas/admin/all
     ok 2 - rol 1: /api/formulas/admin/all
       ---
-      duration_ms: 11.8267
+      duration_ms: 11.8944
       type: 'test'
       ...
     # Subtest: rol 1: /api/admin/pedidos
     ok 3 - rol 1: /api/admin/pedidos
       ---
-      duration_ms: 8.8045
+      duration_ms: 11.389
       type: 'test'
       ...
     # Subtest: rol 3: /api/dashboard/admin
     ok 4 - rol 3: /api/dashboard/admin
       ---
-      duration_ms: 11.9711
+      duration_ms: 7.612
       type: 'test'
       ...
     # Subtest: rol 3: /api/formulas/admin/all
     ok 5 - rol 3: /api/formulas/admin/all
       ---
-      duration_ms: 11.9407
+      duration_ms: 5.7335
       type: 'test'
       ...
     # Subtest: rol 3: /api/admin/pedidos
     ok 6 - rol 3: /api/admin/pedidos
       ---
-      duration_ms: 10.3792
+      duration_ms: 5.9663
       type: 'test'
       ...
     # Subtest: rol 2: /api/dashboard/admin
     ok 7 - rol 2: /api/dashboard/admin
       ---
-      duration_ms: 11.7489
+      duration_ms: 6.605
       type: 'test'
       ...
     # Subtest: rol 2: /api/formulas/admin/all
     ok 8 - rol 2: /api/formulas/admin/all
       ---
-      duration_ms: 6.6403
+      duration_ms: 5.9866
       type: 'test'
       ...
     # Subtest: rol 2: /api/admin/pedidos
     ok 9 - rol 2: /api/admin/pedidos
       ---
-      duration_ms: 10.9753
+      duration_ms: 8.6708
       type: 'test'
       ...
     1..9
-ok 8 - roles administrativos 1 y 3 pasan; usuario normal recibe 403
+ok 9 - roles administrativos 1 y 3 pasan; usuario normal recibe 403
   ---
-  duration_ms: 98.3419
+  duration_ms: 74.5481
   type: 'test'
   ...
 # Error en login con Google: provider failure
@@ -364,43 +404,43 @@ ok 8 - roles administrativos 1 y 3 pasan; usuario normal recibe 403
     # Subtest: POST /api/auth/google
     ok 1 - POST /api/auth/google
       ---
-      duration_ms: 16.1995
+      duration_ms: 8.9752
       type: 'test'
       ...
 # Error en recuperación: mail failure
     # Subtest: POST /api/auth/recuperar
     ok 2 - POST /api/auth/recuperar
       ---
-      duration_ms: 5.7618
+      duration_ms: 6.4332
       type: 'test'
       ...
     # Subtest: POST /api/auth/restablecer
     ok 3 - POST /api/auth/restablecer
       ---
-      duration_ms: 6.7863
+      duration_ms: 6.3846
       type: 'test'
       ...
     # Subtest: PUT /api/auth/profile
     ok 4 - PUT /api/auth/profile
       ---
-      duration_ms: 6.8905
+      duration_ms: 6.4909
       type: 'test'
       ...
     # Subtest: GET /api/pedidos/0
     ok 5 - GET /api/pedidos/0
       ---
-      duration_ms: 9.3013
+      duration_ms: 10.9891
       type: 'test'
       ...
     # Subtest: GET /api/pedidos/83
     ok 6 - GET /api/pedidos/83
       ---
-      duration_ms: 5.1262
+      duration_ms: 6.6783
       type: 'test'
       ...
 # Error al eliminar pedido: Error: Pedido no encontrado.
-#     at Object.eliminarPedido (C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\tests\\api-contracts.test.cjs:67:71)
-#     at eliminarPedido (C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\src\\controllers\\order.controller.js:118:28)
+#     at Object.eliminarPedido (C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\tests\\api-contracts.test.cjs:75:71)
+#     at eliminarPedido (C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\src\\controllers\\order.controller.js:134:28)
 #     at Layer.handleRequest (C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\node_modules\\router\\lib\\layer.js:152:17)
 #     at next (C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\node_modules\\router\\lib\\route.js:157:13)
 #     at Route.dispatch (C:\\Users\\SAMIR ACOSTA\\SaludClick\\backend\\node_modules\\router\\lib\\route.js:117:3)
@@ -412,13 +452,13 @@ ok 8 - roles administrativos 1 y 3 pasan; usuario normal recibe 403
     # Subtest: DELETE /api/pedidos/83
     ok 7 - DELETE /api/pedidos/83
       ---
-      duration_ms: 11.1356
+      duration_ms: 5.8005
       type: 'test'
       ...
     # Subtest: PATCH /api/formulas/admin/71
     ok 8 - PATCH /api/formulas/admin/71
       ---
-      duration_ms: 8.8181
+      duration_ms: 5.9051
       type: 'test'
       ...
 # Error: Solo se permiten PDF, JPG, PNG o WEBP.
@@ -435,763 +475,869 @@ ok 8 - roles administrativos 1 y 3 pasan; usuario normal recibe 403
     # Subtest: POST /api/formulas/
     ok 9 - POST /api/formulas/
       ---
-      duration_ms: 9.3895
+      duration_ms: 5.659
       type: 'test'
       ...
     # Subtest: GET /api/formulas/0
     ok 10 - GET /api/formulas/0
       ---
-      duration_ms: 11.6961
+      duration_ms: 7.7518
       type: 'test'
       ...
     # Subtest: GET /api/formulas/999
     ok 11 - GET /api/formulas/999
       ---
-      duration_ms: 6.7735
+      duration_ms: 6.763
       type: 'test'
       ...
     # Subtest: PATCH /api/admin/pedidos/1
     ok 12 - PATCH /api/admin/pedidos/1
       ---
-      duration_ms: 6.173
+      duration_ms: 10.541
       type: 'test'
       ...
     # Subtest: PATCH /api/admin/pedidos/999
     ok 13 - PATCH /api/admin/pedidos/999
       ---
-      duration_ms: 7.1101
+      duration_ms: 8.2516
       type: 'test'
       ...
     1..13
-ok 9 - errores de controlador conservan sus status, campos y mensajes
+ok 10 - errores de controlador conservan sus status, campos y mensajes
   ---
-  duration_ms: 114.657
+  duration_ms: 100.4564
   type: 'test'
   ...
 # Subtest: lectura de fórmula privada limita propietario y no requiere filesystem real
     # Subtest: fórmula propia entrega contenido binario tras verificar la sesión
     ok 1 - fórmula propia entrega contenido binario tras verificar la sesión
       ---
-      duration_ms: 10.474
+      duration_ms: 6.2678
       type: 'test'
       ...
     # Subtest: fórmula ajena/inexistente no se entrega
     ok 2 - fórmula ajena/inexistente no se entrega
       ---
-      duration_ms: 9.672
+      duration_ms: 6.6922
       type: 'test'
       ...
     # Subtest: sin JWT no se consulta el recurso
     ok 3 - sin JWT no se consulta el recurso
       ---
-      duration_ms: 5.0845
+      duration_ms: 5.2805
       type: 'test'
       ...
     1..3
-ok 10 - lectura de fórmula privada limita propietario y no requiere filesystem real
+ok 11 - lectura de fórmula privada limita propietario y no requiere filesystem real
   ---
-  duration_ms: 26.6175
+  duration_ms: 19.4189
   type: 'test'
   ...
 # Subtest: registro normaliza correo, guarda hash bcrypt y asigna rol de usuario
-ok 11 - registro normaliza correo, guarda hash bcrypt y asigna rol de usuario
+ok 12 - registro normaliza correo, guarda hash bcrypt y asigna rol de usuario
   ---
-  duration_ms: 4.2195
+  duration_ms: 5.5468
   type: 'test'
   ...
 # Subtest: registro conserva prioridad de correo duplicado y sus validaciones actuales
     # Subtest: duplicado antes de campos requeridos
     ok 1 - duplicado antes de campos requeridos
       ---
-      duration_ms: 1.3421
+      duration_ms: 1.7213
       type: 'test'
       ...
     # Subtest: campos requeridos
     ok 2 - campos requeridos
       ---
-      duration_ms: 0.5751
+      duration_ms: 0.6036
       type: 'test'
       ...
     # Subtest: mínimo de ocho caracteres
     ok 3 - mínimo de ocho caracteres
       ---
-      duration_ms: 0.5196
+      duration_ms: 0.5812
       type: 'test'
       ...
     1..3
-ok 12 - registro conserva prioridad de correo duplicado y sus validaciones actuales
+ok 13 - registro conserva prioridad de correo duplicado y sus validaciones actuales
   ---
-  duration_ms: 3.6954
+  duration_ms: 4.453
   type: 'test'
   ...
 # Subtest: login valida contraseña/estado y firma el JWT actual de ocho horas
     # Subtest: login normaliza correo y devuelve usuario público
     ok 1 - login normaliza correo y devuelve usuario público
       ---
-      duration_ms: 11.0404
+      duration_ms: 9.1477
       type: 'test'
       ...
     # Subtest: credenciales incorrectas
     ok 2 - credenciales incorrectas
       ---
-      duration_ms: 2.0197
+      duration_ms: 0.6953
       type: 'test'
       ...
     # Subtest: cuenta inactiva
     ok 3 - cuenta inactiva
       ---
-      duration_ms: 0.5257
+      duration_ms: 0.5125
       type: 'test'
       ...
     1..3
-ok 13 - login valida contraseña/estado y firma el JWT actual de ocho horas
+ok 14 - login valida contraseña/estado y firma el JWT actual de ocho horas
   ---
-  duration_ms: 14.7605
+  duration_ms: 11.5342
   type: 'test'
   ...
 # Subtest: Google verifica audiencia y correo antes de crear o iniciar sesión
     # Subtest: cuenta existente
     ok 1 - cuenta existente
       ---
-      duration_ms: 1.8173
+      duration_ms: 1.7002
       type: 'test'
       ...
     # Subtest: correo no verificado
     ok 2 - correo no verificado
       ---
-      duration_ms: 0.6791
+      duration_ms: 0.5511
       type: 'test'
       ...
     # Subtest: cuenta nueva mantiene rol predeterminado y perfil derivado
     ok 3 - cuenta nueva mantiene rol predeterminado y perfil derivado
       ---
-      duration_ms: 1.4896
+      duration_ms: 2.2036
       type: 'test'
       ...
     1..3
-ok 14 - Google verifica audiencia y correo antes de crear o iniciar sesión
+ok 15 - Google verifica audiencia y correo antes de crear o iniciar sesión
   ---
-  duration_ms: 5.1097
+  duration_ms: 5.5417
   type: 'test'
   ...
 # Subtest: recuperación oculta cuentas inexistentes, persiste hash y envía enlace de 15 minutos
-ok 15 - recuperación oculta cuentas inexistentes, persiste hash y envía enlace de 15 minutos
+ok 16 - recuperación oculta cuentas inexistentes, persiste hash y envía enlace de 15 minutos
   ---
-  duration_ms: 3.1271
+  duration_ms: 3.5358
   type: 'test'
   ...
 # Subtest: restablecimiento conserva validación, hash y consumo del token
     # Subtest: token ausente
     ok 1 - token ausente
       ---
-      duration_ms: 0.8099
+      duration_ms: 0.7488
       type: 'test'
       ...
     # Subtest: contraseña corta
     ok 2 - contraseña corta
       ---
-      duration_ms: 0.4599
+      duration_ms: 1.0488
       type: 'test'
       ...
     # Subtest: token vencido o desconocido
     ok 3 - token vencido o desconocido
       ---
-      duration_ms: 0.8192
+      duration_ms: 0.7745
       type: 'test'
       ...
     # Subtest: éxito con contraseña mínima
     ok 4 - éxito con contraseña mínima
       ---
-      duration_ms: 0.5887
+      duration_ms: 0.6428
       type: 'test'
       ...
     1..4
-ok 16 - restablecimiento conserva validación, hash y consumo del token
+ok 17 - restablecimiento conserva validación, hash y consumo del token
   ---
-  duration_ms: 5.2165
+  duration_ms: 5.5489
   type: 'test'
   ...
 # Subtest: servicio de perfil consulta usuario y reenvía los datos de actualización al repositorio
     # Subtest: perfil existente
     ok 1 - perfil existente
       ---
-      duration_ms: 0.6046
+      duration_ms: 0.6011
       type: 'test'
       ...
     # Subtest: perfil inexistente
     ok 2 - perfil inexistente
       ---
-      duration_ms: 0.6012
+      duration_ms: 0.663
       type: 'test'
       ...
     # Subtest: actualizar perfil
     ok 3 - actualizar perfil
       ---
-      duration_ms: 0.6658
+      duration_ms: 1.1723
       type: 'test'
       ...
     1..3
-ok 17 - servicio de perfil consulta usuario y reenvía los datos de actualización al repositorio
+ok 18 - servicio de perfil consulta usuario y reenvía los datos de actualización al repositorio
   ---
-  duration_ms: 2.7292
+  duration_ms: 3.3222
   type: 'test'
   ...
+# ◇ injected env (20) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
 # Subtest: chat service: restringe historial a cliente y agente asignado
-ok 18 - chat service: restringe historial a cliente y agente asignado
+ok 19 - chat service: restringe historial a cliente y agente asignado
   ---
-  duration_ms: 16.0298
+  duration_ms: 3.3187
   type: 'test'
   ...
 # Subtest: chat service: valida mensajes y persiste los mensajes autorizados
-ok 19 - chat service: valida mensajes y persiste los mensajes autorizados
+ok 20 - chat service: valida mensajes y persiste los mensajes autorizados
   ---
-  duration_ms: 2.6188
+  duration_ms: 2.8134
   type: 'test'
   ...
 # Subtest: chat service: solo usuarios autenticados pueden abrir conversaciones
-ok 20 - chat service: solo usuarios autenticados pueden abrir conversaciones
+ok 21 - chat service: solo usuarios autenticados pueden abrir conversaciones
   ---
-  duration_ms: 0.4894
+  duration_ms: 0.7456
   type: 'test'
   ...
+# ◇ injected env (20) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
 # Subtest: socket: valida JWT y restringe roles del handshake
-ok 21 - socket: valida JWT y restringe roles del handshake
+ok 22 - socket: valida JWT y restringe roles del handshake
   ---
-  duration_ms: 37.4472
+  duration_ms: 11.9636
   type: 'test'
   ...
 # Subtest: socket: entrega eventos de mensaje y notifica la conversación
-ok 22 - socket: entrega eventos de mensaje y notifica la conversación
+ok 23 - socket: entrega eventos de mensaje y notifica la conversación
   ---
-  duration_ms: 6.5787
+  duration_ms: 2.7685
   type: 'test'
   ...
 # Subtest: socket: rechaza unirse a conversaciones sin permiso y devuelve historial autorizado
-ok 23 - socket: rechaza unirse a conversaciones sin permiso y devuelve historial autorizado
+ok 24 - socket: rechaza unirse a conversaciones sin permiso y devuelve historial autorizado
   ---
-  duration_ms: 12.2437
+  duration_ms: 3.4824
   type: 'test'
   ...
-# ◇ injected env (20) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+# ◇ injected env (20) from .env // tip: ⌘ override existing { override: true }
 # Subtest: CORS preflight permite http://localhost:4321
-ok 24 - CORS preflight permite http://localhost:4321
+ok 25 - CORS preflight permite http://localhost:4321
   ---
-  duration_ms: 158.356
+  duration_ms: 373.4526
   type: 'test'
   ...
 # Subtest: CORS preflight permite http://127.0.0.1:4321
-ok 25 - CORS preflight permite http://127.0.0.1:4321
+ok 26 - CORS preflight permite http://127.0.0.1:4321
   ---
-  duration_ms: 14.5317
+  duration_ms: 14.0173
   type: 'test'
   ...
 # Subtest: la solicitud de login desde Astro llega a la validación reCAPTCHA
-ok 26 - la solicitud de login desde Astro llega a la validación reCAPTCHA
+ok 27 - la solicitud de login desde Astro llega a la validación reCAPTCHA
   ---
-  duration_ms: 136.5768
+  duration_ms: 339.7318
   type: 'test'
   ...
 # Subtest: un origen externo sigue rechazado y no recibe permiso CORS
-ok 27 - un origen externo sigue rechazado y no recibe permiso CORS
+ok 28 - un origen externo sigue rechazado y no recibe permiso CORS
   ---
-  duration_ms: 8.3722
+  duration_ms: 12.1148
   type: 'test'
   ...
 # Subtest: producción solo recibe los orígenes explícitos y nunca el comodín
-ok 28 - producción solo recibe los orígenes explícitos y nunca el comodín
+ok 29 - producción solo recibe los orígenes explícitos y nunca el comodín
   ---
-  duration_ms: 0.5666
+  duration_ms: 0.7016
   type: 'test'
   ...
 # Subtest: el origen exacto del backend se permite para cargar módulos ES en desarrollo
-ok 29 - el origen exacto del backend se permite para cargar módulos ES en desarrollo
+ok 30 - el origen exacto del backend se permite para cargar módulos ES en desarrollo
   ---
-  duration_ms: 1.9724
+  duration_ms: 0.6142
   type: 'test'
   ...
 # Subtest: el aprovisionamiento guarda bcrypt, restringe roles y no pasa la contraseÃ±a en claro
-ok 30 - el aprovisionamiento guarda bcrypt, restringe roles y no pasa la contraseÃ±a en claro
+ok 31 - el aprovisionamiento guarda bcrypt, restringe roles y no pasa la contraseÃ±a en claro
   ---
-  duration_ms: 3.3134
+  duration_ms: 3.3536
   type: 'test'
   ...
 # Subtest: el aprovisionamiento rechaza roles fuera de 1/3 antes de consultar o insertar
-ok 31 - el aprovisionamiento rechaza roles fuera de 1/3 antes de consultar o insertar
+ok 32 - el aprovisionamiento rechaza roles fuera de 1/3 antes de consultar o insertar
   ---
-  duration_ms: 1.5272
+  duration_ms: 1.2638
   type: 'test'
   ...
 # Subtest: el aprovisionamiento no crea duplicados de correo
-ok 32 - el aprovisionamiento no crea duplicados de correo
+ok 33 - el aprovisionamiento no crea duplicados de correo
   ---
-  duration_ms: 0.735
+  duration_ms: 1.3975
+  type: 'test'
+  ...
+# Subtest: los scripts públicos usan PostgreSQL y el esquema generado incluye defaults e idempotencia
+ok 34 - los scripts públicos usan PostgreSQL y el esquema generado incluye defaults e idempotencia
+  ---
+  duration_ms: 4.5019
   type: 'test'
   ...
 # Subtest: controles del frontend en Edge headless
     # Subtest: inicio: buscar, Enter, vacÃ­o, solicitar y servicios
     ok 1 - inicio: buscar, Enter, vacÃ­o, solicitar y servicios
       ---
-      duration_ms: 1805.1418
+      duration_ms: 1331.4818
       type: 'test'
       ...
     # Subtest: cinco bÃºsquedas por nombre, Enter, limpiar y parÃ¡metro
     ok 2 - cinco bÃºsquedas por nombre, Enter, limpiar y parÃ¡metro
       ---
-      duration_ms: 281.9881
+      duration_ms: 524.8018
       type: 'test'
       ...
     # Subtest: agregar cinco, duplicado, cantidades, eliminar, persistencia y vaciar
     ok 3 - agregar cinco, duplicado, cantidades, eliminar, persistencia y vaciar
       ---
-      duration_ms: 398.4881
+      duration_ms: 247.6024
       type: 'test'
       ...
     # Subtest: confirmar dirige al checkout y conserva el borrador local
     ok 4 - confirmar dirige al checkout y conserva el borrador local
       ---
-      duration_ms: 245.5823
+      duration_ms: 198.3092
       type: 'test'
       ...
     # Subtest: doble clic de pago envía una sola solicitud de pedido
     ok 5 - doble clic de pago envía una sola solicitud de pedido
       ---
-      duration_ms: 277.0089
+      duration_ms: 283.8654
       type: 'test'
       ...
     # Subtest: perfil: validaciÃ³n, guardar sin falso Ã©xito y cancelar
     ok 6 - perfil: validaciÃ³n, guardar sin falso Ã©xito y cancelar
       ---
-      duration_ms: 266.8043
+      duration_ms: 269.714
       type: 'test'
       ...
     # Subtest: menÃºs mÃ³viles, navegaciÃ³n local y dashboard sin listeners duplicados
     ok 7 - menÃºs mÃ³viles, navegaciÃ³n local y dashboard sin listeners duplicados
       ---
-      duration_ms: 1329.2128
+      duration_ms: 1304.4948
       type: 'test'
       ...
     # Subtest: registro: contraseÃ±as, documentos y error real de servicio
     ok 8 - registro: contraseÃ±as, documentos y error real de servicio
       ---
-      duration_ms: 253.4656
+      duration_ms: 249.8153
       type: 'test'
       ...
     # Subtest: sesiÃ³n temporal, persistente y logout usan las claves existentes
     ok 9 - sesiÃ³n temporal, persistente y logout usan las claves existentes
       ---
-      duration_ms: 302.1019
+      duration_ms: 206.7715
       type: 'test'
       ...
     # Subtest: login, recuperación y restablecer muestran el error del servicio caído
     ok 10 - login, recuperación y restablecer muestran el error del servicio caído
       ---
-      duration_ms: 662.9713
+      duration_ms: 669.2594
       type: 'test'
       ...
     # Subtest: todos los enlaces internos, scripts y tipos de botÃ³n existen
     ok 11 - todos los enlaces internos, scripts y tipos de botÃ³n existen
       ---
-      duration_ms: 3086.0955
+      duration_ms: 2899.0938
       type: 'test'
       ...
     # Subtest: sin sesiÃ³n: buscar/Enter, solicitar, consultar, estado e historial vuelven a su destino tras login
     ok 12 - sin sesiÃ³n: buscar/Enter, solicitar, consultar, estado e historial vuelven a su destino tras login
       ---
-      duration_ms: 2202.121
+      duration_ms: 2186.9349
       type: 'test'
       ...
     # Subtest: domicilio y fÃ³rmula requieren login antes de mostrar indisponibilidad
     ok 13 - domicilio y fÃ³rmula requieren login antes de mostrar indisponibilidad
       ---
-      duration_ms: 982.7134
+      duration_ms: 748.3263
       type: 'test'
       ...
     # Subtest: las cinco pÃ¡ginas privadas recuerdan accesos directos y no entran en bucle
     ok 14 - las cinco pÃ¡ginas privadas recuerdan accesos directos y no entran en bucle
       ---
-      duration_ms: 2718.1083
+      duration_ms: 2203.7699
       type: 'test'
       ...
     # Subtest: login fallido y recarga conservan destino; Ã©xito lo consume una sola vez
     ok 15 - login fallido y recarga conservan destino; Ã©xito lo consume una sola vez
       ---
-      duration_ms: 946.1735
+      duration_ms: 851.1511
       type: 'test'
       ...
     # Subtest: destinos externos, login y rutas inexistentes se rechazan
     ok 16 - destinos externos, login y rutas inexistentes se rechazan
       ---
-      duration_ms: 385.9838
+      duration_ms: 388.0127
       type: 'test'
       ...
     # Subtest: sin sesiÃ³n no se modifica el pedido aunque la pÃ¡gina ya estuviera abierta
     ok 17 - sin sesiÃ³n no se modifica el pedido aunque la pÃ¡gina ya estuviera abierta
       ---
-      duration_ms: 2592.2846
+      duration_ms: 2428.0681
       type: 'test'
       ...
     # Subtest: sesiÃ³n: cinco medicamentos, confirmar, logout limpia destino y volver exige login
     ok 18 - sesiÃ³n: cinco medicamentos, confirmar, logout limpia destino y volver exige login
       ---
-      duration_ms: 927.4303
+      duration_ms: 718.4582
       type: 'test'
       ...
     # Subtest: clics de ratÃ³n reales en los cinco servicios privados sin sesiÃ³n
     ok 19 - clics de ratÃ³n reales en los cinco servicios privados sin sesiÃ³n
       ---
-      duration_ms: 1494.9554
+      duration_ms: 1423.4557
       type: 'test'
       ...
     # Subtest: clic real en Contactar sin autenticaciÃ³n solicita abrir el correo
     ok 20 - clic real en Contactar sin autenticaciÃ³n solicita abrir el correo
       ---
-      duration_ms: 467.6175
+      duration_ms: 272.2061
       type: 'test'
       ...
     # Subtest: clics reales en Iniciar SesiÃ³n y Registrarse
     ok 21 - clics reales en Iniciar SesiÃ³n y Registrarse
       ---
-      duration_ms: 1082.7564
+      duration_ms: 1030.5025
       type: 'test'
       ...
     # Subtest: servicios de Inicio visibles y accesibles en móvil
     ok 22 - servicios de Inicio visibles y accesibles en móvil
       ---
-      duration_ms: 153.6875
+      duration_ms: 153.2587
       type: 'test'
       ...
     # Subtest: imágenes locales del catálogo de medicamentos cargan
     ok 23 - imágenes locales del catálogo de medicamentos cargan
       ---
-      duration_ms: 293.4362
+      duration_ms: 220.9393
       type: 'test'
       ...
     # Subtest: EV-ACC-001 navegación por teclado
     ok 24 - EV-ACC-001 navegación por teclado
       ---
-      duration_ms: 140.1604
+      duration_ms: 164.6696
       type: 'test'
       ...
     # Subtest: EV-ACC-002 foco visible
     ok 25 - EV-ACC-002 foco visible
       ---
-      duration_ms: 118.1522
+      duration_ms: 124.7393
       type: 'test'
       ...
     # Subtest: EV-ACC-003 etiquetas y mensajes de validación
     ok 26 - EV-ACC-003 etiquetas y mensajes de validación
       ---
-      duration_ms: 114.2117
+      duration_ms: 116.9948
       type: 'test'
       ...
     # Subtest: EV-ACC-004 contraste de texto WCAG AA
     ok 27 - EV-ACC-004 contraste de texto WCAG AA
       ---
-      duration_ms: 104.5754
+      duration_ms: 107.3353
       type: 'test'
       ...
     # Subtest: EV-ACC-005 encabezados HTML
     ok 28 - EV-ACC-005 encabezados HTML
       ---
-      duration_ms: 110.8742
+      duration_ms: 115.5616
       type: 'test'
       ...
     # Subtest: EV-ACC-006 textos alternativos de imágenes
     ok 29 - EV-ACC-006 textos alternativos de imágenes
       ---
-      duration_ms: 128.4915
+      duration_ms: 108.5645
       type: 'test'
       ...
     # Subtest: EV-ACC-007 zoom y diseño adaptable a 320 px
     ok 30 - EV-ACC-007 zoom y diseño adaptable a 320 px
       ---
-      duration_ms: 136.9598
+      duration_ms: 117.4258
       type: 'test'
       ...
     # Subtest: sin excepciones JavaScript propias
     ok 31 - sin excepciones JavaScript propias
       ---
-      duration_ms: 0.3586
+      duration_ms: 0.4258
       type: 'test'
       ...
     1..31
-ok 33 - controles del frontend en Edge headless
+ok 35 - controles del frontend en Edge headless
   ---
-  duration_ms: 26909.8128
+  duration_ms: 24761.8181
   type: 'test'
   ...
-# medicamentos: clic real -> http://127.0.0.1:61467/login.html
-# pedido: clic real -> http://127.0.0.1:61467/login.html
-# historial: clic real -> http://127.0.0.1:61467/login.html
-# formula: clic real -> http://127.0.0.1:61467/login.html
+# medicamentos: clic real -> http://127.0.0.1:60557/login.html
+# pedido: clic real -> http://127.0.0.1:60557/login.html
+# historial: clic real -> http://127.0.0.1:60557/login.html
+# formula: clic real -> http://127.0.0.1:60557/login.html
 # Contactar: clic real -> mailto:contacto@saludclick.com (sin enviar correo)
-# login.html: clic real -> http://127.0.0.1:61467/login.html
-# registro.html: clic real -> http://127.0.0.1:61467/registro.html
+# login.html: clic real -> http://127.0.0.1:60557/login.html
+# registro.html: clic real -> http://127.0.0.1:60557/registro.html
 # Subtest: health consulta PostgreSQL y conserva la respuesta del controlador
-ok 34 - health consulta PostgreSQL y conserva la respuesta del controlador
+ok 36 - health consulta PostgreSQL y conserva la respuesta del controlador
   ---
-  duration_ms: 3.5649
+  duration_ms: 3.8735
   type: 'test'
   ...
 # Subtest: catálogo conserva la delegación controlador → servicio → repositorio con PostgreSQL
-ok 35 - catálogo conserva la delegación controlador → servicio → repositorio con PostgreSQL
+ok 37 - catálogo conserva la delegación controlador → servicio → repositorio con PostgreSQL
   ---
-  duration_ms: 7.7763
+  duration_ms: 4.8803
   type: 'test'
   ...
 # Subtest: fallo del repositorio conserva HTTP 500 y el mensaje actual del catálogo
-ok 36 - fallo del repositorio conserva HTTP 500 y el mensaje actual del catálogo
+ok 38 - fallo del repositorio conserva HTTP 500 y el mensaje actual del catálogo
   ---
-  duration_ms: 0.6909
+  duration_ms: 0.8037
+  type: 'test'
+  ...
+# Subtest: la clave duplicada devuelve el pedido guardado sin descontar stock de nuevo
+ok 39 - la clave duplicada devuelve el pedido guardado sin descontar stock de nuevo
+  ---
+  duration_ms: 32.3268
+  type: 'test'
+  ...
+# Subtest: pedido nuevo reclama la clave y persiste detalles, pago y stock en una transacción
+ok 40 - pedido nuevo reclama la clave y persiste detalles, pago y stock en una transacción
+  ---
+  duration_ms: 1.4525
+  type: 'test'
+  ...
+# Subtest: una clave con otra huella revierte sin acceder a inventario
+ok 41 - una clave con otra huella revierte sin acceder a inventario
+  ---
+  duration_ms: 9.9118
+  type: 'test'
+  ...
+# Subtest: un cambio de stock concurrente revierte el pedido y no guarda el pago
+ok 42 - un cambio de stock concurrente revierte el pedido y no guarda el pago
+  ---
+  duration_ms: 1.6825
+  type: 'test'
+  ...
+# Subtest: bloquea inventario en orden estable para evitar interbloqueos entre carritos
+ok 43 - bloquea inventario en orden estable para evitar interbloqueos entre carritos
+  ---
+  duration_ms: 1.0335
   type: 'test'
   ...
 # Subtest: crea pedido con precio tomado del catálogo y pago de prueba aprobado
-ok 37 - crea pedido con precio tomado del catálogo y pago de prueba aprobado
+ok 44 - crea pedido con precio tomado del catálogo y pago de prueba aprobado
   ---
-  duration_ms: 6.0707
+  duration_ms: 5.684
+  type: 'test'
+  ...
+# Subtest: la huella idempotente no incorpora datos de tarjeta
+ok 45 - la huella idempotente no incorpora datos de tarjeta
+  ---
+  duration_ms: 0.942
   type: 'test'
   ...
 # Subtest: rechaza medicamentos inexistentes, no disponibles o sin stock antes de persistir
     # Subtest: inexistente
     ok 1 - inexistente
       ---
-      duration_ms: 10.0966
+      duration_ms: 3.2545
       type: 'test'
       ...
     # Subtest: no disponible
     ok 2 - no disponible
       ---
-      duration_ms: 0.7542
+      duration_ms: 0.5134
       type: 'test'
       ...
     # Subtest: stock insuficiente
     ok 3 - stock insuficiente
       ---
-      duration_ms: 0.5414
+      duration_ms: 0.9082
       type: 'test'
       ...
     1..3
-ok 38 - rechaza medicamentos inexistentes, no disponibles o sin stock antes de persistir
+ok 46 - rechaza medicamentos inexistentes, no disponibles o sin stock antes de persistir
   ---
-  duration_ms: 13.3296
+  duration_ms: 7.7059
   type: 'test'
   ...
 # Subtest: valida líneas, domicilio y tarjeta de prueba con mensajes actuales
     # Subtest: /al menos un medicamento/
     ok 1 - /al menos un medicamento/
       ---
-      duration_ms: 0.8427
+      duration_ms: 1.3038
       type: 'test'
       ...
     # Subtest: /duplicados/
     ok 2 - /duplicados/
       ---
-      duration_ms: 1.8926
+      duration_ms: 1.1618
       type: 'test'
       ...
     # Subtest: /dirección es obligatoria/
     ok 3 - /dirección es obligatoria/
       ---
-      duration_ms: 0.6474
+      duration_ms: 3.9189
       type: 'test'
       ...
     # Subtest: /Pago rechazado/
     ok 4 - /Pago rechazado/
       ---
-      duration_ms: 0.6015
+      duration_ms: 0.4405
       type: 'test'
       ...
     1..4
-ok 39 - valida líneas, domicilio y tarjeta de prueba con mensajes actuales
+ok 47 - valida líneas, domicilio y tarjeta de prueba con mensajes actuales
   ---
-  duration_ms: 5.3336
+  duration_ms: 10.481
+  type: 'test'
+  ...
+# Subtest: requiere clave UUID y retorna un pedido repetido antes de validar stock o pago
+    # Subtest: rechaza una clave ausente o inválida
+    ok 1 - rechaza una clave ausente o inválida
+      ---
+      duration_ms: 1.111
+      type: 'test'
+      ...
+    # Subtest: reutiliza el resultado persistido sin consultar inventario ni pago
+    ok 2 - reutiliza el resultado persistido sin consultar inventario ni pago
+      ---
+      duration_ms: 1.3312
+      type: 'test'
+      ...
+    # Subtest: rechaza reutilizar la clave para otro pedido
+    ok 3 - rechaza reutilizar la clave para otro pedido
+      ---
+      duration_ms: 1.7578
+      type: 'test'
+      ...
+    1..3
+ok 48 - requiere clave UUID y retorna un pedido repetido antes de validar stock o pago
+  ---
+  duration_ms: 5.3515
   type: 'test'
   ...
 # Subtest: agrega sin duplicar, actualiza cantidades, elimina y vacÃ­a
-ok 40 - agrega sin duplicar, actualiza cantidades, elimina y vacÃ­a
+ok 49 - agrega sin duplicar, actualiza cantidades, elimina y vacÃ­a
   ---
-  duration_ms: 6.193
+  duration_ms: 5.9786
   type: 'test'
   ...
 # Subtest: rechaza cantidades invÃ¡lidas y medicamentos inexistentes sin guardar
-ok 41 - rechaza cantidades invÃ¡lidas y medicamentos inexistentes sin guardar
+ok 50 - rechaza cantidades invÃ¡lidas y medicamentos inexistentes sin guardar
   ---
-  duration_ms: 1.39
+  duration_ms: 1.6037
   type: 'test'
   ...
 # Subtest: confirma con identificador, fecha y cantidades; persiste y no confirma vacÃ­o
-ok 42 - confirma con identificador, fecha y cantidades; persiste y no confirma vacÃ­o
+ok 51 - confirma con identificador, fecha y cantidades; persiste y no confirma vacÃ­o
   ---
-  duration_ms: 2.8866
+  duration_ms: 4.9963
   type: 'test'
   ...
 # Subtest: fallo de almacenamiento conserva el borrador y no confirma
-ok 43 - fallo de almacenamiento conserva el borrador y no confirma
+ok 52 - fallo de almacenamiento conserva el borrador y no confirma
   ---
-  duration_ms: 1.1
+  duration_ms: 1.5285
   type: 'test'
   ...
 # Subtest: datos corruptos o manipulados no se sobrescriben
-ok 44 - datos corruptos o manipulados no se sobrescriben
+ok 53 - datos corruptos o manipulados no se sobrescriben
   ---
-  duration_ms: 0.7034
+  duration_ms: 1.2182
   type: 'test'
   ...
 # Subtest: reCAPTCHA rechaza configuración ausente sin llamar al proveedor
-ok 45 - reCAPTCHA rechaza configuración ausente sin llamar al proveedor
+ok 54 - reCAPTCHA rechaza configuración ausente sin llamar al proveedor
   ---
-  duration_ms: 2.9618
+  duration_ms: 3.2291
   type: 'test'
   ...
 # Subtest: un token ausente es un error del cliente aunque falte configuración del servidor
-ok 46 - un token ausente es un error del cliente aunque falte configuración del servidor
+ok 55 - un token ausente es un error del cliente aunque falte configuración del servidor
   ---
-  duration_ms: 0.3443
+  duration_ms: 0.4182
   type: 'test'
   ...
 # Subtest: reCAPTCHA falla cerrado si no hay hostnames permitidos configurados
-ok 47 - reCAPTCHA falla cerrado si no hay hostnames permitidos configurados
+ok 56 - reCAPTCHA falla cerrado si no hay hostnames permitidos configurados
   ---
-  duration_ms: 1.5423
+  duration_ms: 32.5773
   type: 'test'
   ...
 # Subtest: reCAPTCHA requiere token y rechaza acción o puntuación inválida
     # Subtest: token ausente
     ok 1 - token ausente
       ---
-      duration_ms: 0.3398
+      duration_ms: 0.3918
       type: 'test'
       ...
     # Subtest: respuesta rechazada {"success":false,"hostname":"localhost"}
     ok 2 - respuesta rechazada {"success":false,"hostname":"localhost"}
       ---
-      duration_ms: 0.769
+      duration_ms: 0.8141
       type: 'test'
       ...
     # Subtest: respuesta rechazada {"success":true,"hostname":"other.example"}
     ok 3 - respuesta rechazada {"success":true,"hostname":"other.example"}
       ---
-      duration_ms: 0.5704
+      duration_ms: 0.582
       type: 'test'
       ...
     # Subtest: respuesta rechazada {"success":true,"hostname":""}
     ok 4 - respuesta rechazada {"success":true,"hostname":""}
       ---
-      duration_ms: 0.2031
+      duration_ms: 0.414
       type: 'test'
       ...
     1..4
-ok 48 - reCAPTCHA requiere token y rechaza acción o puntuación inválida
+ok 57 - reCAPTCHA requiere token y rechaza acción o puntuación inválida
   ---
-  duration_ms: 3.1525
+  duration_ms: 3.6297
   type: 'test'
   ...
 # Subtest: reCAPTCHA permite avanzar solo tras respuesta válida del proveedor
-ok 49 - reCAPTCHA permite avanzar solo tras respuesta válida del proveedor
+ok 58 - reCAPTCHA permite avanzar solo tras respuesta válida del proveedor
   ---
-  duration_ms: 3.0772
+  duration_ms: 3.6049
   type: 'test'
   ...
 # Subtest: reCAPTCHA falla cerrado si el proveedor no está disponible
-ok 50 - reCAPTCHA falla cerrado si el proveedor no está disponible
+ok 59 - reCAPTCHA falla cerrado si el proveedor no está disponible
   ---
-  duration_ms: 0.6477
+  duration_ms: 2.9126
+  type: 'test'
+  ...
+# Subtest: auth repository guarda usuarios, búsquedas, perfil y tokens de recuperación
+ok 60 - auth repository guarda usuarios, búsquedas, perfil y tokens de recuperación
+  ---
+  duration_ms: 6.4967
+  type: 'test'
+  ...
+# Subtest: auth repository confirma la actualización de contraseña y revierte fallos
+ok 61 - auth repository confirma la actualización de contraseña y revierte fallos
+  ---
+  duration_ms: 2.1272
+  type: 'test'
+  ...
+# Subtest: formula repository conserva el propietario, el estado y los filtros de listado
+ok 62 - formula repository conserva el propietario, el estado y los filtros de listado
+  ---
+  duration_ms: 1.6732
+  type: 'test'
+  ...
+# Subtest: admin repository convierte pedidos, actualiza estados y mantiene filtros de cuentas
+ok 63 - admin repository convierte pedidos, actualiza estados y mantiene filtros de cuentas
+  ---
+  duration_ms: 2.3408
+  type: 'test'
+  ...
+# Subtest: eliminación de cuenta es transaccional, serializable y valida todas las restricciones
+    # Subtest: rechaza cuenta inexistente
+    ok 1 - rechaza cuenta inexistente
+      ---
+      duration_ms: 1.4848
+      type: 'test'
+      ...
+    # Subtest: rechaza roles protegidos e historial comercial
+    ok 2 - rechaza roles protegidos e historial comercial
+      ---
+      duration_ms: 0.5733
+      type: 'test'
+      ...
+    # Subtest: elimina registros dependientes y retorna los nombres de archivos
+    ok 3 - elimina registros dependientes y retorna los nombres de archivos
+      ---
+      duration_ms: 6.4595
+      type: 'test'
+      ...
+    1..3
+ok 64 - eliminación de cuenta es transaccional, serializable y valida todas las restricciones
+  ---
+  duration_ms: 9.8878
+  type: 'test'
+  ...
+# Subtest: dashboard agrega totales personales y ventas por mes sin contar pagos sin fecha
+ok 65 - dashboard agrega totales personales y ventas por mes sin contar pagos sin fecha
+  ---
+  duration_ms: 5.0772
   type: 'test'
   ...
 # Subtest: servicio de usuario normaliza perfil y conserva la validación actual
-ok 51 - servicio de usuario normaliza perfil y conserva la validación actual
+ok 66 - servicio de usuario normaliza perfil y conserva la validación actual
   ---
-  duration_ms: 71.707
+  duration_ms: 21.6086
   type: 'test'
   ...
-1..51
-# tests 175
+1..66
+# tests 199
 # suites 0
-# pass 175
+# pass 199
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 28892.4142
+# duration_ms 26830.6894
 # start of coverage report
-# ------------------------------------------------------------------------------------------------------------------------------------------------------------
-# file                                      | line % | branch % | funcs % | uncovered lines
-# ------------------------------------------------------------------------------------------------------------------------------------------------------------
-# scripts                                   |        |          |         |
-#  provision-admin.js                       |  34.50 |    53.33 |   25.00 | 13-14 21-22 30-31 60-62 64-103 105-165 170-171
-# src                                       |        |          |         |
-#  app.js                                   |  97.06 |    66.67 |   75.00 | 51 65
-#  config                                   |        |          |         |
-#   cors.js                                 | 100.00 |    90.00 |  100.00 |
-#   database.js                             |  86.11 |    50.00 |    0.00 | 10-13 33
-#   prisma.js                               | 100.00 |   100.00 |  100.00 |
-#  controllers                              |        |          |         |
-#   admin.controller.js                     |  42.86 |   100.00 |   50.00 | 41-52 56-111
-#   auth.controller.js                      |  89.20 |    66.67 |  100.00 | 15-19 33-37 49-53 87-90
-#   chat.controller.js                      |  14.29 |   100.00 |    0.00 | 2-13
-#   dashboard.controller.js                 | 100.00 |    60.00 |  100.00 |
-#   formula.controller.js                   | 100.00 |    54.84 |  100.00 |
-#   health.controller.js                    | 100.00 |   100.00 |  100.00 |
-#   medication.controller.js                | 100.00 |   100.00 |  100.00 |
-#   order.controller.js                     |  79.22 |    64.29 |  100.00 | 21-27 46-52 91-97 112-116 137-142
-#  middlewares                              |        |          |         |
-#   admin.middleware.js                     | 100.00 |   100.00 |  100.00 |
-#   auth.middleware.js                      |  89.13 |    87.50 |  100.00 | 22-26
-#   farmacia.middleware.js                  |  40.91 |   100.00 |    0.00 | 7-19
-#   recaptcha.middleware.js                 |  97.62 |    91.67 |   57.14 | 50-51
-#  repositories                             |        |          |         |
-#   admin.repository.js                     |  10.70 |   100.00 |    0.00 | 3-32 34-43 51-81 83-90 92-116 118-135 138-207
-#   auth.repository.js                      |  29.51 |   100.00 |    0.00 | 4-8 12-29 33-37 41-48 52-60 64-81 85-91 95-110
-#   chat.repository.js                      |  22.45 |   100.00 |    0.00 | 10-47
-#   dashboard.repository.js                 |   3.39 |   100.00 |    0.00 | 4-44 46-175
-#   formula.repository.js                   |  13.56 |   100.00 |    0.00 | 3-14 16-26 28-35 37-49 51-57
-#   health.repository.js                    | 100.00 |   100.00 |  100.00 |
-#   medication.repository.js                | 100.00 |   100.00 |  100.00 |
-#   order.repository.js                     |   9.03 |   100.00 |    0.00 | 3-13 15-80 82-97 99-114 116-147
-#  routes                                   |        |          |         |
-#   admin.routes.js                         | 100.00 |   100.00 |  100.00 |
-#   auth.routes.js                          | 100.00 |   100.00 |  100.00 |
-#   chat.routes.js                          | 100.00 |   100.00 |  100.00 |
-#   dashboard.routes.js                     | 100.00 |   100.00 |  100.00 |
-#   farmacia.routes.js                      |  66.67 |   100.00 |    0.00 | 6-9
-#   formula.routes.js                       | 100.00 |   100.00 |  100.00 |
-#   health.routes.js                        | 100.00 |   100.00 |  100.00 |
-#   index.js                                | 100.00 |   100.00 |  100.00 |
-#   medication.routes.js                    | 100.00 |   100.00 |  100.00 |
-#   order.routes.js                         | 100.00 |   100.00 |  100.00 |
-#  services                                 |        |          |         |
-#   admin.service.js                        |  29.67 |   100.00 |   40.00 | 18-20 22-30 32-83
-#   auth.service.js                         |  95.25 |    69.05 |  100.00 | 135-138 181-184 196-199 280-283 286-289 359
-#   chat.service.js                         |  85.71 |    73.91 |   71.43 | 5-9
-#   health.service.js                       | 100.00 |   100.00 |  100.00 |
-#   medication.service.js                   | 100.00 |   100.00 |  100.00 |
-#   order.service.js                        |  92.05 |    78.05 |   87.50 | 36-39 79-82 87-90 240-248
-#   user.service.js                         | 100.00 |    80.00 |  100.00 |
-#  sockets                                  |        |          |         |
-#   chat.socket.js                          |  84.48 |    62.50 |   55.56 | 42-48 53-54
-#  utils                                    |        |          |         |
-#   jwt.js                                  | 100.00 |   100.00 |  100.00 |
-#  validators                               |        |          |         |
-#   admin.validator.js                      | 100.00 |   100.00 |  100.00 |
-#   auth.validator.js                       | 100.00 |    92.86 |  100.00 |
-#   user.validator.js                       |  86.67 |    54.55 |  100.00 | 22-25
-# tests                                     |        |          |         |
-#  admin-contracts.test.cjs                 |  99.33 |    94.87 |  100.00 | 69
-#  api-contracts.test.cjs                   |  99.62 |    93.88 |   96.23 | 134
-#  auth-user-characterization.test.cjs      |  99.12 |    88.73 |  100.00 | 100 102
-#  chat-service.test.cjs                    | 100.00 |   100.00 |   91.67 |
-#  chat-socket.test.cjs                     | 100.00 |    92.50 |   94.29 |
-#  cors.test.cjs                            |  98.82 |    85.71 |  100.00 | 21
-#  database-public-scripts.test.cjs         |  93.71 |   100.00 |   62.50 | 73-75 79-80 83-84 119-120
-#  frontend.test.cjs                        |  91.99 |    83.57 |   90.40 | 98-99 113-115 129 156-158 166-168 175-179 185-189 197-199 224-226 243-262 422-424
-#  health-layer.test.cjs                    | 100.00 |    85.00 |  100.00 |
-#  medication-layer.test.cjs                | 100.00 |    86.96 |  100.00 |
-#  order-service-characterization.test.cjs  | 100.00 |    95.00 |   82.35 |
-#  pedido-temporal.test.cjs                 | 100.00 |   100.00 |  100.00 |
-#  recaptcha-middleware.test.cjs            | 100.00 |   100.00 |   82.35 |
-#  user-service-characterization.test.cjs   | 100.00 |    92.31 |  100.00 |
-# ------------------------------------------------------------------------------------------------------------------------------------------------------------
-# all files                                 |  77.50 |    84.76 |   82.99 |
-# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------------
+# file                       | line % | branch % | funcs % | uncovered lines
+# ---------------------------------------------------------------------------------------------------------------------------
+# src                        |        |          |         |
+#  app.js                    |  97.06 |    66.67 |   75.00 | 51 65
+#  config                    |        |          |         |
+#   cors.js                  | 100.00 |    90.00 |  100.00 |
+#   database.js              |  86.11 |    50.00 |    0.00 | 10-13 33
+#   prisma.js                | 100.00 |   100.00 |  100.00 |
+#  controllers               |        |          |         |
+#   admin.controller.js      |  42.86 |   100.00 |   50.00 | 41-52 56-111
+#   auth.controller.js       |  89.20 |    66.67 |  100.00 | 15-19 33-37 49-53 87-90
+#   chat.controller.js       |  14.29 |   100.00 |    0.00 | 2-13
+#   dashboard.controller.js  | 100.00 |    60.00 |  100.00 |
+#   formula.controller.js    | 100.00 |    54.84 |  100.00 |
+#   health.controller.js     | 100.00 |   100.00 |  100.00 |
+#   medication.controller.js | 100.00 |   100.00 |  100.00 |
+#   order.controller.js      |  85.29 |    66.67 |  100.00 | 62-68 107-113 128-132 153-158
+#  middlewares               |        |          |         |
+#   admin.middleware.js      | 100.00 |   100.00 |  100.00 |
+#   auth.middleware.js       |  89.13 |    87.50 |  100.00 | 22-26
+#   farmacia.middleware.js   |  40.91 |   100.00 |    0.00 | 7-19
+#   recaptcha.middleware.js  |  97.62 |    91.67 |   57.14 | 50-51
+#  repositories              |        |          |         |
+#   admin.repository.js      | 100.00 |    94.12 |  100.00 |
+#   auth.repository.js       | 100.00 |    66.67 |  100.00 |
+#   chat.repository.js       |  22.45 |   100.00 |    0.00 | 10-47
+#   dashboard.repository.js  | 100.00 |    75.00 |  100.00 |
+#   formula.repository.js    | 100.00 |   100.00 |  100.00 |
+#   health.repository.js     | 100.00 |   100.00 |  100.00 |
+#   medication.repository.js | 100.00 |   100.00 |  100.00 |
+#   order.repository.js      |  62.07 |    73.91 |   44.44 | 26-27 44-46 48-58 87-88 107-108 115-118 158-173 175-190 192-223
+#  routes                    |        |          |         |
+#   admin.routes.js          | 100.00 |   100.00 |  100.00 |
+#   auth.routes.js           | 100.00 |   100.00 |  100.00 |
+#   chat.routes.js           | 100.00 |   100.00 |  100.00 |
+#   dashboard.routes.js      | 100.00 |   100.00 |  100.00 |
+#   farmacia.routes.js       |  66.67 |   100.00 |    0.00 | 6-9
+#   formula.routes.js        | 100.00 |   100.00 |  100.00 |
+#   health.routes.js         | 100.00 |   100.00 |  100.00 |
+#   index.js                 | 100.00 |   100.00 |  100.00 |
+#   medication.routes.js     | 100.00 |   100.00 |  100.00 |
+#   order.routes.js          | 100.00 |   100.00 |  100.00 |
+#  services                  |        |          |         |
+#   admin.service.js         |  29.67 |   100.00 |   40.00 | 18-20 22-30 32-83
+#   auth.service.js          |  95.25 |    69.05 |  100.00 | 135-138 181-184 196-199 280-283 286-289 359
+#   chat.service.js          |  85.71 |    73.91 |   71.43 | 5-9
+#   health.service.js        | 100.00 |   100.00 |  100.00 |
+#   medication.service.js    | 100.00 |   100.00 |  100.00 |
+#   order.service.js         |  92.91 |    82.69 |   80.00 | 40-43 83-86 91-94 272-280
+#   user.service.js          | 100.00 |    80.00 |  100.00 |
+#  sockets                   |        |          |         |
+#   chat.socket.js           |  84.48 |    62.50 |   55.56 | 42-48 53-54
+#  utils                     |        |          |         |
+#   jwt.js                   | 100.00 |   100.00 |  100.00 |
+#  validators                |        |          |         |
+#   admin.validator.js       | 100.00 |   100.00 |  100.00 |
+#   auth.validator.js        | 100.00 |    92.86 |  100.00 |
+#   user.validator.js        |  86.67 |    54.55 |  100.00 | 22-25
+# ---------------------------------------------------------------------------------------------------------------------------
+# all files                  |  85.98 |    77.49 |   74.29 |
+# ---------------------------------------------------------------------------------------------------------------------------
 # end of coverage report
-Process exit code: 0

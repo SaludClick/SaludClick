@@ -2,6 +2,10 @@ const crypto = require("crypto");
 
 const orderRepository = require("../repositories/order.repository");
 
+function serviceError(message, status = 400) {
+    return Object.assign(new Error(message), { status });
+}
+
 // =================================================
 // LIMPIAR ITEMS
 // =================================================
@@ -12,7 +16,7 @@ function limpiarItems(items) {
         !items.length ||
         items.length > 50
     ) {
-        throw new Error(
+        throw serviceError(
             "El pedido debe contener al menos un medicamento."
         );
     }
@@ -33,13 +37,13 @@ function limpiarItems(items) {
             cantidad < 1 ||
             cantidad > 99
         ) {
-            throw new Error(
+            throw serviceError(
                 "Los medicamentos o cantidades del pedido no son válidos."
             );
         }
 
         if (vistos.has(medicamento_id)) {
-            throw new Error(
+            throw serviceError(
                 "No se permiten medicamentos duplicados en el pedido."
             );
         }
@@ -76,7 +80,7 @@ function simularPago({
         !/^\d{2}\/\d{2}$/.test(exp) ||
         !/^\d{3,4}$/.test(security)
     ) {
-        throw new Error(
+        throw serviceError(
             "Completa los datos de la tarjeta de prueba correctamente."
         );
     }
@@ -84,7 +88,7 @@ function simularPago({
     const month = Number(exp.slice(0, 2));
 
     if (month < 1 || month > 12) {
-        throw new Error(
+        throw serviceError(
             "La fecha de vencimiento no es válida."
         );
     }
@@ -132,7 +136,12 @@ function simularPago({
 // CREAR PEDIDO
 // =================================================
 
-async function crearPedido(usuarioId, data) {
+async function crearPedido(usuarioId, data, idempotencyKey) {
+    const key = String(idempotencyKey || "").trim().toLowerCase();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(key)) {
+        throw serviceError("La clave Idempotency-Key debe ser un UUID válido.");
+    }
+
     const tipoEntrega =
         data.tipoEntrega === "DOMICILIO"
             ? "DOMICILIO"
@@ -145,12 +154,33 @@ async function crearPedido(usuarioId, data) {
         tipoEntrega === "DOMICILIO" &&
         direccion.length < 8
     ) {
-        throw new Error(
+        throw serviceError(
             "La dirección es obligatoria para domicilio."
         );
     }
 
     const items = limpiarItems(data.items);
+    const observaciones = String(
+        data.observaciones || ""
+    ).trim();
+    const idempotencyHash = crypto
+        .createHash("sha256")
+        .update(JSON.stringify({
+            tipoEntrega,
+            direccion,
+            observaciones,
+            items: [...items].sort(
+                (a, b) => a.medicamento_id - b.medicamento_id
+            )
+        }))
+        .digest("hex");
+
+    const existing = await orderRepository.buscarPedidoIdempotente(
+        usuarioId,
+        key,
+        idempotencyHash
+    );
+    if (existing) return existing;
 
     const meds =
         await orderRepository.listarMedicamentos(
@@ -162,7 +192,7 @@ async function crearPedido(usuarioId, data) {
     );
 
     if (meds.length !== items.length) {
-        throw new Error(
+        throw serviceError(
             "Uno de los medicamentos no existe."
         );
     }
@@ -175,13 +205,13 @@ async function crearPedido(usuarioId, data) {
         );
 
         if (med.estado !== "DISPONIBLE") {
-            throw new Error(
+            throw serviceError(
                 `${med.nombre} no está disponible.`
             );
         }
 
         if (med.stock < item.cantidad) {
-            throw new Error(
+            throw serviceError(
                 `Stock insuficiente para ${med.nombre}.`
             );
         }
@@ -208,7 +238,7 @@ async function crearPedido(usuarioId, data) {
     );
 
     if (pago.estado !== "APROBADO") {
-        throw new Error(
+        throw serviceError(
             `Pago rechazado. Referencia: ${pago.referencia}`
         );
     }
@@ -218,13 +248,15 @@ async function crearPedido(usuarioId, data) {
             usuarioId,
             tipoEntrega,
             direccion,
-            observaciones: String(
-                data.observaciones || ""
-            ).trim(),
+            observaciones,
             items: calculados,
             total,
-            pago
+            pago,
+            idempotencyKey: key,
+            idempotencyHash
         });
+
+    if (result.replayed) return result;
 
     return {
         ...result,

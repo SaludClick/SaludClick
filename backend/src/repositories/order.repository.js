@@ -1,5 +1,50 @@
 const pool = require("../config/database");
 
+function orderConflict(message) {
+    return Object.assign(new Error(message), { status: 409 });
+}
+
+async function buscarPedidoIdempotenteEn(queryable, usuarioId, key, hash) {
+    const { rows } = await queryable.query(
+        `SELECT s.id AS "solicitudId", s.idempotency_hash,
+                p.id AS "pagoId", p.monto AS total, p.estado,
+                p.metodo, p.marca, p.ultimos_digitos, p.referencia
+         FROM solicitudes s
+         LEFT JOIN pagos p ON p.solicitud_id = s.id AND p.usuario_id = s.usuario_id
+         WHERE s.usuario_id = $1 AND s.idempotency_key = $2`,
+        [usuarioId, key]
+    );
+    if (!rows.length) return null;
+
+    const pedido = rows[0];
+    if (pedido.idempotency_hash !== hash) {
+        throw orderConflict(
+            "La clave Idempotency-Key ya fue utilizada con otros datos."
+        );
+    }
+    if (pedido.pagoId == null) {
+        throw new Error("No se pudo recuperar el resultado del pedido anterior.");
+    }
+
+    return {
+        solicitudId: pedido.solicitudId,
+        pagoId: pedido.pagoId,
+        total: Number(pedido.total),
+        pago: {
+            estado: pedido.estado,
+            metodo: pedido.metodo,
+            marca: pedido.marca,
+            ultimos_digitos: pedido.ultimos_digitos,
+            referencia: pedido.referencia
+        },
+        replayed: true
+    };
+}
+
+async function buscarPedidoIdempotente(usuarioId, key, hash) {
+    return buscarPedidoIdempotenteEn(pool, usuarioId, key, hash);
+}
+
 async function listarMedicamentos(ids) {
     if (!ids || ids.length === 0) return [];
 
@@ -13,13 +58,44 @@ async function listarMedicamentos(ids) {
 }
 
 async function crearPedidoConPago({
-    usuarioId, tipoEntrega, direccion, observaciones, items, total, pago
+    usuarioId, tipoEntrega, direccion, observaciones, items, total, pago,
+    idempotencyKey, idempotencyHash
 }) {
     const connection = await pool.connect();
     try {
         await connection.query("BEGIN");
 
-        for (const item of items) {
+        const pedidoResult = await connection.query(
+            `INSERT INTO solicitudes
+                (usuario_id, estado, tipo_entrega, direccion, observaciones,
+                 idempotency_key, idempotency_hash)
+             VALUES ($1, 'APROBADA', $2, $3, $4, $5, $6)
+             ON CONFLICT (usuario_id, idempotency_key) DO NOTHING
+             RETURNING id`,
+            [usuarioId, tipoEntrega, direccion || null, observaciones || null,
+                idempotencyKey, idempotencyHash]
+        );
+
+        if (!pedidoResult.rows.length) {
+            const existing = await buscarPedidoIdempotenteEn(
+                connection,
+                usuarioId,
+                idempotencyKey,
+                idempotencyHash
+            );
+            if (!existing) {
+                throw new Error("No se pudo recuperar el resultado del pedido anterior.");
+            }
+            await connection.query("COMMIT");
+            return existing;
+        }
+
+        const solicitudId = pedidoResult.rows[0].id;
+        const orderedItems = [...items].sort(
+            (a, b) => a.medicamento_id - b.medicamento_id
+        );
+
+        for (const item of orderedItems) {
             const { rows } = await connection.query(
                 `SELECT id, nombre, precio, stock, estado
                  FROM medicamentos WHERE id = $1 FOR UPDATE`,
@@ -31,22 +107,18 @@ async function crearPedidoConPago({
                 throw new Error(`El medicamento ${item.medicamento_id} no está disponible.`);
             }
             if (medicamento.stock < item.cantidad) {
-                throw new Error(
+                throw orderConflict(
                     `Stock insuficiente para ${medicamento.nombre}. Disponible: ${medicamento.stock}.`
+                );
+            }
+            if (Number(medicamento.precio) !== Number(item.precio)) {
+                throw orderConflict(
+                    `El precio de ${medicamento.nombre} cambió. Actualiza el carrito.`
                 );
             }
         }
 
-        const pedidoResult = await connection.query(
-            `INSERT INTO solicitudes
-                (usuario_id, estado, tipo_entrega, direccion, observaciones)
-             VALUES ($1, 'APROBADA', $2, $3, $4)
-             RETURNING id`,
-            [usuarioId, tipoEntrega, direccion || null, observaciones || null]
-        );
-        const solicitudId = pedidoResult.rows[0].id;
-
-        for (const item of items) {
+        for (const item of orderedItems) {
             await connection.query(
                 `INSERT INTO detalle_solicitud
                     (solicitud_id, medicamento_id, cantidad, precio, subtotal)
@@ -70,7 +142,11 @@ async function crearPedidoConPago({
         );
 
         await connection.query("COMMIT");
-        return { solicitudId, pagoId: pagoResult.rows[0].id };
+        return {
+            solicitudId,
+            pagoId: pagoResult.rows[0].id,
+            replayed: false
+        };
     } catch (error) {
         await connection.query("ROLLBACK");
         throw error;
@@ -148,6 +224,7 @@ async function eliminarPedidoUsuario(usuarioId, pedidoId) {
 
 module.exports = {
     listarMedicamentos,
+    buscarPedidoIdempotente,
     crearPedidoConPago,
     listarPedidosUsuario,
     detallePedidoUsuario,

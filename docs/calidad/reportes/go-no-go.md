@@ -5,25 +5,26 @@
 
 ## Evidencia favorable
 
-- 175 pruebas ejecutadas, 175 aprobadas y ninguna fallida u omitida en la regresión.
-- Siete controles de accesibilidad en Edge headless aprobados; evidencias EV-ACC-001–007.
-- Build de Astro aprobado; `astro check`: cero errores, cero warnings y dos hints.
-- `npx prisma validate`: esquema PostgreSQL válido.
-- Sin credenciales reales; no hubo acceso, migración ni escritura a Neon/producción.
+- `npm test`: 199 pruebas aprobadas; 0 fallidas y 0 omitidas.
+- EV-ACC-001–007: siete verificaciones automatizadas aprobadas en Edge headless.
+- Build Astro: aprobado; 14 páginas. `astro check`: 0 errores, 0 warnings y 2 hints.
+- Prisma 7.10.1: esquema válido y cliente generado.
+- Auditorías backend y frontend: 0 vulnerabilidades reportadas.
+- Cobertura de `backend/src/`: 85,98 % líneas, 77,49 % ramas y 74,29 % funciones.
+- No se usaron credenciales reales ni se conectó, migró o escribió en Neon/producción.
 
-## Criterios aún incumplidos
+## Criterios aún incumplidos o bloqueados
 
-- Cobertura de sentencias: **77.50 %**, inferior al umbral propuesto de 80 %.
-- `npm audit` frontend: **1 vulnerabilidad crítica**, 3 altas y 1 baja.
-- `npm audit` backend: 4 altas y 2 moderadas.
-- Sin prueba transaccional de aceptación contra PostgreSQL aislado.
-- La interfaz bloquea el doble clic, pero no hay garantía persistente backend contra reintentos o solicitudes repetidas.
+- La cobertura aspiracional de 100 % no se alcanza; ramas y funciones están por debajo de ese objetivo.
+- No se probó la migración aditiva ni la idempotencia/concurrencia en una instancia PostgreSQL aislada.
+- La integración de persistencia y el resultado de la migración para la base destino siguen pendientes de revisión y autorización.
+- El build conserva avisos de colisión entre páginas Astro y archivos existentes en `public/`.
 
 ## Condiciones para reconsiderar
 
-1. Resolver el hallazgo crítico de Astro mediante actualización mayor revisada y repetir build/regresión/audit.
-2. Evaluar las actualizaciones mayores restantes de dependencias y volver a ejecutar ambos audits.
-3. Llevar cobertura medida a 80 % o documentar una exclusión aprobada con denominador reproducible.
-4. Diseñar y probar idempotencia persistente de pedidos y una prueba aislada de PostgreSQL, sin tocar datos reales.
+1. Revisar la migración aditiva contra un respaldo y esquema destino; ejecutarla solo en PostgreSQL aislado autorizado y comprobar reintentos concurrentes, rollback y stock.
+2. Repetir pruebas de aceptación de frontend/backend con base PostgreSQL aislada; no usar Neon ni datos reales.
+3. Continuar ampliando cobertura real, especialmente servicios/controladores y ramas; no excluir módulos para elevar el porcentaje.
+4. Resolver o aceptar explícitamente las colisiones de rutas del build y reevaluar hints restantes.
 
-Las actualizaciones mayores requieren revisión de compatibilidad; no se ejecutó `npm audit fix --force`. Esta evaluación no autoriza despliegue.
+Las evidencias actuales no autorizan despliegue ni migración. El estado continúa **NO-GO**.

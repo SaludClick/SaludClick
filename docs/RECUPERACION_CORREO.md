@@ -10,13 +10,15 @@ Desde `backend/` ejecuta:
 npm install
 ```
 
-## 2. Crear la tabla en MySQL
+## 2. Esquema PostgreSQL
 
-Ejecuta la sección `TOKENS DE RECUPERACIÓN DE CONTRASEÑA` del archivo:
+`TokenRecuperacion` y `tokens_recuperacion` están definidos en `backend/prisma/schema.prisma`. Para una base vacía, instala el esquema con:
 
-`backend/database/saludclick.sql`
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/database/install_schema_public.sql
+```
 
-Si ya ejecutaste todo el SQL anteriormente, ejecuta solo el `CREATE TABLE tokens_recuperacion` y los índices de esa sección.
+En una base existente, no ejecutes el antiguo `saludclick.sql` ni una migración MySQL; revisa el estado de Prisma y prepara una migración PostgreSQL específica con respaldo y autorización.
 
 ## 3. Configurar el correo
 

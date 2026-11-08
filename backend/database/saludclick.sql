@@ -1,218 +1,337 @@
-USE saludclick;
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
 
--- ============================================
--- TABLA: ROLES
--- ============================================
-CREATE TABLE roles (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(50) NOT NULL UNIQUE,
-    descripcion VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+-- CreateEnum
+CREATE TYPE "EstadoMedicamento" AS ENUM ('DISPONIBLE', 'AGOTADO', 'INACTIVO');
+
+-- CreateEnum
+CREATE TYPE "MetodoPago" AS ENUM ('TARJETA');
+
+-- CreateEnum
+CREATE TYPE "EstadoPago" AS ENUM ('APROBADO', 'RECHAZADO', 'PENDIENTE');
+
+-- CreateEnum
+CREATE TYPE "FrecuenciaRecordatorio" AS ENUM ('CADA_8_HORAS', 'CADA_12_HORAS', 'CADA_24_HORAS');
+
+-- CreateEnum
+CREATE TYPE "EstadoRecordatorio" AS ENUM ('ACTIVO', 'INACTIVO');
+
+-- CreateEnum
+CREATE TYPE "EstadoSolicitud" AS ENUM ('PENDIENTE', 'APROBADA', 'PREPARANDO', 'LISTA', 'ENTREGADA', 'CANCELADA');
+
+-- CreateEnum
+CREATE TYPE "TipoEntrega" AS ENUM ('RECOGER', 'DOMICILIO');
+
+-- CreateEnum
+CREATE TYPE "EstadoUsuario" AS ENUM ('ACTIVO', 'INACTIVO');
+
+-- CreateEnum
+CREATE TYPE "EstadoChat" AS ENUM ('ABIERTA', 'CERRADA');
+
+-- CreateEnum
+CREATE TYPE "EstadoMensaje" AS ENUM ('ENVIADO', 'ENTREGADO', 'LEIDO');
+
+-- CreateTable
+CREATE TABLE "categorias" (
+    "id" SERIAL NOT NULL,
+    "nombre" VARCHAR(100) NOT NULL,
+    "descripcion" VARCHAR(255),
+    "created_at" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "categorias_pkey" PRIMARY KEY ("id")
 );
 
--- ============================================
--- TABLA: CATEGORIAS
--- ============================================
-CREATE TABLE categorias (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL UNIQUE,
-    descripcion VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+-- CreateTable
+CREATE TABLE "roles" (
+    "id" SERIAL NOT NULL,
+    "nombre" VARCHAR(50) NOT NULL,
+    "descripcion" VARCHAR(255),
+    "created_at" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "roles_pkey" PRIMARY KEY ("id")
 );
 
--- ============================================
--- TABLA: USUARIOS
--- ============================================
-CREATE TABLE usuarios (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
-    apellido VARCHAR(100) NOT NULL,
-    correo VARCHAR(150) NOT NULL UNIQUE,
-    telefono VARCHAR(20),
-    cedula VARCHAR(30) NULL UNIQUE,
-    tipo_documento VARCHAR(10),
-    ciudad VARCHAR(100),
-    password VARCHAR(255) NOT NULL,
-    rol_id INT NOT NULL,
-    estado ENUM('ACTIVO','INACTIVO') DEFAULT 'ACTIVO',
+-- CreateTable
+CREATE TABLE "usuarios" (
+    "id" SERIAL NOT NULL,
+    "nombre" VARCHAR(100) NOT NULL,
+    "apellido" VARCHAR(100) NOT NULL,
+    "correo" VARCHAR(150) NOT NULL,
+    "telefono" VARCHAR(20),
+    "cedula" VARCHAR(30),
+    "tipo_documento" VARCHAR(10),
+    "ciudad" VARCHAR(100),
+    "password" VARCHAR(255) NOT NULL,
+    "rol_id" INTEGER NOT NULL,
+    "estado" "EstadoUsuario" DEFAULT 'ACTIVO',
+    "created_at" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_usuario_rol
-        FOREIGN KEY (rol_id)
-        REFERENCES roles(id)
-        ON UPDATE CASCADE
+    CONSTRAINT "usuarios_pkey" PRIMARY KEY ("id")
 );
 
--- ============================================
--- TABLA: MEDICAMENTOS
--- ============================================
-CREATE TABLE medicamentos (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(150) NOT NULL,
-    descripcion TEXT,
-    categoria_id INT NOT NULL,
-    precio DECIMAL(10,2) NOT NULL,
-    stock INT NOT NULL DEFAULT 0,
-    imagen VARCHAR(255),
-    estado ENUM('DISPONIBLE','AGOTADO','INACTIVO') DEFAULT 'DISPONIBLE',
+-- CreateTable
+CREATE TABLE "medicamentos" (
+    "id" SERIAL NOT NULL,
+    "nombre" VARCHAR(150) NOT NULL,
+    "descripcion" TEXT,
+    "categoria_id" INTEGER NOT NULL,
+    "precio" DECIMAL(10,2) NOT NULL,
+    "stock" INTEGER NOT NULL DEFAULT 0,
+    "imagen" VARCHAR(255),
+    "estado" "EstadoMedicamento" DEFAULT 'DISPONIBLE',
+    "created_at" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_medicamento_categoria
-        FOREIGN KEY (categoria_id)
-        REFERENCES categorias(id)
-        ON UPDATE CASCADE
+    CONSTRAINT "medicamentos_pkey" PRIMARY KEY ("id")
 );
 
--- ============================================
--- TABLA: SOLICITUDES
--- ============================================
-CREATE TABLE solicitudes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    usuario_id INT NOT NULL,
+-- CreateTable
+CREATE TABLE "solicitudes" (
+    "id" SERIAL NOT NULL,
+    "usuario_id" INTEGER NOT NULL,
+    "fecha" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    "estado" "EstadoSolicitud" DEFAULT 'PENDIENTE',
+    "tipo_entrega" "TipoEntrega" DEFAULT 'RECOGER',
+    "direccion" VARCHAR(255),
+    "observaciones" TEXT,
+    "idempotency_key" UUID,
+    "idempotency_hash" CHAR(64),
+    "created_at" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
 
-    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
-
-    estado ENUM(
-        'PENDIENTE',
-        'APROBADA',
-        'PREPARANDO',
-        'LISTA',
-        'ENTREGADA',
-        'CANCELADA'
-    ) DEFAULT 'PENDIENTE',
-
-    tipo_entrega ENUM(
-        'RECOGER',
-        'DOMICILIO'
-    ) DEFAULT 'RECOGER',
-
-    direccion VARCHAR(255),
-
-    observaciones TEXT,
-
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_solicitud_usuario
-        FOREIGN KEY (usuario_id)
-        REFERENCES usuarios(id)
-        ON UPDATE CASCADE
+    CONSTRAINT "solicitudes_pkey" PRIMARY KEY ("id")
 );
 
--- ============================================
--- TABLA: DETALLE SOLICITUD
--- ============================================
-CREATE TABLE detalle_solicitud (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+-- CreateTable
+CREATE TABLE "detalle_solicitud" (
+    "id" SERIAL NOT NULL,
+    "solicitud_id" INTEGER NOT NULL,
+    "medicamento_id" INTEGER NOT NULL,
+    "cantidad" INTEGER NOT NULL,
+    "precio" DECIMAL(10,2) NOT NULL,
+    "subtotal" DECIMAL(10,2) NOT NULL,
+    "created_at" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
 
-    solicitud_id INT NOT NULL,
-
-    medicamento_id INT NOT NULL,
-
-    cantidad INT NOT NULL,
-
-    precio DECIMAL(10,2) NOT NULL,
-
-    subtotal DECIMAL(10,2) NOT NULL,
-
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_detalle_solicitud
-        FOREIGN KEY (solicitud_id)
-        REFERENCES solicitudes(id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE,
-
-    CONSTRAINT fk_detalle_medicamento
-        FOREIGN KEY (medicamento_id)
-        REFERENCES medicamentos(id)
-        ON UPDATE CASCADE
+    CONSTRAINT "detalle_solicitud_pkey" PRIMARY KEY ("id")
 );
 
--- ============================================
--- TABLA: RECORDATORIOS
--- ============================================
-CREATE TABLE recordatorios (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+-- CreateTable
+CREATE TABLE "pagos" (
+    "id" SERIAL NOT NULL,
+    "solicitud_id" INTEGER NOT NULL,
+    "usuario_id" INTEGER NOT NULL,
+    "referencia" VARCHAR(80) NOT NULL,
+    "metodo" "MetodoPago" NOT NULL,
+    "marca" VARCHAR(30) NOT NULL,
+    "ultimos_digitos" CHAR(4) NOT NULL,
+    "monto" DECIMAL(10,2) NOT NULL,
+    "estado" "EstadoPago" NOT NULL,
+    "simulacion" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
 
-    usuario_id INT NOT NULL,
-
-    medicamento_id INT NOT NULL,
-
-    hora TIME NOT NULL,
-
-    frecuencia ENUM(
-        'CADA_8_HORAS',
-        'CADA_12_HORAS',
-        'CADA_24_HORAS'
-    ) NOT NULL,
-
-    fecha_inicio DATE NOT NULL,
-
-    fecha_fin DATE,
-
-    estado ENUM('ACTIVO','INACTIVO') DEFAULT 'ACTIVO',
-
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_recordatorio_usuario
-        FOREIGN KEY (usuario_id)
-        REFERENCES usuarios(id)
-        ON UPDATE CASCADE,
-
-    CONSTRAINT fk_recordatorio_medicamento
-        FOREIGN KEY (medicamento_id)
-        REFERENCES medicamentos(id)
-        ON UPDATE CASCADE
-);
--- ============================================
--- TOKENS DE RECUPERACIÓN DE CONTRASEÑA
--- ============================================
-CREATE TABLE tokens_recuperacion (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    usuario_id INT NOT NULL,
-    token_hash CHAR(64) NOT NULL UNIQUE,
-    expira_en DATETIME NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_token_recuperacion_usuario
-        FOREIGN KEY (usuario_id)
-        REFERENCES usuarios(id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
+    CONSTRAINT "pagos_pkey" PRIMARY KEY ("id")
 );
 
-CREATE INDEX idx_tokens_recuperacion_usuario
-    ON tokens_recuperacion(usuario_id);
+-- CreateTable
+CREATE TABLE "recordatorios" (
+    "id" SERIAL NOT NULL,
+    "usuario_id" INTEGER NOT NULL,
+    "medicamento_id" INTEGER NOT NULL,
+    "hora" TIME(0) NOT NULL,
+    "frecuencia" "FrecuenciaRecordatorio" NOT NULL,
+    "fecha_inicio" DATE NOT NULL,
+    "fecha_fin" DATE,
+    "estado" "EstadoRecordatorio" DEFAULT 'ACTIVO',
+    "created_at" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
 
-CREATE INDEX idx_tokens_recuperacion_expira
-    ON tokens_recuperacion(expira_en);
-
-
--- ============================================
--- PAGOS SIMULADOS
--- ============================================
-CREATE TABLE pagos (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    solicitud_id INT NOT NULL,
-    usuario_id INT NOT NULL,
-    referencia VARCHAR(80) NOT NULL UNIQUE,
-    metodo ENUM('TARJETA') NOT NULL DEFAULT 'TARJETA',
-    marca VARCHAR(30) NOT NULL,
-    ultimos_digitos CHAR(4) NOT NULL,
-    monto DECIMAL(10,2) NOT NULL,
-    estado ENUM('APROBADO','RECHAZADO','PENDIENTE') NOT NULL,
-    simulacion TINYINT(1) NOT NULL DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_pago_solicitud FOREIGN KEY (solicitud_id) REFERENCES solicitudes(id) ON DELETE CASCADE,
-    CONSTRAINT fk_pago_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-    INDEX idx_pago_usuario (usuario_id),
-    INDEX idx_pago_solicitud (solicitud_id)
+    CONSTRAINT "recordatorios_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateTable
+CREATE TABLE "tokens_recuperacion" (
+    "id" SERIAL NOT NULL,
+    "usuario_id" INTEGER NOT NULL,
+    "token_hash" CHAR(64) NOT NULL,
+    "expira_en" TIMESTAMP(0) NOT NULL,
+    "created_at" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "tokens_recuperacion_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "playing_with_neon" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "value" REAL,
+
+    CONSTRAINT "playing_with_neon_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "formulas_medicas" (
+    "id" SERIAL NOT NULL,
+    "usuario_id" INTEGER NOT NULL,
+    "nombre_archivo" VARCHAR(255) NOT NULL,
+    "nombre_original" VARCHAR(180) NOT NULL,
+    "tipo_mime" VARCHAR(100) NOT NULL,
+    "ruta_archivo" VARCHAR(500) NOT NULL,
+    "tamano" INTEGER NOT NULL,
+    "descripcion" TEXT,
+    "estado" VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',
+    "fecha_subida" TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "formulas_medicas_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "conversaciones" (
+    "id" SERIAL NOT NULL,
+    "cliente_id" INTEGER NOT NULL,
+    "agente_id" INTEGER,
+    "estado" "EstadoChat" NOT NULL DEFAULT 'ABIERTA',
+    "created_at" TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(0) NOT NULL,
+
+    CONSTRAINT "conversaciones_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "mensajes_chat" (
+    "id" SERIAL NOT NULL,
+    "conversacion_id" INTEGER NOT NULL,
+    "remitente_id" INTEGER NOT NULL,
+    "contenido" VARCHAR(2000) NOT NULL,
+    "estado" "EstadoMensaje" NOT NULL DEFAULT 'ENVIADO',
+    "created_at" TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "entregado_at" TIMESTAMP(0),
+    "leido_at" TIMESTAMP(0),
+
+    CONSTRAINT "mensajes_chat_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "categorias_nombre_key" ON "categorias"("nombre");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "roles_nombre_key" ON "roles"("nombre");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "usuarios_correo_key" ON "usuarios"("correo");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "usuarios_cedula_key" ON "usuarios"("cedula");
+
+-- CreateIndex
+CREATE INDEX "usuarios_rol_id_idx" ON "usuarios"("rol_id");
+
+-- CreateIndex
+CREATE INDEX "medicamentos_categoria_id_idx" ON "medicamentos"("categoria_id");
+
+-- CreateIndex
+CREATE INDEX "medicamentos_estado_idx" ON "medicamentos"("estado");
+
+-- CreateIndex
+CREATE INDEX "solicitudes_usuario_id_idx" ON "solicitudes"("usuario_id");
+
+-- CreateIndex
+CREATE INDEX "solicitudes_estado_idx" ON "solicitudes"("estado");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "solicitudes_usuario_id_idempotency_key_key" ON "solicitudes"("usuario_id", "idempotency_key");
+
+-- CreateIndex
+CREATE INDEX "detalle_solicitud_solicitud_id_idx" ON "detalle_solicitud"("solicitud_id");
+
+-- CreateIndex
+CREATE INDEX "detalle_solicitud_medicamento_id_idx" ON "detalle_solicitud"("medicamento_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "pagos_referencia_key" ON "pagos"("referencia");
+
+-- CreateIndex
+CREATE INDEX "pagos_solicitud_id_idx" ON "pagos"("solicitud_id");
+
+-- CreateIndex
+CREATE INDEX "pagos_usuario_id_idx" ON "pagos"("usuario_id");
+
+-- CreateIndex
+CREATE INDEX "recordatorios_usuario_id_idx" ON "recordatorios"("usuario_id");
+
+-- CreateIndex
+CREATE INDEX "recordatorios_medicamento_id_idx" ON "recordatorios"("medicamento_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "tokens_recuperacion_token_hash_key" ON "tokens_recuperacion"("token_hash");
+
+-- CreateIndex
+CREATE INDEX "tokens_recuperacion_usuario_id_idx" ON "tokens_recuperacion"("usuario_id");
+
+-- CreateIndex
+CREATE INDEX "tokens_recuperacion_expira_en_idx" ON "tokens_recuperacion"("expira_en");
+
+-- CreateIndex
+CREATE INDEX "formulas_medicas_usuario_id_idx" ON "formulas_medicas"("usuario_id");
+
+-- CreateIndex
+CREATE INDEX "formulas_medicas_estado_idx" ON "formulas_medicas"("estado");
+
+-- CreateIndex
+CREATE INDEX "conversaciones_cliente_id_updated_at_idx" ON "conversaciones"("cliente_id", "updated_at");
+
+-- CreateIndex
+CREATE INDEX "conversaciones_agente_id_estado_updated_at_idx" ON "conversaciones"("agente_id", "estado", "updated_at");
+
+-- CreateIndex
+CREATE INDEX "mensajes_chat_conversacion_id_created_at_idx" ON "mensajes_chat"("conversacion_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "mensajes_chat_remitente_id_idx" ON "mensajes_chat"("remitente_id");
+
+-- AddForeignKey
+ALTER TABLE "usuarios" ADD CONSTRAINT "usuarios_rol_id_fkey" FOREIGN KEY ("rol_id") REFERENCES "roles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "medicamentos" ADD CONSTRAINT "medicamentos_categoria_id_fkey" FOREIGN KEY ("categoria_id") REFERENCES "categorias"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "solicitudes" ADD CONSTRAINT "solicitudes_usuario_id_fkey" FOREIGN KEY ("usuario_id") REFERENCES "usuarios"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "detalle_solicitud" ADD CONSTRAINT "detalle_solicitud_medicamento_id_fkey" FOREIGN KEY ("medicamento_id") REFERENCES "medicamentos"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "detalle_solicitud" ADD CONSTRAINT "detalle_solicitud_solicitud_id_fkey" FOREIGN KEY ("solicitud_id") REFERENCES "solicitudes"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "pagos" ADD CONSTRAINT "pagos_solicitud_id_fkey" FOREIGN KEY ("solicitud_id") REFERENCES "solicitudes"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "pagos" ADD CONSTRAINT "pagos_usuario_id_fkey" FOREIGN KEY ("usuario_id") REFERENCES "usuarios"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "recordatorios" ADD CONSTRAINT "recordatorios_medicamento_id_fkey" FOREIGN KEY ("medicamento_id") REFERENCES "medicamentos"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "recordatorios" ADD CONSTRAINT "recordatorios_usuario_id_fkey" FOREIGN KEY ("usuario_id") REFERENCES "usuarios"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "tokens_recuperacion" ADD CONSTRAINT "tokens_recuperacion_usuario_id_fkey" FOREIGN KEY ("usuario_id") REFERENCES "usuarios"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "formulas_medicas" ADD CONSTRAINT "formulas_medicas_usuario_id_fkey" FOREIGN KEY ("usuario_id") REFERENCES "usuarios"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "conversaciones" ADD CONSTRAINT "conversaciones_cliente_id_fkey" FOREIGN KEY ("cliente_id") REFERENCES "usuarios"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "conversaciones" ADD CONSTRAINT "conversaciones_agente_id_fkey" FOREIGN KEY ("agente_id") REFERENCES "usuarios"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "mensajes_chat" ADD CONSTRAINT "mensajes_chat_conversacion_id_fkey" FOREIGN KEY ("conversacion_id") REFERENCES "conversaciones"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "mensajes_chat" ADD CONSTRAINT "mensajes_chat_remitente_id_fkey" FOREIGN KEY ("remitente_id") REFERENCES "usuarios"("id") ON DELETE CASCADE ON UPDATE CASCADE;

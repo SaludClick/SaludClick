@@ -1,38 +1,39 @@
 # Reporte de ejecución de calidad
 
-**Fecha:** 2026-11-07
-**Versión:** 1.0.0
-**Ambiente:** Windows, Node.js, Edge headless; datos ficticios y servidores locales; sin conexión a PostgreSQL/Neon durante la suite. No se usaron credenciales reales.
+**Fecha:** 2026-11-07 · **Versión:** 1.0.0
+**Ambiente:** Windows, Node.js v22.23.1, Edge headless, datos ficticios y servidores locales. No se conectó a PostgreSQL/Neon ni se usaron credenciales reales.
 
-## Resumen medido
+## Resultados comprobados
 
 | Comprobación | Resultado |
 |---|---|
-| `npm test` en `backend/` | 175 ejecutadas, 175 aprobadas, 0 fallidas, 0 omitidas |
-| `node --test --experimental-test-coverage tests/*.test.cjs` | 175 aprobadas; 77.50 % sentencias, 84.76 % ramas, 82.99 % funciones |
+| `npm test` en `backend/` | 199 ejecutadas, 199 aprobadas, 0 fallidas, 0 omitidas |
+| Cobertura Node sobre `backend/src/**/*.js` | 85,98 % líneas; 77,49 % ramas; 74,29 % funciones |
 | `npm run build` en `frontend/` | Aprobado; 14 páginas Astro generadas |
 | `npm run check` en `frontend/` | 0 errores, 0 warnings, 2 hints |
-| `npx prisma validate` en `backend/` | Esquema PostgreSQL válido; no conecta ni migra la base |
-| `npm audit` en `backend/` | 6 vulnerabilidades: 2 moderadas, 4 altas |
-| `npm audit` en `frontend/` | 5 vulnerabilidades: 1 baja, 3 altas, 1 crítica |
-| Accesibilidad EV-ACC-001–007 | 7 aprobadas en Edge headless, con alcance descrito en la sección 13.2 del plan |
+| `npx prisma validate` y `npx prisma generate` | Aprobados con Prisma 7.10.1; sin conexión ni migración |
+| `npm audit` en `backend/` | 0 vulnerabilidades reportadas |
+| `npm audit` en `frontend/` | 0 vulnerabilidades reportadas |
+| Accesibilidad EV-ACC-001–007 | 7 verificaciones aprobadas en Edge headless |
 
-El antecedente de 167 pruebas, 165 aprobadas y 2 fallidas fue reproducido. El error `No se encontró la línea del carrito: Acetaminofén` provenía de una carrera en el test: `go()` esperaba `document.readyState`, no el render terminado del catálogo asíncrono. El estado local se persistía y el catálogo de prueba respondía; la búsqueda se sincronizó con la aparición de la fila sin cambiar la aserción. La ejecución final aprobó la prueba.
+El antecedente de 167 pruebas (165 aprobadas, 2 fallidas) se reprodujo en la fase anterior. La falla del carrito era una carrera del test que consultaba el DOM antes de terminar el render asíncrono; se corrigió esperando la fila concreta, sin cambiar la aserción ni ocultar el defecto.
 
-Se crearon ocho verificaciones: siete accesibilidad y una prueba de doble clic de pago. Se asociaron etiquetas a los campos del formulario de registro y nombres accesibles al botón de menú y al buscador de medicamentos.
+Se añadieron pruebas de contrato para la clave idempotente, repetición/reuso y conflictos; pruebas transaccionales con dobles PostgreSQL; pruebas de repositorios de autenticación, administración, fórmulas y dashboard; y verificaciones del esquema/instaladores PostgreSQL. El checkout ahora envía una clave UUID estable durante reintentos, y el backend persiste la clave y la huella dentro de la transacción. La huella no incluye PAN ni CVV, y los bloqueos de inventario se solicitan en orden estable por medicamento. El repositorio de administración también dejó de contener una implementación SQL duplicada que quedaba sobrescrita por la de Prisma.
 
-## Seguridad y base de datos
+## Seguridad, persistencia y límites
 
-Se actualizaron dependencias dentro de los rangos compatibles usando `npm audit fix` sin `--force`. Esto eliminó el hallazgo crítico de `proxy-addr` en backend; quedan 6 avisos backend. Frontend conserva un hallazgo crítico en Astro y avisos adicionales; el remedio que ofrece el audit requiere Astro 7.4.1, fuera del rango mayor actual. No se hizo el salto mayor automáticamente. No se ejecutó una migración ni se modificaron datos reales.
+Las auditorías finales de ambos proyectos reportaron cero vulnerabilidades. Se actualizaron Astro a 7.4.1 y Prisma/Client a 7.10.1; Prisma usa ahora el adaptador PostgreSQL compatible con la versión mayor. Se generó el DDL de instalación desde `schema.prisma`, se alinearon sus defaults y los scripts MySQL de actualización que alteraban columnas/inventario quedaron retirados con error explícito.
 
-Los tests de API usan repositorios simulados. La integración con PostgreSQL real y el comportamiento persistente entre instancias están pendientes. El checkout evita el doble clic en el navegador; el backend no tiene clave de idempotencia persistente y no garantiza deduplicación de solicitudes repetidas.
+La cobertura de líneas supera el umbral propuesto de 80 %, pero ramas (77,49 %), funciones (74,29 %) y la meta aspiracional de 100 % no se alcanzaron. Los tests de transacción y deduplicación usan dobles; no demuestran concurrencia ni persistencia en PostgreSQL real. El cambio de idempotencia es una migración aditiva aún no aplicada. No había una base de pruebas aislada disponible/autorizada; no se intentó conectar a Neon.
 
-**Decisión:** NO-GO según los umbrales propuestos: cobertura inferior a 80 %, dependencias con hallazgo crítico abierto y validación de integración real pendiente. Consulte `go-no-go.md`.
+El build final aprobó, aunque Astro informó colisiones preexistentes entre algunas rutas `src/pages` y archivos del directorio `public`. `astro check` no detectó errores ni warnings y reportó dos hints.
 
-## Archivos de evidencia
+**Decisión:** **NO-GO** para liberar o afirmar aceptación integral hasta validar la migración y el comportamiento concurrente con PostgreSQL aislado, y completar la cobertura pendiente. Consulte `go-no-go.md`.
 
-- `../evidencias/EV-QUALITY-001-tests.txt`: transcripción de la regresión final.
-- `cobertura-node.txt`: transcripción completa del reporte de cobertura.
-- `build-frontend.txt`, `prisma-validate.txt`: compilación, diagnóstico y validación Prisma.
-- `npm-audit-backend.txt`, `npm-audit-frontend.txt`: informes completos de auditoría.
-- `../evidencias/EV-ACC-001.txt` a `EV-ACC-007.txt`: salidas aprobadas de accesibilidad.
+## Evidencias
+
+- `../evidencias/EV-QUALITY-001-tests.txt`: transcripción actualizada de `npm test`.
+- `cobertura-node.txt`: transcripción de cobertura exclusiva de `backend/src/`.
+- `build-frontend.txt`, `prisma-validate.txt`: build, diagnósticos y validación/generación Prisma.
+- `npm-audit-backend.txt`, `npm-audit-frontend.txt`: auditorías finales.
+- `../evidencias/EV-ACC-001.txt` a `EV-ACC-007.txt`: comprobaciones WCAG automatizadas ejecutadas.

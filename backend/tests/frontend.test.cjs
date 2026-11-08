@@ -7,7 +7,7 @@ const http = require('node:http');
 const net = require('node:net');
 const { spawn } = require('node:child_process');
 
-// Navegador aislado y servidor estÃ¡tico: no accede a MySQL ni usa sesiones reales.
+// Navegador aislado y servidor estático: no accede a PostgreSQL ni usa sesiones reales.
 test('controles del frontend en Edge headless', { timeout: 120000 }, async t => {
     const edge = process.env.EDGE_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
     if (!fs.existsSync(edge)) { t.skip('Microsoft Edge no estÃ¡ instalado; define EDGE_PATH para ejecutar esta prueba.'); return; }
@@ -18,6 +18,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     let loginCorrecto = false;
     let loginRequests = 0;
     let orderRequests = 0;
+    const orderIdempotencyKeys = [];
     const medicamentos = [
         ['Acetaminofén', 'Analgésicos', '500 mg', 'acetaminofen.svg'],
         ['Ibuprofeno', 'Antiinflamatorios', '400 mg', 'ibuprofeno.svg'],
@@ -43,7 +44,10 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
             return;
         }
         if (pathname === '/api/auth/login') loginRequests += 1;
-        if (pathname === '/api/pedidos' && req.method === 'POST') orderRequests += 1;
+        if (pathname === '/api/pedidos' && req.method === 'POST') {
+            orderRequests += 1;
+            orderIdempotencyKeys.push(req.headers['idempotency-key']);
+        }
         if (pathname === '/api/auth/login' && loginCorrecto) {
             // Respuesta controlada Ãºnicamente en este servidor de pruebas.
             res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -333,6 +337,10 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         await until(() => Promise.resolve(orderRequests === before + 1));
         await until(() => evaluate('!document.querySelector("#pagarPedido").disabled'));
         assert.equal(orderRequests,before+1);
+        assert.match(orderIdempotencyKeys.at(-1), /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+        await click('#pagarPedido');
+        await until(() => Promise.resolve(orderRequests === before + 2));
+        assert.equal(orderIdempotencyKeys.at(-1), orderIdempotencyKeys.at(-2));
     });
     await t.test('perfil: validaciÃ³n, guardar sin falso Ã©xito y cancelar', async () => {
         await evaluate(`sessionStorage.removeItem('saludclick_user')`);

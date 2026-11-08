@@ -5,10 +5,21 @@ const orderService = require("../services/order.service");
 // =================================================
 
 async function crearPedido(req, res) {
+    const idempotencyKey = req.get("Idempotency-Key");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        String(idempotencyKey || "")
+    )) {
+        return res.status(400).json({
+            ok: false,
+            mensaje: "La clave Idempotency-Key debe ser un UUID válido."
+        });
+    }
+
     try {
         const resultado = await orderService.crearPedido(
             req.usuario.id,
-            req.body
+            req.body,
+            idempotencyKey
         );
 
         res.status(201).json({
@@ -20,9 +31,14 @@ async function crearPedido(req, res) {
     } catch (error) {
         console.error("Error al crear pedido:", error);
 
-        res.status(400).json({
+        const status = [400, 409].includes(error.status)
+            ? error.status
+            : 500;
+        res.status(status).json({
             ok: false,
-            mensaje: error.message
+            mensaje: status === 500
+                ? "No se pudo crear el pedido."
+                : error.message
         });
     }
 }

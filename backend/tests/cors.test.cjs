@@ -28,13 +28,14 @@ for (const origin of ["http://localhost:4321", "http://127.0.0.1:4321"]) {
             headers: {
                 Origin: origin,
                 "Access-Control-Request-Method": "POST",
-                "Access-Control-Request-Headers": "content-type"
+                "Access-Control-Request-Headers": "content-type,idempotency-key"
             }
         });
         assert.equal(response.status, 204);
         assert.equal(response.headers.get("access-control-allow-origin"), origin);
         assert.match(response.headers.get("access-control-allow-methods"), /POST/);
         assert.match(response.headers.get("access-control-allow-headers"), /Content-Type/i);
+        assert.match(response.headers.get("access-control-allow-headers"), /Idempotency-Key/i);
     });
 }
 

@@ -14,11 +14,11 @@
 | Historial | `api-contracts.test.cjs`, `frontend.test.cjs` | Aprobado en contratos/UI | Sin PostgreSQL real |
 | Validación de formularios | `frontend.test.cjs` | Aprobado | Registro y pago de prueba |
 | Errores de API | `api-contracts.test.cjs`, `cors.test.cjs`, `frontend.test.cjs` | Aprobado | Respuestas controladas |
-| Integridad de datos | `pedido-temporal.test.cjs`, `order-service-characterization.test.cjs`, `database-public-scripts.test.cjs` | Aprobado en lógica simulada | Integridad transaccional PostgreSQL real pendiente |
+| Integridad de datos | `pedido-temporal.test.cjs`, `order-service-characterization.test.cjs`, `order-repository-idempotency.test.cjs`, `repository-layer.test.cjs`, `database-public-scripts.test.cjs` | Aprobado en lógica/transacción simulada | Integridad transaccional PostgreSQL real pendiente |
 | Protección de rutas privadas | `frontend.test.cjs`, `api-contracts.test.cjs` | Aprobado | Verificación de navegador y middleware con JWT ficticio |
 | Integración frontend/backend | `frontend.test.cjs`, `api-contracts.test.cjs` | Parcial/aprobado con fixtures | No es integración con backend y PostgreSQL desplegados |
 | Expiración de sesiones | `auth-user-characterization.test.cjs`, `api-contracts.test.cjs`, `frontend.test.cjs` | Aprobado | No cubre expiración real en producción |
-| Prevención de pedidos duplicados | `frontend.test.cjs` (doble clic), `order-service-characterization.test.cjs` (líneas repetidas) | Aprobado en UI/líneas; backend idempotente pendiente | Sin clave de idempotencia persistente para reintentos de `POST` |
+| Prevención de pedidos duplicados | `frontend.test.cjs`, `api-contracts.test.cjs`, `order-service-characterization.test.cjs`, `order-repository-idempotency.test.cjs` | Clave persistente implementada y contratos/transacciones simuladas aprobados | Falta comprobar índice, concurrencia y replay en PostgreSQL aislado |
 | Accesibilidad teclado | `EV-ACC-001.txt` | Aprobado | Inicio |
 | Foco visible | `EV-ACC-002.txt` | Aprobado | Inicio; estilo presente |
 | Etiquetas y mensajes | `EV-ACC-003.txt` | Aprobado | Formulario de registro |
@@ -27,4 +27,4 @@
 | Textos alternativos | `EV-ACC-006.txt` | Aprobado | Imágenes de inicio |
 | Zoom/diseño adaptable | `EV-ACC-007.txt` | Aprobado | Viewport a 320 px en inicio |
 
-Los resultados agregados corresponden a 175 pruebas aprobadas y 0 fallidas; cobertura medida: 77.50 % de sentencias, 84.76 % de ramas y 82.99 % de funciones.
+La regresión final ejecutó 199 pruebas: 199 aprobadas, 0 fallidas y 0 omitidas. Cobertura de `backend/src/` medida con Node Test Runner: 85,98 % líneas, 77,49 % ramas y 74,29 % funciones. La validación no equivale a integración con PostgreSQL real.

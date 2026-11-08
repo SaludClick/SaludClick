@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Categoria {
@@ -40,7 +39,7 @@ model Usuario {
   ciudad              String?             @db.VarChar(100)
   password            String              @db.VarChar(255)
   rol_id              Int
-  estado              EstadoUsuario?
+  estado              EstadoUsuario?       @default(ACTIVO)
   created_at          DateTime?           @default(now()) @db.Timestamp(0)
   updated_at          DateTime?           @default(now()) @db.Timestamp(0)
   pagos               Pago[]
@@ -63,7 +62,7 @@ model Medicamento {
   descripcion        String?
   categoria_id       Int
   precio             Decimal            @db.Decimal(10, 2)
-  stock              Int
+  stock              Int                @default(0)
   imagen             String?            @db.VarChar(255)
   estado             EstadoMedicamento? @default(DISPONIBLE)
   created_at         DateTime?          @default(now()) @db.Timestamp(0)
@@ -82,9 +81,11 @@ model Solicitud {
   usuario_id    Int
   fecha         DateTime?          @default(now()) @db.Timestamp(0)
   estado        EstadoSolicitud?   @default(PENDIENTE)
-  tipo_entrega  TipoEntrega?
+  tipo_entrega  TipoEntrega?      @default(RECOGER)
   direccion     String?            @db.VarChar(255)
   observaciones String?
+  idempotency_key  String?         @db.Uuid
+  idempotency_hash String?         @db.Char(64)
   created_at    DateTime?          @default(now()) @db.Timestamp(0)
   updated_at    DateTime?          @default(now()) @db.Timestamp(0)
   detalles      DetalleSolicitud[]
@@ -93,6 +94,7 @@ model Solicitud {
 
   @@index([usuario_id])
   @@index([estado])
+  @@unique([usuario_id, idempotency_key], map: "solicitudes_usuario_id_idempotency_key_key")
   @@map("solicitudes")
 }
 
@@ -122,7 +124,7 @@ model Pago {
   ultimos_digitos String     @db.Char(4)
   monto           Decimal    @db.Decimal(10, 2)
   estado          EstadoPago
-  simulacion      Boolean
+  simulacion      Boolean    @default(true)
   created_at      DateTime?  @default(now()) @db.Timestamp(0)
   solicitud       Solicitud  @relation(fields: [solicitud_id], references: [id])
   usuario         Usuario    @relation(fields: [usuario_id], references: [id])
