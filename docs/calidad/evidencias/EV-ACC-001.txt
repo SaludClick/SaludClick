@@ -1,0 +1,9 @@
+Evidencia EV-ACC-001
+Fecha: 2026-11-07 21:38:50 -05:00
+Versión del proyecto: 1.0.0
+Comando: cd backend; npm test
+Ambiente: Windows, Microsoft Edge headless, servidor HTTP y datos locales ficticios; sin credenciales reales ni base de datos real.
+Verificación: Navegación por teclado
+Resultado: PASS — Edge headless: al presionar Tab, el foco llega a un control interactivo semántico.
+Estado: EJECUTADA Y APROBADA
+Referencia de ejecución: docs/calidad/evidencias/EV-QUALITY-001-tests.txt

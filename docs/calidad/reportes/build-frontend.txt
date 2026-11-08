@@ -1,0 +1,96 @@
+SaludClick frontend build/check
+Date: 2026-11-07 21:37:55 -05:00
+Project version: 1.0.0
+Environment: Windows; Node.js; frontend dependencies installed locally
+Command: npm run build
+
+> saludclick-frontend-astro@1.0.0 build
+> astro build
+
+[2m21:38:03[22m [34m[vite][39m Re-optimizing dependencies because lockfile has changed
+[2m21:38:03[22m [34m[content][39m Syncing content
+[2m21:38:03[22m [34m[content][39m Synced content
+[2m21:38:03[22m [34m[types][39m Generated [2m486ms[22m
+[2m21:38:03[22m [34m[build][39m output: [34m"static"[39m
+[2m21:38:03[22m [34m[build][39m mode: [34m"static"[39m
+[2m21:38:03[22m [34m[build][39m directory: [34mC:\Users\SAMIR ACOSTA\SaludClick\frontend\dist\[39m
+[2m21:38:03[22m [34m[build][39m Collecting build info...
+[2m21:38:03[22m [34m[build][39m [32m✓ Completed in 524ms.[39m
+[2m21:38:03[22m [34m[build][39m Building static entrypoints...
+[2m21:38:05[22m [34m[vite][39m [32m✓ built in 1.71s[39m
+[2m21:38:05[22m [34m[build][39m [32m✓ Completed in 1.76s.[39m
+
+[42m[30m building client (vite) [39m[49m
+[2m21:38:05[22m [34m[vite][39m transforming...
+[2m21:38:06[22m [34m[vite][39m [32m✓[39m 33 modules transformed.
+[2m21:38:06[22m [34m[vite][39m rendering chunks...
+[2m21:38:07[22m [34m[vite][39m computing gzip size...
+[2m21:38:07[22m [34m[vite][39m [2mdist/[22m[36m_astro/Brand.Bm0Fzyaz.js        [39m[1m[2m  0.28 kB[22m[1m[22m[2m │ gzip:  0.22 kB[22m
+[2m21:38:07[22m [34m[vite][39m [2mdist/[22m[36m_astro/SearchBox.CLVVXdho.js    [39m[1m[2m  0.43 kB[22m[1m[22m[2m │ gzip:  0.29 kB[22m
+[2m21:38:07[22m [34m[vite][39m [2mdist/[22m[36m_astro/jsx-runtime.D_zvdyIk.js  [39m[1m[2m  0.73 kB[22m[1m[22m[2m │ gzip:  0.46 kB[22m
+[2m21:38:07[22m [34m[vite][39m [2mdist/[22m[36m_astro/Chat.scGCqUZ-.js         [39m[1m[2m  6.62 kB[22m[1m[22m[2m │ gzip:  2.76 kB[22m
+[2m21:38:07[22m [34m[vite][39m [2mdist/[22m[36m_astro/index.DLkBFFtG.js        [39m[1m[2m  8.20 kB[22m[1m[22m[2m │ gzip:  3.17 kB[22m
+[2m21:38:07[22m [34m[vite][39m [2mdist/[22m[36m_astro/client.C5RI7xnT.js       [39m[1m[2m215.57 kB[22m[1m[22m[2m │ gzip: 67.09 kB[22m
+[2m21:38:07[22m [34m[vite][39m [32m✓ built in 2.03s[39m
+
+[42m[30m generating static routes [39m[49m
+[2m21:38:07[22m [32m▶[39m src/pages/index.astro
+[2m21:38:07[22m   [34m└─[39m [2m/index.html[22m [2m(+118ms)[22m
+[2m21:38:07[22m [32m▶[39m src/pages/login.astro
+[2m21:38:07[22m   [34m└─[39m [2m/login.html[22m [2m(+24ms)[22m
+[2m21:38:07[22m [32m▶[39m src/pages/pages/admin-cuentas.astro
+[2m21:38:07[22m   [34m└─[39m [2m/pages/admin-cuentas.html[22m [2m(+25ms)[22m
+[2m21:38:07[22m [32m▶[39m src/pages/pages/admin.astro
+[2m21:38:07[22m   [34m└─[39m [2m/pages/admin.html[22m [2m(+22ms)[22m
+[2m21:38:07[22m [32m▶[39m src/pages/pages/chat.astro
+[2m21:38:07[22m   [34m└─[39m [2m/pages/chat.html[22m [2m(+16ms)[22m
+[2m21:38:07[22m [32m▶[39m src/pages/pages/dashboard.astro
+[2m21:38:07[22m   [34m└─[39m [2m/pages/dashboard.html[22m [2m(+4ms)[22m
+[2m21:38:07[22m [32m▶[39m src/pages/pages/formulas.astro
+[2m21:38:07[22m   [34m└─[39m [2m/pages/formulas.html[22m [2m(+4ms)[22m
+[2m21:38:07[22m [32m▶[39m src/pages/pages/historial.astro
+[2m21:38:07[22m   [34m└─[39m [2m/pages/historial.html[22m [2m(+88ms)[22m
+[2m21:38:07[22m [32m▶[39m src/pages/pages/medicamentos.astro
+[2m21:38:07[22m   [34m└─[39m [2m/pages/medicamentos.html[22m [2m(+32ms)[22m
+[2m21:38:07[22m [32m▶[39m src/pages/pages/pedidos.astro
+[2m21:38:07[22m   [34m└─[39m [2m/pages/pedidos.html[22m [2m(+23ms)[22m
+[2m21:38:08[22m [32m▶[39m src/pages/pages/perfil.astro
+[2m21:38:08[22m   [34m└─[39m [2m/pages/perfil.html[22m [2m(+7ms)[22m
+[2m21:38:08[22m [35mλ[39m src/pages/recaptcha-config.json.ts
+[2m21:38:08[22m   [34m└─[39m [2m/recaptcha-config.json[22m [2m(+14ms)[22m
+[2m21:38:08[22m [32m▶[39m src/pages/recuperar.astro
+[2m21:38:08[22m   [34m└─[39m [2m/recuperar.html[22m [2m(+83ms)[22m
+[2m21:38:08[22m [32m▶[39m src/pages/registro.astro
+[2m21:38:08[22m   [34m└─[39m [2m/registro.html[22m [2m(+21ms)[22m
+[2m21:38:08[22m [32m▶[39m src/pages/restablecer.astro
+[2m21:38:08[22m   [34m└─[39m [2m/restablecer.html[22m [2m(+5ms)[22m
+[2m21:38:08[22m [32m✓ Completed in 814ms.
+[39m
+[2m21:38:08[22m [34m[build][39m 14 page(s) built in [1m5.21s[22m
+[2m21:38:08[22m [34m[build][39m [1mComplete![22m
+Build exit code: 0
+Command: npm run check
+
+> saludclick-frontend-astro@1.0.0 check
+> astro check
+
+[2m21:38:15[22m [34m[content][39m Syncing content
+[2m21:38:15[22m [34m[content][39m Synced content
+[2m21:38:15[22m [34m[types][39m Generated [2m81ms[22m
+[2m21:38:15[22m [34m[check][39m Getting diagnostics for Astro files in C:\Users\SAMIR ACOSTA\SaludClick\frontend...
+[96mpublic/js/admin-cuentas.js[0m:[93m41[0m:[93m10[0m - [93mwarning[0m[90m ts(6133): [0m'escapar' is declared but its value is never read.
+
+[7m41[0m function escapar(valor) {
+[7m  [0m [93m         ~~~~~~~[0m
+
+[96mpublic/js/dashboard.js[0m:[93m11[0m:[93m15[0m - [93mwarning[0m[90m ts(6133): [0m'map' is declared but its value is never read.
+
+[7m11[0m         const map={totalPedidos:s.pedidos,totalMedicamentos:undefined};
+[7m  [0m [93m              ~~~[0m
+
+Result (42 files):
+- 0 errors
+- 0 warnings
+- 2 hints
+
+Check exit code: 0

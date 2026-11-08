@@ -1,0 +1,19 @@
+SaludClick Prisma validation
+Date: 2026-11-07 21:37:53 -05:00
+Project version: 1.0.0
+Command: npx prisma validate
+Environment: Windows; PostgreSQL schema validation only; no database connection or migration
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+┌─────────────────────────────────────────────────────────┐
+│  Update available 6.19.3 -> 8.0.0-rc.33                 │
+│                                                         │
+│  This is a major update - please follow the guide at    │
+│  https://pris.ly/d/major-version-upgrade                │
+│                                                         │
+│  Run the following to update                            │
+│    npm i --save-dev prisma@latest                       │
+│    npm i @prisma/client@latest                          │
+└─────────────────────────────────────────────────────────┘
+The schema at prisma\schema.prisma is valid 🚀
+Process exit code: 0

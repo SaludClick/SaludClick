@@ -17,6 +17,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         : path.resolve(__dirname, '../../frontend/public');
     let loginCorrecto = false;
     let loginRequests = 0;
+    let orderRequests = 0;
     const medicamentos = [
         ['Acetaminofén', 'Analgésicos', '500 mg', 'acetaminofen.svg'],
         ['Ibuprofeno', 'Antiinflamatorios', '400 mg', 'ibuprofeno.svg'],
@@ -42,6 +43,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
             return;
         }
         if (pathname === '/api/auth/login') loginRequests += 1;
+        if (pathname === '/api/pedidos' && req.method === 'POST') orderRequests += 1;
         if (pathname === '/api/auth/login' && loginCorrecto) {
             // Respuesta controlada Ãºnicamente en este servidor de pruebas.
             res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -230,9 +232,11 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     const catalogReady = () => evaluate('Array.isArray(window.saludClickCatalogo) && window.saludClickCatalogo.length === 5');
     const state = () => evaluate(`JSON.parse(localStorage.getItem('saludclick_pedido_temporal_v1'))`);
     async function clickCartControl(name, controlIndex) {
+        await until(() => evaluate(`[...document.querySelectorAll('#detallePedido tr')].some(r=>r.cells[0]?.textContent.includes(${JSON.stringify(name)}))`));
         await evaluate(`(()=>{const row=[...document.querySelectorAll('#detallePedido tr')].find(r=>r.cells[0]?.textContent.includes(${JSON.stringify(name)})); if(!row) throw new Error('No se encontró la línea del carrito: '+${JSON.stringify(name)}); const button=${controlIndex}===2?row.cells[2].querySelector('button'):row.cells[1].querySelectorAll('button')[${controlIndex}]; button.click();})()`);
     }
     async function setCartQuantity(name, quantity) {
+        await until(() => evaluate(`[...document.querySelectorAll('#detallePedido tr')].some(r=>r.cells[0]?.textContent.includes(${JSON.stringify(name)}))`));
         await evaluate(`(()=>{const row=[...document.querySelectorAll('#detallePedido tr')].find(r=>r.cells[0]?.textContent.includes(${JSON.stringify(name)})); if(!row) throw new Error('No se encontró la línea del carrito: '+${JSON.stringify(name)}); const input=row.cells[1].querySelector('input'); input.value=${JSON.stringify(String(quantity))}; input.dispatchEvent(new Event('change',{bubbles:true}));})()`);
     }
     if (realCaptcha) {
@@ -318,6 +322,17 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         assert.deepEqual(await state(), before);
         assert.equal(await evaluate('document.querySelectorAll("#carritoPedido tr").length'), 5);
         assert.equal(await evaluate('document.querySelector("#resultadoPago").hidden'), true);
+    });
+    await t.test('doble clic de pago envía una sola solicitud de pedido', async () => {
+        await evaluate(`localStorage.setItem('saludclick_pedido_temporal_v1',JSON.stringify({version:1,borrador:[{id:1,cantidad:1}],confirmados:[]}))`);
+        await go('/pages/pedidos.html');
+        await until(() => evaluate('document.querySelector("#pagarPedido") && !document.querySelector("#pagarPedido").disabled'));
+        for (const [id,text] of [['titular','Usuario de prueba'],['numero','4242424242424242'],['vencimiento','12/30'],['cvv','123']]) await value('#'+id,text);
+        const before = orderRequests;
+        assert.equal(await evaluate(`(()=>{const button=document.querySelector('#pagarPedido');button.click();button.click();return button.disabled})()`),true);
+        await until(() => Promise.resolve(orderRequests === before + 1));
+        await until(() => evaluate('!document.querySelector("#pagarPedido").disabled'));
+        assert.equal(orderRequests,before+1);
     });
     await t.test('perfil: validaciÃ³n, guardar sin falso Ã©xito y cancelar', async () => {
         await evaluate(`sessionStorage.removeItem('saludclick_user')`);
@@ -568,6 +583,54 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         const catalogoImagenes = await evaluate(`[...document.querySelectorAll('#catalogoMedicamentos .tabla-medicamento-imagen')].map(img=>({src:img.getAttribute('src'),complete:img.complete,width:img.naturalWidth,height:img.naturalHeight}))`);
         assert.equal(catalogoImagenes.length,5);
         for (const imagen of catalogoImagenes) { assert.equal(imagen.complete,true); assert.ok(imagen.width > 0 && imagen.height > 0); assert.equal((await fetch(new URL(imagen.src,base))).status,200); }
+    });
+    await t.test('EV-ACC-001 navegación por teclado', async () => {
+        await go('/index.html');
+        await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+        await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+        assert.ok(await evaluate('document.activeElement.matches("a,button,input,select,textarea")'));
+    });
+    await t.test('EV-ACC-002 foco visible', async () => {
+        await go('/index.html');
+        await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+        await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+        const focus = await evaluate(`(()=>{const s=getComputedStyle(document.activeElement);return {visible:document.activeElement.matches(':focus-visible'),outlineStyle:s.outlineStyle,outlineWidth:s.outlineWidth}})()`);
+        assert.equal(focus.visible,true);
+        assert.notEqual(focus.outlineStyle,'none');
+        assert.ok(parseFloat(focus.outlineWidth) >= 2);
+    });
+    await t.test('EV-ACC-003 etiquetas y mensajes de validación', async () => {
+        await go('/registro.html');
+        const result = await evaluate(`(()=>{const form=document.querySelector('#registroForm');const fields=[...form.querySelectorAll('input:not([type=hidden]),select,textarea')];return {unlabeled:fields.filter(e=>!e.labels?.length&&!e.hasAttribute('aria-label')&&!e.hasAttribute('aria-labelledby')).map(e=>e.id||e.name||e.type),invalid:!form.checkValidity(),validation:fields.find(e=>!e.checkValidity())?.validationMessage||'',status:document.querySelector('#avisoLegal')?.getAttribute('role')}})()`);
+        assert.deepEqual(result.unlabeled,[]);
+        assert.equal(result.invalid,true);
+        assert.ok(result.validation.length > 0);
+        assert.equal(result.status,'status');
+    });
+    await t.test('EV-ACC-004 contraste de texto WCAG AA', async () => {
+        await go('/index.html');
+        const contrast = await evaluate(`(()=>{const e=document.querySelector('#buscarInicio'),s=getComputedStyle(e),parse=c=>c.match(/[\\d.]+/g).slice(0,3).map(Number),linear=v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4},l=c=>{const [r,g,b]=parse(c);return .2126*linear(r)+.7152*linear(g)+.0722*linear(b)},a=l(s.color),b=l(s.backgroundColor);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05)})()`);
+        assert.ok(contrast >= 4.5, `Contraste calculado: ${contrast.toFixed(2)}:1`);
+    });
+    await t.test('EV-ACC-005 encabezados HTML', async () => {
+        await go('/index.html');
+        const levels = await evaluate('[...document.querySelectorAll("h1,h2,h3,h4,h5,h6")].map(e=>Number(e.tagName.slice(1)))');
+        assert.equal(levels.filter(level=>level===1).length,1);
+        for (let index=1;index<levels.length;index++) assert.ok(levels[index]-levels[index-1]<=1,`Salto de encabezado h${levels[index-1]} a h${levels[index]}`);
+    });
+    await t.test('EV-ACC-006 textos alternativos de imágenes', async () => {
+        await go('/index.html');
+        const images = await evaluate('[...document.images].filter(e=>!e.hasAttribute("alt")).map(e=>e.src)');
+        assert.deepEqual(images,[]);
+    });
+    await t.test('EV-ACC-007 zoom y diseño adaptable a 320 px', async () => {
+        await go('/index.html');
+        const viewport = await evaluate('document.querySelector(\'meta[name="viewport"]\')?.content||""');
+        assert.match(viewport,/width=device-width/);
+        await send('Emulation.setDeviceMetricsOverride',{width:320,height:800,deviceScaleFactor:1,mobile:true});
+        const dimensions = await evaluate('({width:document.documentElement.clientWidth,scrollWidth:document.documentElement.scrollWidth})');
+        assert.ok(dimensions.scrollWidth<=dimensions.width,`Desbordamiento horizontal: ${JSON.stringify(dimensions)}`);
+        await send('Emulation.clearDeviceMetricsOverride');
     });
     await t.test('sin excepciones JavaScript propias', () => assert.deepEqual(errors,[]));
 });
