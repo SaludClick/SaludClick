@@ -10,8 +10,8 @@ node --test --experimental-test-coverage --test-coverage-include="src/**/*.js" t
 
 | Métrica | Fase anterior | Fase final | Meta |
 |---|---:|---:|---:|
-| Líneas | 89,75 % | **92,45 %** | 90 % |
-| Ramas | 80,27 % | **81,97 %** | 90 % |
+| Líneas | 89,75 % | **92,35 %** | 90 % |
+| Ramas | 80,27 % | **81,63 %** | 90 % |
 | Funciones | 78,72 % | **81,56 %** | 90 % |
 
 La suite final ejecutó 238 pruebas: 238 aprobadas, 0 fallidas y 0 omitidas. Se agregaron casos de administración, middleware de farmacia y normalización de documentos de perfil; también se estabilizó una espera E2E para el render asíncrono del checkout. No se excluyeron módulos ni se alteraron aserciones para elevar métricas.

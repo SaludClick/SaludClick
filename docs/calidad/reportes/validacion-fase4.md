@@ -4,7 +4,7 @@
 
 ## PostgreSQL y migraciones
 
-Las comprobaciones de `TEST_DATABASE_URL` desde los procesos de esta sesión y en los archivos locales `backend/.env*` no encontraron la variable. Se detuvieron las operaciones de base de datos antes de consultar el contenedor o abrir una conexión. No se intentó conectar a Neon ni a otra base, no se aplicaron migraciones y no se inspeccionaron tablas, relaciones o restricciones en un servidor PostgreSQL real.
+La comprobación de `TEST_DATABASE_URL` en el entorno de procesos no encontró la variable. Se detuvieron las operaciones de base de datos antes de consultar el contenedor o abrir una conexión. No se intentó conectar a Neon ni a otra base, no se aplicaron migraciones y no se inspeccionaron tablas, relaciones o restricciones en un servidor PostgreSQL real.
 
 `prisma.config.ts` usa `DATABASE_URL` para migraciones, no `TEST_DATABASE_URL`. Cuando la variable de pruebas esté disponible, el comando de migración deberá recibirla explícitamente como `DATABASE_URL` solo tras validar host, puerto, base y contenedor. La migración `20261107215000_add_order_idempotency` se revisó estáticamente: agrega dos columnas anulables (`UUID` y `CHAR(64)`) y un índice único compuesto por `usuario_id` e `idempotency_key`, consistente con `Solicitud` en `schema.prisma`. `npx prisma validate` aprobó sin conexión con una URL local ficticia; esto no acredita el esquema de una base destino.
 
@@ -18,8 +18,8 @@ No se ejecutaron pruebas reales de PostgreSQL. Persistencia entre procesos, rein
 
 | Métrica de `backend/src/` | Resultado | Meta |
 |---|---:|---:|
-| Líneas | 92,45 % | 90 % |
-| Ramas | 81,97 % | 90 % |
+| Líneas | 92,35 % | 90 % |
+| Ramas | 81,63 % | 90 % |
 | Funciones | 81,56 % | 90 % |
 
 `backend> node --test --experimental-test-coverage --test-coverage-include="src/**/*.js" tests/*.test.cjs`: **238 aprobadas, 0 fallidas, 0 omitidas**. Incluye contratos API y 31 subpruebas de Edge headless. El backend de la prueba de navegador es simulado; no demuestra integración con PostgreSQL.
@@ -32,7 +32,7 @@ Una primera ejecución encontró una carrera en el test de checkout: esperaba la
 
 ## Frontend y accesibilidad
 
-`frontend> npm run check`: **0 errores, 0 warnings y 2 hints**. `frontend> npm run build`: aprobado; `dist` contiene **14 archivos HTML** y el build no reportó colisiones. Astro generó dos páginas y copió las páginas estáticas restantes desde `public`.
+`frontend> npm run check`: **0 errores, 0 warnings y 2 hints**. `frontend> npm run build`: aprobado; `dist` contiene **14 archivos HTML** y el build no reportó colisiones. Astro generó dos páginas y copió las páginas estáticas restantes desde `public`. `npx prisma validate` y `npx prisma generate` aprobaron sin conexión.
 
 No hay un runner E2E independiente, pero `backend/tests/frontend.test.cjs` ejecuta 31 subpruebas en Edge headless con servidor de API simulado. Las siete verificaciones EV-ACC-001–007 se reejecutaron y aprobaron dentro de esa suite. Esto no cubre backend/PostgreSQL desplegados.
 

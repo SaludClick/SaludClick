@@ -5,6 +5,8 @@ Ambiente: Windows, Node.js v22.23.1, Edge headless.
 
 REGRESION Y E2E
 Comando: backend> node --test --experimental-test-coverage --test-coverage-include="src/**/*.js" tests/*.test.cjs
+DATABASE_URL fue sustituida en el proceso de pruebas por un destino loopback no
+escuchando para impedir fallback a cualquier configuración externa; no se conectó.
 Resultado final: 238 pruebas aprobadas; 0 fallidas; 0 omitidas.
 Incluye 31 subpruebas de navegador Edge con servidor API simulado y 7 verificaciones
 de accesibilidad. No equivale a integración con PostgreSQL.
@@ -16,7 +18,7 @@ Se agregó espera explícita a las cinco filas esperadas, sin cambiar la aserci�
 El test Edge focalizado aprobó sus 32 resultados y la regresión final aprobó completa.
 
 COBERTURA REAL DE backend/src
-Líneas: 92.45%; ramas: 81.97%; funciones: 81.56%.
+Líneas: 92.35%; ramas: 81.63%; funciones: 81.56%.
 La meta de 90% se alcanzó solo en líneas; ramas y funciones siguen pendientes.
 
 POSTGRESQL

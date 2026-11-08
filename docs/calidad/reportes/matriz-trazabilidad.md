@@ -27,6 +27,6 @@
 | Textos alternativos | `EV-ACC-006.txt` | Aprobado | Imágenes de inicio |
 | Zoom/diseño adaptable | `EV-ACC-007.txt` | Aprobado | Viewport a 320 px en inicio |
 
-La regresión final ejecutó 238 pruebas: 238 aprobadas, 0 fallidas y 0 omitidas. Cobertura de `backend/src/`: 92,45 % líneas, 81,97 % ramas y 81,56 % funciones. Las pruebas de navegador Edge y EV-ACC-001–007 aprobaron con API simulada. El checkout/idempotencia se prueba con dobles, no con PostgreSQL real.
+La regresión final ejecutó 238 pruebas: 238 aprobadas, 0 fallidas y 0 omitidas. Cobertura de `backend/src/`: 92,35 % líneas, 81,63 % ramas y 81,56 % funciones. Las pruebas de navegador Edge y EV-ACC-001–007 aprobaron con API simulada. El checkout/idempotencia se prueba con dobles, no con PostgreSQL real.
 
 `TEST_DATABASE_URL` no está disponible; por seguridad, no se consultó el contenedor ni se ejecutaron migraciones o pruebas reales de persistencia/concurrencia/reinicio/rollback. Ver `validacion-fase4.md`, `cobertura-fasefinal.md` y EV-POSTGRES-001; esos criterios permanecen bloqueados, no aprobados.
