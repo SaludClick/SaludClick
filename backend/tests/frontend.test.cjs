@@ -7,6 +7,44 @@ const http = require('node:http');
 const net = require('node:net');
 const { spawn } = require('node:child_process');
 
+test('las rutas Astro no colisionan con public y conservan las 14 páginas HTML', () => {
+    const frontend = path.resolve(__dirname, '../../frontend');
+    const publicRoot = path.join(frontend, 'public');
+    const pagesRoot = path.join(frontend, 'src/pages');
+    const collectFiles = directory => fs.readdirSync(directory, { withFileTypes: true })
+        .flatMap(entry => {
+            const file = path.join(directory, entry.name);
+            return entry.isDirectory() ? collectFiles(file) : [file];
+        });
+    const publicRoutes = collectFiles(publicRoot)
+        .filter(file => path.extname(file) === '.html')
+        .map(file => path.relative(publicRoot, file).replace(/\\/g, '/'));
+    const astroRoutes = collectFiles(pagesRoot)
+        .filter(file => path.extname(file) === '.astro')
+        .map(file => path.relative(pagesRoot, file).replace(/\\/g, '/').replace(/\.astro$/, '.html'));
+    const collisions = astroRoutes.filter(route => publicRoutes.includes(route));
+    const routes = [...new Set([...publicRoutes, ...astroRoutes])].sort();
+    const expectedRoutes = [
+        'index.html',
+        'login.html',
+        'pages/admin-cuentas.html',
+        'pages/admin.html',
+        'pages/chat.html',
+        'pages/dashboard.html',
+        'pages/formulas.html',
+        'pages/historial.html',
+        'pages/medicamentos.html',
+        'pages/pedidos.html',
+        'pages/perfil.html',
+        'recuperar.html',
+        'registro.html',
+        'restablecer.html'
+    ];
+
+    assert.deepEqual(collisions, []);
+    assert.deepEqual(routes, expectedRoutes);
+});
+
 // Navegador aislado y servidor estático: no accede a PostgreSQL ni usa sesiones reales.
 test('controles del frontend en Edge headless', { timeout: 120000 }, async t => {
     const edge = process.env.EDGE_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';

@@ -6,6 +6,7 @@ const inventory = [
     { id: 5, nombre: 'Mock medicamento', precio: '12.34', stock: 8, estado: 'DISPONIBLE' }
 ];
 const writes = [];
+const deleteCalls = [];
 const IDEMPOTENCY_KEY = 'de305d54-75b4-431b-adb2-eb6b9e546014';
 let existingOrder = null;
 let lookupCalls = 0;
@@ -26,7 +27,7 @@ const repository = {
     crearPedidoConPago: async data => { writes.push(data); return { solicitudId: 99, pagoId: 123, replayed: false }; },
     listarPedidosUsuario: async () => [],
     detallePedidoUsuario: async () => [],
-    eliminarPedidoUsuario: async () => {}
+    eliminarPedidoUsuario: async (...args) => { deleteCalls.push(args); }
 };
 const originalLoad = Module._load;
 Module._load = function(request, parent, isMain) {
@@ -149,4 +150,34 @@ test('requiere clave UUID y retorna un pedido repetido antes de validar stock o 
             { status: 409, message: /otros datos/ }
         );
     });
+});
+
+test('rechaza cantidades fuera de límites y datos de pago inválidos', async t => {
+    existingOrder = null;
+    const invalidOrders = [
+        ['medicamento no positivo', order({ items: [{ id: 0, cantidad: 1 }] }), /no son válidos/],
+        ['cantidad cero', order({ items: [{ id: 5, cantidad: 0 }] }), /no son válidos/],
+        ['cantidad fraccionaria', order({ items: [{ id: 5, cantidad: 1.5 }] }), /no son válidos/],
+        ['cantidad máxima excedida', order({ items: [{ id: 5, cantidad: 100 }] }), /no son válidos/],
+        ['más de 50 líneas', order({ items: Array.from({ length: 51 }, (_, index) => ({ id: index + 1, cantidad: 1 })) }), /al menos un medicamento/],
+        ['vencimiento inválido', order({ pago: { numero: '4242424242424242', vencimiento: '13/30', cvv: '123', titular: 'Mock' } }), /fecha de vencimiento/],
+        ['CVV inválido', order({ pago: { numero: '4242424242424242', vencimiento: '12/30', cvv: '12', titular: 'Mock' } }), /datos de la tarjeta/]
+    ];
+
+    for (const [label, payload, message] of invalidOrders) {
+        await t.test(label, async () => {
+            const writesBefore = writes.length;
+            await assert.rejects(
+                orderService.crearPedido(12, payload, IDEMPOTENCY_KEY),
+                message
+            );
+            assert.equal(writes.length, writesBefore);
+        });
+    }
+});
+
+test('eliminar pedido delega usuario y pedido al repositorio', async () => {
+    deleteCalls.length = 0;
+    await orderService.eliminarPedido(12, 99);
+    assert.deepEqual(deleteCalls, [[12, 99]]);
 });

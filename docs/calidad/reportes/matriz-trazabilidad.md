@@ -27,4 +27,4 @@
 | Textos alternativos | `EV-ACC-006.txt` | Aprobado | Imágenes de inicio |
 | Zoom/diseño adaptable | `EV-ACC-007.txt` | Aprobado | Viewport a 320 px en inicio |
 
-La regresión final ejecutó 199 pruebas: 199 aprobadas, 0 fallidas y 0 omitidas. Cobertura de `backend/src/` medida con Node Test Runner: 85,98 % líneas, 77,49 % ramas y 74,29 % funciones. La validación no equivale a integración con PostgreSQL real.
+La regresión Fase 3 ejecutó 225 pruebas: 225 aprobadas, 0 fallidas y 0 omitidas. Cobertura de `backend/src/` medida con Node Test Runner: 89,75 % líneas, 80,27 % ramas y 78,72 % funciones. La validación no equivale a integración con PostgreSQL real.

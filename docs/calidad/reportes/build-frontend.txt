@@ -1,66 +1,47 @@
 SaludClick frontend build and checks
-Date: 2026-11-07 22:15:51 -05:00
+Date start: 2026-11-07 22:39:16 -05:00
+Date end: 2026-11-07 22:39:40 -05:00
 Project version: 1.0.0
 Environment: Windows, Node.js v22.23.1
 Commands: npm run build; npm run check
-Build exit: 0; Astro check exit: 0
+Build exit code: 0
+Astro check exit code: 0
+Built HTML routes: 14
+Status: APROBADO
 
 --- npm run build ---
 
 > saludclick-frontend-astro@1.0.0 build
 > astro build
 
-[2m22:15:24[22m [34m[types][39m Generated [2m341ms[22m
-[2m22:15:24[22m [34m[build][39m output: [34m"static"[39m
-[2m22:15:24[22m [34m[build][39m mode: [34m"static"[39m
-[2m22:15:24[22m [34m[build][39m directory: [34mC:\Users\SAMIR ACOSTA\SaludClick\frontend\dist\[39m
-[2m22:15:24[22m [34m[build][39m Collecting build info...
-[2m22:15:24[22m [34m[build][39m [32m✓ Completed in 613ms.[39m
-[2m22:15:25[22m [34m[build][39m Building static entrypoints...
-[2m22:15:26[22m [34m[vite][39m [32m✓ built in 1.50s[39m
-[2m22:15:27[22m [34m[vite][39m [32m✓ built in 493ms[39m
-[2m22:15:27[22m [34m[build][39m Rearranging server assets...
+[2m22:39:24[22m [34m[types][39m Generated [2m171ms[22m
+[2m22:39:24[22m [34m[build][39m output: [34m"static"[39m
+[2m22:39:24[22m [34m[build][39m mode: [34m"static"[39m
+[2m22:39:24[22m [34m[build][39m directory: [34mC:\Users\SAMIR ACOSTA\SaludClick\frontend\dist\[39m
+[2m22:39:24[22m [34m[build][39m Collecting build info...
+[2m22:39:24[22m [34m[build][39m [32m✓ Completed in 271ms.[39m
+[2m22:39:24[22m [34m[build][39m Building static entrypoints...
+[2m22:39:25[22m [34m[vite][39m [32m✓ built in 431ms[39m
+[2m22:39:25[22m [34m[vite][39m [32m✓ built in 242ms[39m
+[2m22:39:25[22m [34m[build][39m Rearranging server assets...
 
 [42m[30m generating static routes [39m[49m
-[2m22:15:27[22m   [34m├─[39m [2m/login.html[22m[33m[1m22:15:27[22m [WARN] [build][39m Skipping src/pages/login.astro because a file with the same name exists in the public folder: login.html
- [2m(+118ms)[22m [33m(file not created, response body was empty)[39m
-[2m22:15:27[22m   [34m├─[39m [2m/pages/admin.html[22m[33m[1m22:15:27[22m [WARN] [build][39m Skipping src/pages/pages/admin.astro because a file with the same name exists in the public folder: pages/admin.html
- [2m(+37ms)[22m [33m(file not created, response body was empty)[39m
-[2m22:15:27[22m   [34m├─[39m [2m/pages/admin-cuentas.html[22m [2m(+58ms)[22m
-[2m22:15:27[22m   [34m├─[39m [2m/pages/chat.html[22m [2m(+86ms)[22m
-[2m22:15:27[22m   [34m├─[39m [2m/pages/dashboard.html[22m[33m[1m22:15:27[22m [WARN] [build][39m Skipping src/pages/pages/dashboard.astro because a file with the same name exists in the public folder: pages/dashboard.html
- [2m(+24ms)[22m [33m(file not created, response body was empty)[39m
-[2m22:15:27[22m   [34m├─[39m [2m/pages/formulas.html[22m[33m[1m22:15:27[22m [WARN] [build][39m Skipping src/pages/pages/formulas.astro because a file with the same name exists in the public folder: pages/formulas.html
- [2m(+22ms)[22m [33m(file not created, response body was empty)[39m
-[2m22:15:27[22m   [34m├─[39m [2m/pages/historial.html[22m[33m[1m22:15:27[22m [WARN] [build][39m Skipping src/pages/pages/historial.astro because a file with the same name exists in the public folder: pages/historial.html
- [2m(+34ms)[22m [33m(file not created, response body was empty)[39m
-[2m22:15:27[22m   [34m├─[39m [2m/pages/medicamentos.html[22m[33m[1m22:15:27[22m [WARN] [build][39m Skipping src/pages/pages/medicamentos.astro because a file with the same name exists in the public folder: pages/medicamentos.html
- [2m(+27ms)[22m [33m(file not created, response body was empty)[39m
-[2m22:15:27[22m   [34m├─[39m [2m/pages/pedidos.html[22m[33m[1m22:15:27[22m [WARN] [build][39m Skipping src/pages/pages/pedidos.astro because a file with the same name exists in the public folder: pages/pedidos.html
- [2m(+26ms)[22m [33m(file not created, response body was empty)[39m
-[2m22:15:27[22m   [34m├─[39m [2m/pages/perfil.html[22m[33m[1m22:15:27[22m [WARN] [build][39m Skipping src/pages/pages/perfil.astro because a file with the same name exists in the public folder: pages/perfil.html
- [2m(+25ms)[22m [33m(file not created, response body was empty)[39m
-[2m22:15:27[22m   [34m├─[39m [2m/recaptcha-config.json[22m [2m(+27ms)[22m
-[2m22:15:28[22m   [34m├─[39m [2m/recuperar.html[22m[33m[1m22:15:28[22m [WARN] [build][39m Skipping src/pages/recuperar.astro because a file with the same name exists in the public folder: recuperar.html
- [2m(+7ms)[22m [33m(file not created, response body was empty)[39m
-[2m22:15:28[22m   [34m├─[39m [2m/registro.html[22m[33m[1m22:15:28[22m [WARN] [build][39m Skipping src/pages/registro.astro because a file with the same name exists in the public folder: registro.html
- [2m(+9ms)[22m [33m(file not created, response body was empty)[39m
-[2m22:15:28[22m   [34m├─[39m [2m/restablecer.html[22m[33m[1m22:15:28[22m [WARN] [build][39m Skipping src/pages/restablecer.astro because a file with the same name exists in the public folder: restablecer.html
- [2m(+9ms)[22m [33m(file not created, response body was empty)[39m
-[2m22:15:28[22m   [34m├─[39m [2m/index.html[22m[33m[1m22:15:28[22m [WARN] [build][39m Skipping src/pages/index.astro because a file with the same name exists in the public folder: index.html
- [2m(+19ms)[22m [33m(file not created, response body was empty)[39m
-[2m22:15:28[22m [32m✓ Completed in 673ms.
+[2m22:39:25[22m   [34m├─[39m [2m/pages/admin-cuentas.html[22m [2m(+36ms)[22m
+[2m22:39:25[22m   [34m├─[39m [2m/pages/chat.html[22m [2m(+48ms)[22m
+[2m22:39:25[22m   [34m├─[39m [2m/recaptcha-config.json[22m [2m(+9ms)[22m
+[2m22:39:25[22m [32m✓ Completed in 156ms.
 [39m
-[2m22:15:28[22m [34m[build][39m [32m✓ Completed in 3.17s.[39m
-[2m22:15:28[22m [34m[build][39m 14 page(s) built in [1m3.85s[22m
-[2m22:15:28[22m [34m[build][39m [1mComplete![22m
+[2m22:39:25[22m [34m[build][39m [32m✓ Completed in 1.01s.[39m
+[2m22:39:25[22m [34m[build][39m 2 page(s) built in [1m1.31s[22m
+[2m22:39:25[22m [34m[build][39m [1mComplete![22m
+
 --- npm run check ---
 
 > saludclick-frontend-astro@1.0.0 check
 > astro check
 
-[2m22:15:42[22m [34m[types][39m Generated [2m225ms[22m
-[2m22:15:42[22m [34m[check][39m Getting diagnostics for Astro files in C:\Users\SAMIR ACOSTA\SaludClick\frontend...
+[2m22:39:33[22m [34m[types][39m Generated [2m148ms[22m
+[2m22:39:33[22m [34m[check][39m Getting diagnostics for Astro files in C:\Users\SAMIR ACOSTA\SaludClick\frontend...
 [96mpublic/js/admin-cuentas.js[0m:[93m41[0m:[93m10[0m - [93mwarning[0m[90m ts(6133): [0m'escapar' is declared but its value is never read.
 
 [7m41[0m function escapar(valor) {
@@ -71,7 +52,24 @@ Build exit: 0; Astro check exit: 0
 [7m11[0m         const map={totalPedidos:s.pedidos,totalMedicamentos:undefined};
 [7m  [0m [93m              ~~~[0m
 
-Result (42 files):
+Result (30 files):
 - 0 errors
 - 0 warnings
 - 2 hints
+
+
+--- HTML routes in frontend/dist ---
+index.html
+login.html
+pages/admin-cuentas.html
+pages/admin.html
+pages/chat.html
+pages/dashboard.html
+pages/formulas.html
+pages/historial.html
+pages/medicamentos.html
+pages/pedidos.html
+pages/perfil.html
+recuperar.html
+registro.html
+restablecer.html
