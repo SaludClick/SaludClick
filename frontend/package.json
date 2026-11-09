@@ -12,6 +12,7 @@
   "dependencies": {
     "@astrojs/react": "^4.4.0",
     "astro": "^5.18.2",
+    "express-rate-limit": "^8.7.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

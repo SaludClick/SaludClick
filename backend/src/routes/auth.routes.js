@@ -1,31 +1,77 @@
-const express = require("express");
 
+const express = require("express");
 const router = express.Router();
 
 const { validarJWT } = require("../middlewares/auth.middleware");
 
 const authController = require("../controllers/auth.controller");
+
 const {
     verificarRecaptcha
 } = require("../middlewares/recaptcha.middleware");
 
-// Registro
+// ==========================================
+// RATE LIMIT - RECUPERACIÓN DE CONTRASEÑA
+// ==========================================
+
+const rateLimit = require("express-rate-limit");
+
+const recuperarPasswordLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    limit: 3,                 // Máximo 3 solicitudes
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+
+    message: {
+        ok: false,
+        mensaje: "Has superado el límite de solicitudes de recuperación. Inténtalo nuevamente en 15 minutos."
+    }
+});
+
+// ==========================================
+// REGISTRO
+// ==========================================
+
 router.post("/register", authController.register);
 
-// Inicio de sesión
+// ==========================================
+// INICIO DE SESIÓN
+// ==========================================
+
 router.post("/login", verificarRecaptcha, authController.login);
 
-// Inicio de sesión con Google
+// ==========================================
+// LOGIN CON GOOGLE
+// ==========================================
+
 router.post("/google", verificarRecaptcha, authController.googleLogin);
 
-// Recuperación de contraseña
-router.post("/recuperar", authController.solicitarRecuperacion);
+// ==========================================
+// RECUPERACIÓN DE CONTRASEÑA
+// ==========================================
 
-// Restablecimiento de contraseña
+router.post(
+    "/recuperar",
+    recuperarPasswordLimiter,
+    authController.solicitarRecuperacion
+);
+
+// ==========================================
+// RESTABLECIMIENTO DE CONTRASEÑA
+// ==========================================
+
 router.post("/restablecer", authController.restablecerPassword);
 
-// Perfil protegido
+// ==========================================
+// PERFIL PROTEGIDO
+// ==========================================
+
 router.get("/profile", validarJWT, authController.profile);
+
 router.put("/profile", validarJWT, authController.updateProfile);
+
+// ==========================================
+// EXPORTAR RUTAS
+// ==========================================
 
 module.exports = router;

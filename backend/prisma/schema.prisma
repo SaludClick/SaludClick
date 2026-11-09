@@ -43,14 +43,11 @@ model Usuario {
   estado              EstadoUsuario?
   created_at          DateTime?           @default(now()) @db.Timestamp(0)
   updated_at          DateTime?           @default(now()) @db.Timestamp(0)
+  formulas_medicas    FormulaMedica[]
   pagos               Pago[]
   recordatorios       Recordatorio[]
   solicitudes         Solicitud[]
   tokens_recuperacion TokenRecuperacion[]
-  formulas_medicas    FormulaMedica[]
-  conversaciones_cliente Conversacion[] @relation("ConversacionCliente")
-  conversaciones_asignadas Conversacion[] @relation("ConversacionAgente")
-  mensajes_chat       MensajeChat[]
   rol                 Rol                 @relation(fields: [rol_id], references: [id])
 
   @@index([rol_id])
@@ -170,6 +167,24 @@ model playing_with_neon {
   value Float? @db.Real
 }
 
+model FormulaMedica {
+  id              Int      @id @default(autoincrement())
+  usuario_id      Int
+  nombre_archivo  String   @db.VarChar(255)
+  nombre_original String   @db.VarChar(180)
+  tipo_mime       String   @db.VarChar(100)
+  ruta_archivo    String   @db.VarChar(500)
+  tamano          Int
+  descripcion     String?
+  estado          String   @default("PENDIENTE") @db.VarChar(20)
+  fecha_subida    DateTime @default(now()) @db.Timestamp(0)
+  usuario         Usuario  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@index([usuario_id])
+  @@index([estado])
+  @@map("formulas_medicas")
+}
+
 enum EstadoMedicamento {
   DISPONIBLE
   AGOTADO
@@ -214,65 +229,4 @@ enum TipoEntrega {
 enum EstadoUsuario {
   ACTIVO
   INACTIVO
-}
-
-model FormulaMedica {
-  id              Int      @id @default(autoincrement())
-  usuario_id      Int
-  nombre_archivo  String   @db.VarChar(255)
-  nombre_original String   @db.VarChar(180)
-  tipo_mime       String   @db.VarChar(100)
-  ruta_archivo    String   @db.VarChar(500)
-  tamano          Int
-  descripcion     String?
-  estado          String   @default("PENDIENTE") @db.VarChar(20)
-  fecha_subida    DateTime @default(now()) @db.Timestamp(0)
-
-  usuario Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
-
-  @@index([usuario_id])
-  @@index([estado])
-  @@map("formulas_medicas")
-}
-
-model Conversacion {
-  id             Int          @id @default(autoincrement())
-  cliente_id     Int
-  agente_id      Int?
-  estado         EstadoChat    @default(ABIERTA)
-  created_at     DateTime      @default(now()) @db.Timestamp(0)
-  updated_at     DateTime      @updatedAt @db.Timestamp(0)
-  cliente        Usuario       @relation("ConversacionCliente", fields: [cliente_id], references: [id], onDelete: Cascade)
-  agente         Usuario?      @relation("ConversacionAgente", fields: [agente_id], references: [id], onDelete: SetNull)
-  mensajes       MensajeChat[]
-  @@index([cliente_id, updated_at])
-  @@index([agente_id, estado, updated_at])
-  @@map("conversaciones")
-}
-
-model MensajeChat {
-  id               Int          @id @default(autoincrement())
-  conversacion_id  Int
-  remitente_id     Int
-  contenido        String       @db.VarChar(2000)
-  estado           EstadoMensaje @default(ENVIADO)
-  created_at       DateTime     @default(now()) @db.Timestamp(0)
-  entregado_at     DateTime?    @db.Timestamp(0)
-  leido_at         DateTime?    @db.Timestamp(0)
-  conversacion     Conversacion @relation(fields: [conversacion_id], references: [id], onDelete: Cascade)
-  remitente        Usuario      @relation(fields: [remitente_id], references: [id], onDelete: Cascade)
-  @@index([conversacion_id, created_at])
-  @@index([remitente_id])
-  @@map("mensajes_chat")
-}
-
-enum EstadoChat {
-  ABIERTA
-  CERRADA
-}
-
-enum EstadoMensaje {
-  ENVIADO
-  ENTREGADO
-  LEIDO
 }
