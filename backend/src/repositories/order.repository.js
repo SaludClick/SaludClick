@@ -135,7 +135,7 @@ async function crearPedidoConPago({
             `INSERT INTO pagos
                 (solicitud_id, usuario_id, referencia, metodo, marca,
                  ultimos_digitos, monto, estado, simulacion)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE)
              RETURNING id`,
             [solicitudId, usuarioId, pago.referencia, pago.metodo, pago.marca,
                 pago.ultimos_digitos, total, pago.estado]

@@ -35,4 +35,44 @@ test("chat service: solo usuarios autenticados pueden abrir conversaciones", asy
   await assert.rejects(service.crear(agent), /Solo los usuarios/);
 });
 
+test("chat service: determina roles y lista solo cuentas autorizadas", async () => {
+  assert.equal(service.staffRole(agent), true);
+  assert.equal(service.staffRole({ id: 10, rol_id: 2 }), false);
+  assert.equal(service.staffRole(undefined), false);
+
+  const listed = [];
+  repository.listar = async (id, staff) => {
+    listed.push({ id, staff });
+    return [];
+  };
+  await service.listar(customer);
+  await service.listar(agent);
+  assert.deepEqual(listed, [{ id: 10, staff: false }, { id: 20, staff: true }]);
+  await assert.rejects(service.listar({ id: 30, rol: 1 }), /No autorizado/);
+});
+
+test("chat service: reutiliza conversaciones existentes y valida autorización", async () => {
+  repository.listar = async () => [conversation];
+  repository.crear = async () => assert.fail("no debe duplicar conversación");
+  assert.equal(await service.crear(customer), conversation);
+
+  assert.equal(await service.autorizada(customer, "invalid"), null);
+  assert.equal(await service.autorizada({ id: 1, rol: 1 }, 7), null);
+  repository.esStaff = async () => false;
+  assert.equal(await service.autorizada(agent, 7), null);
+  repository.esStaff = async () => true;
+  repository.obtenerAutorizada = async (...args) => {
+    assert.deepEqual(args, [7, 20, true]);
+    return conversation;
+  };
+  assert.equal(await service.autorizada(agent, "7"), conversation);
+});
+
+test("chat service rechaza controles y conversaciones cerradas al enviar", async () => {
+  repository.esStaff = async () => true;
+  repository.obtenerAutorizada = async () => ({ ...conversation, estado: "CERRADA" });
+  await assert.rejects(service.enviar(customer, 7, "hola\u0001"), /caracteres válidos/);
+  await assert.rejects(service.enviar(customer, 7, "hola"), /cerrada/);
+});
+
 test.after(() => { Object.assign(repository, original); });

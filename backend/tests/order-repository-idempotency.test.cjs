@@ -140,6 +140,10 @@ test('pedido nuevo reclama la clave y persiste detalles, pago y stock en una tra
     assert.ok(calls.some(({ sql }) => sql === 'COMMIT'));
     const paymentWrite = calls.find(({ sql }) => sql.startsWith('INSERT INTO pagos'));
     assert.deepEqual(paymentWrite.params.slice(2, 6), ['SIM-TEST', 'TARJETA', 'VISA', '4242']);
+    assert.match(
+        paymentWrite.sql,
+        /VALUES \(\$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8, TRUE\)/
+    );
 });
 
 test('una clave con otra huella revierte sin acceder a inventario', async () => {

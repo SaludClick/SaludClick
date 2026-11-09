@@ -59,6 +59,79 @@ test("socket: rechaza unirse a conversaciones sin permiso y devuelve historial a
   assert.ok(socket.rooms.includes("chat:7"));
 });
 
+test("socket: une agentes, marca mensajes entregados y notifica al participante", async () => {
+  service.autorizada = async () => ({ id: 7 });
+  service.staffRole = () => true;
+  repository.mensajes = async () => [{ id: 1 }];
+  repository.actualizarEstado = async (_id, state, userId) => {
+    assert.deepEqual([state, userId], ["ENTREGADO", 20]);
+    return { count: 1 };
+  };
+  repository.obtenerParticipantes = async () => ({ cliente_id: 10, agente_id: 20 });
+  service.enviar = async () => ({ id: 91, conversacion_id: 7 });
+  const { io, socket, emitted } = setup(jwt.sign({ id: 20, rol: 3 }, process.env.JWT_SECRET));
+  await new Promise((resolve, reject) => io.middleware(socket, (error) => error ? reject(error) : resolve()));
+  io.connection(socket);
+
+  let joined;
+  await socket.handlers["chat:join"](7, (result) => { joined = result; });
+  assert.equal(joined.ok, true);
+  assert.ok(emitted.some((entry) => entry.event === "chat:status" && entry.data.estado === "ENTREGADO"));
+  assert.ok(socket.rooms.includes("chat:staff"));
+
+  let sent;
+  await socket.handlers["chat:send"]({ conversationId: 7, contenido: "Hola" }, (result) => { sent = result; });
+  assert.equal(sent.ok, true);
+  assert.ok(emitted.some((entry) => entry.room === "user:10" && entry.event === "chat:notification"));
+});
+
+test("socket: conserva respuestas de error para join, send y read", async () => {
+  const { io, socket } = setup(jwt.sign({ id: 10, rol: 2 }, process.env.JWT_SECRET));
+  await new Promise((resolve, reject) => io.middleware(socket, (error) => error ? reject(error) : resolve()));
+  io.connection(socket);
+
+  service.autorizada = async () => { throw new Error("storage"); };
+  let joinFailure;
+  await socket.handlers["chat:join"](7, (result) => { joinFailure = result; });
+  assert.deepEqual(joinFailure, { ok: false, mensaje: "No se pudo abrir la conversación." });
+  let readFailure;
+  await socket.handlers["chat:read"](7, (result) => { readFailure = result; });
+  assert.deepEqual(readFailure, { ok: false });
+
+  service.enviar = async () => { throw new Error("mensaje inválido"); };
+  let sendFailure;
+  await socket.handlers["chat:send"]({ conversationId: 7 }, (result) => { sendFailure = result; });
+  assert.deepEqual(sendFailure, { ok: false, mensaje: "mensaje inválido" });
+});
+
+test("socket: confirma lectura, tolera ausencia de cambio y permite salir", async () => {
+  let authorized = { id: 7 };
+  service.autorizada = async () => authorized;
+  repository.actualizarEstado = async () => ({ count: authorized ? 1 : 0 });
+  const { io, socket, emitted } = setup(jwt.sign({ id: 10, rol: 2 }, process.env.JWT_SECRET));
+  await new Promise((resolve, reject) => io.middleware(socket, (error) => error ? reject(error) : resolve()));
+  io.connection(socket);
+
+  let read;
+  await socket.handlers["chat:read"](7, (result) => { read = result; });
+  assert.deepEqual(read, { ok: true });
+  assert.ok(emitted.some((entry) => entry.event === "chat:status" && entry.data.estado === "LEIDO"));
+
+  authorized = null;
+  let deniedRead;
+  await socket.handlers["chat:read"](8, (result) => { deniedRead = result; });
+  assert.deepEqual(deniedRead, { ok: false });
+
+  let left;
+  socket.leave = (room) => { left = room; };
+  authorized = { id: 8 };
+  await socket.handlers["chat:leave"](8);
+  assert.equal(left, "chat:8");
+  authorized = null;
+  await socket.handlers["chat:leave"](8);
+  assert.equal(left, "chat:8");
+});
+
 test.after(() => {
   Object.assign(service, serviceOriginals);
   Object.assign(repository, repositoryOriginals);

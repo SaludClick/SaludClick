@@ -1,0 +1,57 @@
+SALUDCLICK - EVIDENCIA DEL RUNNER DE INTEGRACION POSTGRESQL
+Fecha: 2026-11-08
+Commit base: 126f5a5
+
+IMPLEMENTACION
+Runner Node.js node:test: backend/tests/postgres.integration.cjs
+Comando: backend> npm run test:integration:postgres
+Worker HTTP/reinicio: backend/tests/postgres-backend-worker.cjs
+Preflight: TEST_DATABASE_URL exclusivamente; exige PostgreSQL en
+127.0.0.1:55432/saludclick_test y autenticación; confirma base/esquema activos
+y las cuatro migraciones antes de crear datos.
+
+CASOS INTEGRADOS
+Persistencia pedido/detalle/pago/inventario; replay y conflicto idempotente;
+solicitudes concurrentes con misma clave; competencia por stock; pedido con
+varios medicamentos; rollback ante restricción única de pago; reinicio real del
+proceso HTTP y replay persistido.
+
+SEGURIDAD Y AISLAMIENTO
+El ejecutor no recibió TEST_DATABASE_URL y no conectó ni escribió. El usuario
+confirma que ejecutó la suite desde PowerShell contra PostgreSQL local Docker.
+No se consultó ni utilizó Neon. backend/.env no se modificó.
+Fixtures usan IDs propios y su limpieza solo elimina esos registros, en transacción.
+No se ejecutó migrate deploy.
+
+INCIDENCIA DE REINICIO - SQLSTATE 42804
+Causa confirmada: el INSERT de pagos escribía el entero 1 en la columna
+simulacion BOOLEAN, provocando "column simulacion is of type boolean but
+expression is of type integer" y HTTP 500. Corregido en
+backend/src/repositories/order.repository.js: literal SQL TRUE.
+La aserción HTTP 201 se conserva. order-repository-idempotency.test.cjs ahora
+exige TRUE en el SQL de inserción. No se cambió esquema ni migración.
+El worker también adjunta diagnósticos sanitizados si ocurre otro HTTP 500.
+Se revisaron las demás declaraciones y escrituras booleanas; no se encontró
+otro uso entero en columnas booleanas.
+
+RESULTADOS
+Sintaxis del runner, worker y helpers: aprobada.
+Instalación limpia con npm ci: aprobada; Prisma Client se genera con una URL
+local solo para generación, sin conexión ni migraciones.
+Regresión backend ejecutada por el agente tras npm ci: 267 aprobadas,
+0 fallidas, 0 omitidas; cobertura 98.37% líneas, 90.63% ramas y 95.07% funciones.
+La cobertura de integración PostgreSQL es 39.20% (resultado PowerShell informado
+por el usuario), distinta de la cobertura de regresión.
+Integración PostgreSQL en PowerShell (resultado informado por el usuario):
+7 aprobadas, 0 fallidas, 0 omitidas; duración aproximada 5 segundos.
+Verificación local del comando npm run test:integration:postgres: el script
+inicia y se detiene en el preflight porque TEST_DATABASE_URL no está disponible
+en este ejecutor. No hubo conexión ni escrituras desde el agente.
+Defecto de runner confirmado: diagnóstico backend del escenario de reinicio se
+perdía. Corregido en postgres-backend-worker.cjs y postgres.integration.cjs.
+Defecto de aplicación confirmado y corregido: literal entero incompatible con
+pagos.simulacion BOOLEAN.
+La credencial de Neon reportada como expuesta no tiene evidencia de rotación o
+revocación en el árbol ni en el historial Git local. No se conectó a Neon.
+GO para cobertura; NO-GO publicación hasta verificar la rotación/revocación y
+completar las comprobaciones de despliegue pendientes.

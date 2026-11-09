@@ -10,6 +10,8 @@ const TEST_SECRET = 'saludclick-api-contract-test-secret';
 const TEST_RECAPTCHA_SECRET = 'test-only-recaptcha-secret';
 const ORDER_IDEMPOTENCY_KEY = 'de305d54-75b4-431b-adb2-eb6b9e546014';
 const orderIdempotencyKeys = [];
+const serviceFailures = {};
+const repositoryFailures = {};
 const testRecaptchaMiddleware = createRecaptchaMiddleware({
     getSecret: () => TEST_RECAPTCHA_SECRET,
     getAllowedHostnames: () => 'localhost',
@@ -31,21 +33,55 @@ const testRecaptchaMiddleware = createRecaptchaMiddleware({
     }
 });
 const formulaRepository = {
-    crear: async () => 71,
-    listarUsuario: async () => [{ id: 71, nombre: 'mock.pdf', estado: 'PENDIENTE' }],
-    buscarPropia: async (_userId, id) => id === 72 ? {
+    crear: async () => {
+        if (repositoryFailures.formulaCrear) throw repositoryFailures.formulaCrear;
+        return 71;
+    },
+    listarUsuario: async () => {
+        if (repositoryFailures.formulaListar) throw repositoryFailures.formulaListar;
+        return [{ id: 71, nombre: 'mock.pdf', estado: 'PENDIENTE' }];
+    },
+    buscarPropia: async (_userId, id) => {
+        if (repositoryFailures.formulaBuscar) throw repositoryFailures.formulaBuscar;
+        return id === 72 ? {
         id: 72, nombre_archivo: 'mock.pdf', nombre_original: 'receta.pdf', tipo_mime: 'application/pdf'
-    } : undefined,
-    listarAdmin: async () => [{ id: 71, estado: 'PENDIENTE' }],
-    actualizarEstado: async () => 1
+        } : undefined;
+    },
+    listarAdmin: async () => {
+        if (repositoryFailures.formulaListarAdmin) throw repositoryFailures.formulaListarAdmin;
+        return [{ id: 71, estado: 'PENDIENTE' }];
+    },
+    actualizarEstado: async () => {
+        if (repositoryFailures.formulaEstado) throw repositoryFailures.formulaEstado;
+        return 1;
+    }
+};
+const dashboardRepository = {
+    statsUsuario: async () => {
+        if (repositoryFailures.dashboardUsuario) throw repositoryFailures.dashboardUsuario;
+        return { pedidos: 0, formulas: 0 };
+    },
+    statsAdmin: async () => {
+        if (repositoryFailures.dashboardAdmin) throw repositoryFailures.dashboardAdmin;
+        return { usuarios: { total: 0 } };
+    }
 };
 const fakeModules = new Map([
     ['../services/auth.service', {
-        register: async () => ({ ok: true, mensaje: 'Usuario registrado correctamente', id: 61 }),
-        login: async () => ({ ok: true, mensaje: 'Inicio de sesión correcto', token: 'contract-token', usuario: { id: 61, rol: 2 } }),
+        register: async () => {
+            if (serviceFailures.register) throw serviceFailures.register;
+            return { ok: true, mensaje: 'Usuario registrado correctamente', id: 61 };
+        },
+        login: async () => {
+            if (serviceFailures.login) throw serviceFailures.login;
+            return { ok: true, mensaje: 'Inicio de sesión correcto', token: 'contract-token', usuario: { id: 61, rol: 2 } };
+        },
         googleLogin: async credential => credential === 'reject' ? Promise.reject(new Error('provider failure')) : ({ ok: true, token: 'google-contract-token' }),
         solicitarRecuperacion: async correo => { if (correo === 'fail@example.test') throw new Error('mail failure'); },
-        restablecerPassword: async (token, password) => { if (!token || !password) throw new Error('El enlace de recuperación es inválido o ya expiró.'); },
+        restablecerPassword: async (token, password) => {
+            if (serviceFailures.restablecerPassword) throw serviceFailures.restablecerPassword;
+            if (!token || !password) throw new Error('El enlace de recuperación es inválido o ya expiró.');
+        },
         profile: async id => ({ id, nombre: 'Usuario de prueba' }),
         updateProfile: async (id, data) => ({ id, ...data })
     }],
@@ -64,22 +100,29 @@ const fakeModules = new Map([
     }],
     ['../services/order.service', {
         crearPedido: async (_userId, _body, key) => {
+            if (serviceFailures.crearPedido) throw serviceFailures.crearPedido;
             orderIdempotencyKeys.push(key);
             if (key === 'de305d54-75b4-431b-adb2-eb6b9e546015') {
                 throw Object.assign(new Error('La clave Idempotency-Key ya fue utilizada con otros datos.'), { status: 409 });
             }
             return { solicitudId: 81, total: 25, pago: { estado: 'APROBADO' } };
         },
-        listarPedidos: async () => [{ id: 81 }],
-        detallePedido: async (_userId, id) => id === 82 ? [{ id: 82 }] : [],
-        eliminarPedido: async (_userId, id) => { if (id !== 81) throw new Error('Pedido no encontrado.'); }
+        listarPedidos: async () => {
+            if (serviceFailures.listarPedidos) throw serviceFailures.listarPedidos;
+            return [{ id: 81 }];
+        },
+        detallePedido: async (_userId, id) => {
+            if (serviceFailures.detallePedido) throw serviceFailures.detallePedido;
+            return id === 82 ? [{ id: 82 }] : [];
+        },
+        eliminarPedido: async (_userId, id) => {
+            if (serviceFailures.eliminarPedido) throw serviceFailures.eliminarPedido;
+            if (id !== 81) throw new Error('Pedido no encontrado.');
+        }
     }],
     ['../services/health.service', { health: async () => ({ ok: true, fecha: 'test-clock' }) }],
     ['../repositories/medication.repository', { listar: async () => [{ id: 4, nombre: 'Mock medicamento' }] }],
-    ['../repositories/dashboard.repository', {
-        statsUsuario: async () => ({ pedidos: 0, formulas: 0 }),
-        statsAdmin: async () => ({ usuarios: { total: 0 } })
-    }],
+    ['../repositories/dashboard.repository', dashboardRepository],
     ['../repositories/admin.repository', {
         pedidos: async () => [{ id: 81 }],
         estadoPedido: async id => id === 81 ? 1 : 0
@@ -88,7 +131,9 @@ const fakeModules = new Map([
     ['fs/promises', {
         mkdir: async () => {},
         writeFile: async () => {},
-        access: async () => {}
+        access: async () => {
+            if (repositoryFailures.fileAccess) throw repositoryFailures.fileAccess;
+        }
     }]
 ]);
 
@@ -288,12 +333,178 @@ test('errores de controlador conservan sus status, campos y mensajes', async t =
     });
 });
 
+test('controladores de auth y pedidos cubren errores del servicio sin filtrar detalles', async () => {
+    const originalConsoleError = console.error;
+    console.error = () => {};
+    try {
+        serviceFailures.register = new Error('registro fallido');
+        let result = await call('/api/auth/register', { method: 'POST', body: {} });
+        assert.equal(result.response.status, 400);
+        assert.deepEqual(result.data, { ok: false, mensaje: 'registro fallido' });
+        delete serviceFailures.register;
+
+        serviceFailures.login = new Error('login fallido');
+        result = await call('/api/auth/login', {
+            method: 'POST', body: { recaptchaToken: 'test-recaptcha-token' }
+        });
+        assert.equal(result.response.status, 400);
+        assert.deepEqual(result.data, { ok: false, mensaje: 'login fallido' });
+        delete serviceFailures.login;
+
+        result = await call('/api/auth/google', {
+            method: 'POST', body: { recaptchaToken: 'test-recaptcha-token' }
+        });
+        assert.equal(result.response.status, 400);
+        assert.equal(result.data.mensaje, 'Token de Google requerido');
+        result = await call('/api/auth/recuperar', { method: 'POST', body: {} });
+        assert.equal(result.response.status, 200);
+        assert.equal(result.data.ok, true);
+
+        serviceFailures.restablecerPassword = new Error('reset fallido');
+        result = await call('/api/auth/restablecer', {
+            method: 'POST', body: { token: 'valid-shape', password: 'valid-shape' }
+        });
+        assert.equal(result.response.status, 400);
+        assert.deepEqual(result.data, { ok: false, mensaje: 'reset fallido' });
+        delete serviceFailures.restablecerPassword;
+
+        serviceFailures.crearPedido = Object.assign(new Error('pedido inválido'), { status: 400 });
+        result = await call('/api/pedidos/', { method: 'POST', body: {} });
+        assert.equal(result.response.status, 400);
+        assert.equal(result.data.mensaje, 'pedido inválido');
+        serviceFailures.crearPedido = new Error('backend failure');
+        result = await call('/api/pedidos/', { method: 'POST', body: {} });
+        assert.equal(result.response.status, 500);
+        assert.deepEqual(result.data, { ok: false, mensaje: 'No se pudo crear el pedido.' });
+        delete serviceFailures.crearPedido;
+
+        serviceFailures.listarPedidos = new Error('storage');
+        result = await call('/api/pedidos/');
+        assert.equal(result.response.status, 500);
+        assert.deepEqual(result.data, { ok: false, mensaje: 'No se pudo consultar el historial.' });
+        delete serviceFailures.listarPedidos;
+
+        serviceFailures.detallePedido = new Error('storage');
+        result = await call('/api/pedidos/82');
+        assert.equal(result.response.status, 500);
+        assert.deepEqual(result.data, { ok: false, mensaje: 'No se pudo consultar el pedido.' });
+        delete serviceFailures.detallePedido;
+
+        serviceFailures.eliminarPedido = new Error('storage');
+        result = await call('/api/pedidos/81', { method: 'DELETE' });
+        assert.equal(result.response.status, 500);
+        assert.deepEqual(result.data, { ok: false, mensaje: 'No se pudo eliminar el pedido.' });
+    } finally {
+        for (const key of Object.keys(serviceFailures)) delete serviceFailures[key];
+        console.error = originalConsoleError;
+    }
+});
+
 test('lectura de fórmula privada limita propietario y no requiere filesystem real', async t => {
     await t.test('fórmula propia entrega contenido binario tras verificar la sesión', async () => {
         const { response } = await call('/api/formulas/72');
         assert.equal(response.status, 200);
         assert.match(response.headers.get('content-type'), /^application\/pdf(?:;|$)/);
         assert.equal(await response.text(), 'mock-pdf');
+    });
+
+    test('carga de fórmulas valida contenidos admitidos y falla de forma segura', async () => {
+        const originalConsoleError = console.error;
+        console.error = () => {};
+        const submit = archivo => call('/api/formulas/', {
+            method: 'POST', body: { nombre: 'prueba', archivo }
+        });
+        const dataUrl = (mime, bytes) => `data:${mime};base64,${Buffer.from(bytes).toString('base64')}`;
+        try {
+            for (const [mime, bytes] of [
+                ['image/jpeg', [0xff, 0xd8, 0xff, 0x00]],
+                ['image/png', [137, 80, 78, 71, 13, 10, 26, 10]],
+                ['image/webp', [...Buffer.from('RIFF'), 0, 0, 0, 0, ...Buffer.from('WEBP')]]
+            ]) {
+                const result = await submit(dataUrl(mime, bytes));
+                assert.equal(result.response.status, 201);
+                assert.equal(result.data.formula.estado, 'PENDIENTE');
+            }
+
+            for (const archivo of [
+                'not-data-url',
+                dataUrl('application/pdf', [0x00, 0x01]),
+                dataUrl('application/pdf', [])
+            ]) {
+                const result = await submit(archivo);
+                assert.equal(result.response.status, 400);
+            }
+
+            const missing = await call('/api/formulas/', { method: 'POST', body: { nombre: 'faltante' } });
+            assert.equal(missing.response.status, 400);
+
+            repositoryFailures.formulaCrear = new Error('repository unavailable');
+            const failedCreate = await submit(dataUrl('application/pdf', Buffer.from('%PDF-1.4')));
+            assert.equal(failedCreate.response.status, 400);
+            delete repositoryFailures.formulaCrear;
+        } finally {
+            delete repositoryFailures.formulaCrear;
+            console.error = originalConsoleError;
+        }
+    });
+
+    test('listados y lectura de fórmulas responden con error ante fallos de repositorio o filesystem', async () => {
+        const originalConsoleError = console.error;
+        console.error = () => {};
+        try {
+            repositoryFailures.formulaListar = new Error('database unavailable');
+            let result = await call('/api/formulas/');
+            assert.equal(result.response.status, 500);
+            delete repositoryFailures.formulaListar;
+
+            repositoryFailures.formulaListarAdmin = new Error('database unavailable');
+            result = await call('/api/formulas/admin/all', { role: 1 });
+            assert.equal(result.response.status, 500);
+            delete repositoryFailures.formulaListarAdmin;
+
+            repositoryFailures.formulaEstado = new Error('database unavailable');
+            result = await call('/api/formulas/admin/71', {
+                method: 'PATCH', role: 1, body: { estado: 'VALIDADA' }
+            });
+            assert.equal(result.response.status, 400);
+            delete repositoryFailures.formulaEstado;
+
+            repositoryFailures.fileAccess = new Error('file unavailable');
+            result = await call('/api/formulas/72');
+            assert.equal(result.response.status, 404);
+            delete repositoryFailures.fileAccess;
+
+            repositoryFailures.formulaBuscar = new Error('database unavailable');
+            result = await call('/api/formulas/72');
+            assert.equal(result.response.status, 404);
+        } finally {
+            for (const key of Object.keys(repositoryFailures)) delete repositoryFailures[key];
+            console.error = originalConsoleError;
+        }
+    });
+
+    test('dashboard preserva respuestas controladas si falla la consulta de estadísticas', async () => {
+        const originalConsoleError = console.error;
+        console.error = () => {};
+        try {
+            repositoryFailures.dashboardUsuario = new Error('database unavailable');
+            let result = await call('/api/dashboard/me');
+            assert.equal(result.response.status, 500);
+            assert.deepEqual(result.data, { ok: false, mensaje: 'No se pudieron cargar las estadísticas.' });
+            delete repositoryFailures.dashboardUsuario;
+
+            repositoryFailures.dashboardAdmin = new Error('database unavailable');
+            result = await call('/api/dashboard/admin', { role: 1 });
+            assert.equal(result.response.status, 500);
+            assert.deepEqual(result.data, {
+                ok: false,
+                mensaje: 'No se pudieron cargar las estadísticas administrativas.'
+            });
+        } finally {
+            delete repositoryFailures.dashboardUsuario;
+            delete repositoryFailures.dashboardAdmin;
+            console.error = originalConsoleError;
+        }
     });
     await t.test('fórmula ajena/inexistente no se entrega', async () => {
         const { response, data } = await call('/api/formulas/73');

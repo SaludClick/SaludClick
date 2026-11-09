@@ -8,12 +8,12 @@ Comando ejecutado desde `backend/`:
 node --test --experimental-test-coverage --test-coverage-include="src/**/*.js" tests/*.test.cjs
 ```
 
-| Métrica | Fase anterior | Fase final | Meta |
+| Métrica | Regresión anterior | Regresión final | Meta |
 |---|---:|---:|---:|
-| Líneas | 89,75 % | **92,35 %** | 90 % |
-| Ramas | 80,27 % | **81,63 %** | 90 % |
-| Funciones | 78,72 % | **81,56 %** | 90 % |
+| Líneas | 92,45 % | **98,37 %** | 90 % |
+| Ramas | 81,97 % | **90,63 %** | 90 % |
+| Funciones | 81,56 % | **95,07 %** | 90 % |
 
-La suite final ejecutó 238 pruebas: 238 aprobadas, 0 fallidas y 0 omitidas. Se agregaron casos de administración, middleware de farmacia y normalización de documentos de perfil; también se estabilizó una espera E2E para el render asíncrono del checkout. No se excluyeron módulos ni se alteraron aserciones para elevar métricas.
+La suite final ejecutó **267 pruebas: 267 aprobadas, 0 fallidas y 0 omitidas**, en aproximadamente 50 segundos. Se añadieron pruebas unitarias y con API simulada para autorización de chat, sockets, autenticación, pedidos, reCAPTCHA, fórmulas, dashboard y errores de persistencia. No se alteró código de producción para aumentar la cobertura ni se redujeron umbrales.
 
-La meta del 90 % se alcanzó únicamente en líneas. Permanecen huecos relevantes en `chat.repository.js`, `chat.socket.js`, `auth.service.js` y ramas de controladores. El objetivo de ramas/funciones no se declara aprobado.
+Las tres métricas superan la meta. La cobertura reportada corresponde a `backend/src/**/*.js`; el reporte incluye los módulos y no excluye archivos. La cobertura de integración PostgreSQL **39,20 %** es una medición distinta y no se suma a la cobertura de regresión.

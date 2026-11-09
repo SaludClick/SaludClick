@@ -1,6 +1,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { createRecaptchaMiddleware } = require('../src/middlewares/recaptcha.middleware');
+const {
+    createRecaptchaMiddleware,
+    verificarRecaptcha
+} = require('../src/middlewares/recaptcha.middleware');
 
 async function invoke(middleware, body = {}) {
     const result = { status: 200, payload: undefined, nextCalled: false };
@@ -131,4 +134,54 @@ test('reCAPTCHA falla cerrado si el proveedor no está disponible', async () => 
     const result = await invoke(middleware, { recaptchaToken: 'test-token' });
     assert.equal(result.status, 503);
     assert.equal(result.nextCalled, false);
+});
+
+test('middleware predeterminado lee variables de entorno y usa fetch global', async () => {
+    const previous = {
+        secret: process.env.RECAPTCHA_SECRET_KEY,
+        hostnames: process.env.RECAPTCHA_ALLOWED_HOSTNAMES
+    };
+    const originalFetch = globalThis.fetch;
+    process.env.RECAPTCHA_SECRET_KEY = 'test-only-secret';
+    process.env.RECAPTCHA_ALLOWED_HOSTNAMES = 'LOCALHOST.';
+    globalThis.fetch = async (_url, options) => {
+        assert.equal(new URLSearchParams(options.body).get('secret'), 'test-only-secret');
+        return {
+            ok: true,
+            json: async () => ({ success: true, hostname: 'localhost' })
+        };
+    };
+    try {
+        const result = await invoke(verificarRecaptcha, { recaptchaToken: 'test-token' });
+        assert.equal(result.nextCalled, true);
+        assert.equal(result.status, 200);
+    } finally {
+        globalThis.fetch = originalFetch;
+        if (previous.secret === undefined) delete process.env.RECAPTCHA_SECRET_KEY;
+        else process.env.RECAPTCHA_SECRET_KEY = previous.secret;
+        if (previous.hostnames === undefined) delete process.env.RECAPTCHA_ALLOWED_HOSTNAMES;
+        else process.env.RECAPTCHA_ALLOWED_HOSTNAMES = previous.hostnames;
+    }
+});
+
+test('middleware predeterminado falla cerrado si faltan hostnames', async () => {
+    const previous = {
+        secret: process.env.RECAPTCHA_SECRET_KEY,
+        hostnames: process.env.RECAPTCHA_ALLOWED_HOSTNAMES
+    };
+    process.env.RECAPTCHA_SECRET_KEY = 'test-only-secret';
+    delete process.env.RECAPTCHA_ALLOWED_HOSTNAMES;
+    const originalError = console.error;
+    console.error = () => {};
+    try {
+        const result = await invoke(verificarRecaptcha, { recaptchaToken: 'test-token' });
+        assert.equal(result.status, 500);
+        assert.equal(result.nextCalled, false);
+    } finally {
+        console.error = originalError;
+        if (previous.secret === undefined) delete process.env.RECAPTCHA_SECRET_KEY;
+        else process.env.RECAPTCHA_SECRET_KEY = previous.secret;
+        if (previous.hostnames === undefined) delete process.env.RECAPTCHA_ALLOWED_HOSTNAMES;
+        else process.env.RECAPTCHA_ALLOWED_HOSTNAMES = previous.hostnames;
+    }
 });

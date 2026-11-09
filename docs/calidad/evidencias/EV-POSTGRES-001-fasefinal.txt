@@ -20,3 +20,23 @@ solicitudes_usuario_id_idempotency_key_key.
 
 Estado de las pruebas reales de persistencia: BLOQUEADO hasta configurar
 TEST_DATABASE_URL localmente. No aprobado.
+
+REINTENTO DESDE COMMIT 126f5a5
+En esta ejecución se comprobó que TEST_DATABASE_URL no está definida en el
+entorno del proceso (sin leer ni mostrar su contenido). La comprobación de
+seguridad falló, por lo que se detuvo el flujo antes de consultar Docker,
+conectar, asignar DATABASE_URL, ejecutar migraciones o iniciar pruebas con
+escrituras. No se usó Neon ni otra base.
+Destino PostgreSQL 127.0.0.1:55432/saludclick_test: no verificado por conexión
+autenticada. Prisma continúa leyendo DATABASE_URL según prisma.config.ts; no se
+confirmó ni sustituyó un destino efectivo. No hay migraciones ni pruebas reales
+aprobadas en este reintento.
+
+CIERRE POSTERIOR DE CALIDAD
+Regresión backend ejecutada por el agente: 267 aprobadas, 0 fallidas,
+0 omitidas. Cobertura de backend/src: 98.37% líneas, 90.63% ramas y
+95.07% funciones. Estos resultados no corresponden a la suite PostgreSQL.
+PostgreSQL real: resultado posterior informado por el usuario, ejecutado desde
+PowerShell: 7 aprobadas, 0 fallidas, 0 omitidas; cobertura de integración
+39.20%. El agente no reprodujo la conexión ni estas pruebas y no se conectó a
+Neon.
