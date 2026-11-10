@@ -1,41 +1,45 @@
-{
-  "name": "salud",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "dev": "nodemon server.js",
-    "start": "node server.js",
-    "test": "node --test tests/*.test.cjs",
-    "test:integration:postgres": "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.js\" tests/postgres.integration.cjs",
-    "postinstall": "node scripts/generate-prisma-client.cjs"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/SaludClick/SaludClick.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/SaludClick/SaludClick/issues"
-  },
-  "homepage": "https://github.com/SaludClick/SaludClick#readme",
-  "dependencies": {
-    "@prisma/adapter-pg": "7.10.1",
-    "@prisma/client": "7.10.1",
-    "bcrypt": "^6.0.0",
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "google-auth-library": "^11.1.0",
-    "jsonwebtoken": "^9.0.3",
-    "nodemailer": "10.4.0",
-    "pg": "^8.23.1",
-    "socket.io": "^4.8.4"
-  },
-  "devDependencies": {
-    "nodemon": "3.1.11",
-    "prisma": "7.10.1"
-  }
+﻿{
+    "name":  "salud",
+    "version":  "1.0.0",
+    "description":  "",
+    "main":  "index.js",
+    "scripts":  {
+                    "dev":  "nodemon server.js",
+                    "start":  "node server.js",
+                    "test":  "node --test tests/*.test.cjs",
+                    "test:integration:postgres":  "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.js\" tests/postgres.integration.cjs",
+                    "postinstall":  "node scripts/generate-prisma-client.cjs",
+                    "catalogo:importar":  "node scripts/importar-catalogo-invima.js",
+                    "catalogo:verificar":  "node scripts/verificar-catalogo-neon.js"
+                },
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/SaludClick/SaludClick.git"
+                   },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "bugs":  {
+                 "url":  "https://github.com/SaludClick/SaludClick/issues"
+             },
+    "homepage":  "https://github.com/SaludClick/SaludClick#readme",
+    "dependencies":  {
+                         "@prisma/adapter-pg":  "7.10.1",
+                         "@prisma/client":  "7.10.1",
+                         "bcrypt":  "^6.0.0",
+                         "cors":  "^2.8.6",
+                         "dotenv":  "^17.4.2",
+                         "express":  "^5.2.1",
+                         "google-auth-library":  "^11.1.0",
+                         "jsonwebtoken":  "^9.0.3",
+                         "nodemailer":  "10.4.0",
+                         "pg":  "^8.23.1",
+                         "socket.io":  "^4.8.4"
+                     },
+    "devDependencies":  {
+                            "nodemon":  "3.1.11",
+                            "prisma":  "7.10.1"
+                        }
 }
