@@ -11,48 +11,87 @@
     <link rel="icon" href="assets/icons/favicon.ico">
 </head>
 
-<body>
+<body class="home-page">
 
-    <header class="navbar">
+    <header class="navbar home-navbar">
         <div class="container nav-container">
-            <div class="logo">
+            <a class="logo home-logo" href="#inicio" aria-label="SaludClick, Inicio">
                 <i class="fa-solid fa-heart-pulse"></i>
                 <span>SaludClick</span>
-            </div>
-            <nav id="menu">
+            </a>
+            <nav id="menu" aria-label="Navegación principal">
                 <a href="#inicio">Inicio</a>
                 <a href="#servicios">Servicios</a>
                 <a href="#beneficios">Beneficios</a>
                 <a href="#contacto">Contacto</a>
             </nav>
 
-            <div class="botones-nav">
-                <a href="login.html" class="btn-outline">Iniciar Sesión</a>
-                <a href="registro.html" class="btn-primary">Registrarse</a>
+            <div class="botones-nav home-nav-actions">
+                <a href="login.html" class="btn-primary">Iniciar sesión</a>
             </div>
+            <button
+                class="menu-toggle home-menu-toggle"
+                id="menuToggle"
+                type="button"
+                aria-controls="menu"
+                aria-expanded="false"
+                aria-label="Menú de navegación"
+            >
+                <i class="fa-solid fa-bars" aria-hidden="true"></i>
+            </button>
         </div>
     </header>
 
-    <section id="inicio" class="hero">
+    <main>
+    <section id="inicio" class="hero home-hero">
         <div class="container hero-content">
             <div class="hero-texto">
-                <span class="badge">Plataforma de Gestión Farmacéutica</span>
-                <h1>Gestiona tus medicamentos de forma rápida y segura</h1>
-                <p>Consulta disponibilidad, solicita medicamentos y realiza seguimiento de tus pedidos desde cualquier lugar.</p>
+                <span class="badge home-eyebrow">
+                    <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
+                    Atención farmacéutica más simple
+                </span>
+                <h1>Tu bienestar, a un solo clic</h1>
+                <p>Consulta medicamentos, envía tus solicitudes y sigue cada paso desde un mismo lugar.</p>
 
-                <div class="buscador">
+                <div class="buscador home-search" role="search" aria-label="Buscar medicamentos">
                     <input id="busquedaInicio" type="text" placeholder="Buscar medicamento..." aria-label="Buscar medicamento">
-                    <button id="buscarInicio" type="button"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
+                    <button id="buscarInicio" type="button">
+                        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                        Buscar
+                    </button>
                 </div>
 
                 <div class="hero-botones">
-                    <a href="login.html" class="btn-primary btn-lg">Solicitar Medicamentos</a>
-                    <a href="#servicios" class="btn-outline btn-lg">Ver Servicios</a>
+                    <a href="login.html" class="btn-primary btn-lg">Solicitar medicamentos</a>
+                    <a href="#servicios" class="btn-outline btn-lg">Conocer servicios</a>
                 </div>
             </div>
 
-            <div class="hero-imagen">
-                <img src="https://images.openai.com/static-rsc-4/Vk3cM0EAOt6v_4MFBGy4FwdMyVLIrGbyHRiRAo9PTaOB9V12qC9zYmW_mqJg8MnwasLetYeZYH0KeTyO4azHNwkchFjiXB6zZln2aU5tCAPkkpwxeiUPWvVXeLKiLzVEafPE7B0x0o-VzhsiqyoMVI-zpziEYBQJ6vd18EAcQPiNbiAb-976AAP_grJyTe7g?purpose=fullsize" alt="SaludClick">
+            <div class="hero-imagen home-visual" role="group" aria-label="Cómo funciona SaludClick">
+                <div class="home-visual-card">
+                    <div class="home-visual-brand">
+                        <span class="home-visual-icon">
+                            <i class="fa-solid fa-pills" aria-hidden="true"></i>
+                        </span>
+                        <div>
+                            <span>SaludClick</span>
+                            <strong>Tu cuidado, más simple</strong>
+                        </div>
+                        <span class="home-visual-check" aria-hidden="true">
+                            <i class="fa-solid fa-check"></i>
+                        </span>
+                    </div>
+                    <div class="home-visual-message">
+                        <span class="home-visual-label">Desde donde estés</span>
+                        <strong>Organiza tus solicitudes de medicamentos</strong>
+                        <p>Información clara para acompañar tu proceso.</p>
+                    </div>
+                    <div class="home-visual-steps" role="group" aria-label="Pasos">
+                        <span><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Consulta</span>
+                        <span><i class="fa-solid fa-file-medical" aria-hidden="true"></i> Solicita</span>
+                        <span><i class="fa-solid fa-route" aria-hidden="true"></i> Haz seguimiento</span>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -119,6 +158,7 @@
             </div>
         </div>
     </section>
+    </main>
 
     <!-- Footer Optimizado con Redes Interactivas -->
     <footer id="contacto" class="footer">
