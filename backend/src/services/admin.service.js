@@ -1,8 +1,12 @@
 
 const fs = require("fs/promises");
 const path = require("path");
+const bcrypt = require("bcrypt");
 const adminRepository = require("../repositories/admin.repository");
-const { validarEstadoPedido } = require("../validators/admin.validator");
+const {
+    validarEstadoPedido,
+    validarCrearCuenta
+} = require("../validators/admin.validator");
 
 const UPLOAD_DIR = path.resolve(__dirname, "../../private_uploads");
 
@@ -17,6 +21,59 @@ async function actualizarEstadoPedido(idEntrada, estadoEntrada) {
 
 async function listarCuentas() {
     return adminRepository.listarCuentas();
+}
+
+function errorCuenta(mensaje, code) {
+    const error = new Error(mensaje);
+    error.code = code;
+    return error;
+}
+
+async function crearCuenta(entrada) {
+    const cuenta = validarCrearCuenta(entrada);
+    const existente = await adminRepository.buscarCuentaPorCorreo(cuenta.correo);
+
+    if (existente) {
+        throw errorCuenta(
+            "Ya existe una cuenta con ese correo electrónico.",
+            "CORREO_DUPLICADO"
+        );
+    }
+
+    const rol = await adminRepository.buscarRol(cuenta.rol_id);
+
+    if (!rol) {
+        throw errorCuenta(
+            "El rol seleccionado no está disponible en la base de datos.",
+            "ROL_NO_DISPONIBLE"
+        );
+    }
+
+    const password = await bcrypt.hash(cuenta.password, 10);
+
+    try {
+        return await adminRepository.crearCuenta({
+            ...cuenta,
+            password,
+            estado: "ACTIVO"
+        });
+    } catch (error) {
+        if (error.code === "P2002") {
+            throw errorCuenta(
+                "Ya existe una cuenta con ese correo electrónico.",
+                "CORREO_DUPLICADO"
+            );
+        }
+
+        if (error.code === "P2003") {
+            throw errorCuenta(
+                "El rol seleccionado no está disponible en la base de datos.",
+                "ROL_NO_DISPONIBLE"
+            );
+        }
+
+        throw error;
+    }
 }
 
 async function buscarCuentaParaEliminar(idEntrada) {
@@ -85,6 +142,7 @@ async function eliminarCuenta(idEntrada, idAdministrador) {
 module.exports = {
     listarPedidos,
     actualizarEstadoPedido,
+    crearCuenta,
     listarCuentas,
     buscarCuentaParaEliminar,
     eliminarCuenta

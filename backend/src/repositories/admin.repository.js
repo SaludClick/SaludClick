@@ -41,9 +41,45 @@ async function estadoPedido(id, estado) {
     return resultado.count;
 }
 
+async function buscarCuentaPorCorreo(correo) {
+    return prisma.usuario.findFirst({
+        where: { correo: { equals: correo, mode: "insensitive" } },
+        select: { id: true }
+    });
+}
+
+async function buscarRol(id) {
+    return prisma.rol.findUnique({
+        where: { id },
+        select: { id: true }
+    });
+}
+
+async function crearCuenta(cuenta) {
+    return prisma.usuario.create({
+        data: {
+            nombre: cuenta.nombre,
+            apellido: cuenta.apellido,
+            correo: cuenta.correo,
+            password: cuenta.password,
+            rol_id: cuenta.rol_id,
+            estado: "ACTIVO"
+        },
+        select: {
+            id: true,
+            nombre: true,
+            apellido: true,
+            correo: true,
+            rol_id: true,
+            estado: true,
+            created_at: true
+        }
+    });
+}
+
 async function listarCuentas() {
     return prisma.usuario.findMany({
-        where: { rol_id: { in: [2, 3] } },
+        where: { rol_id: { in: [2, 3, 4] } },
         select: {
             id: true,
             nombre: true,
@@ -161,6 +197,9 @@ async function eliminarCuenta(id) {
 module.exports = {
     pedidos,
     estadoPedido,
+    buscarCuentaPorCorreo,
+    buscarRol,
+    crearCuenta,
     listarCuentas,
     buscarCuentaParaEliminar,
     eliminarCuenta

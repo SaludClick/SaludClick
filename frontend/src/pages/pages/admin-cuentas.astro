@@ -3,65 +3,82 @@
 import Layout from "../../layouts/Layout.astro";
 
 const title = "Gestión de cuentas | SaludClick";
-const bodyClass = "";
+const bodyClass = "admin-console";
 ---
 
 <Layout title={title} bodyClass={bodyClass}>
   <Fragment slot="head">
     <meta
       name="description"
-      content="Gestión de cuentas de usuarios y farmacias de SaludClick."
+      content="Gestión administrativa de pacientes, farmacias y EPS de SaludClick."
     />
   </Fragment>
 
-  <header class="navbar">
-    <div class="container nav-container">
-      <a href="/pages/dashboard" class="logo">
-        <i class="fa-solid fa-heart-pulse"></i>
-        <span>SaludClick</span>
+  <div class="admin-app">
+    <aside class="admin-sidebar" id="menu" aria-label="Navegación administrativa">
+      <a href="/pages/admin.html" class="admin-brand" aria-label="SaludClick, dashboard">
+        <span class="admin-brand-mark">
+          <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
+        </span>
+        <span>SaludClick<small>ADMINISTRACIÓN</small></span>
       </a>
 
-      <button
-        class="menu-toggle"
-        id="menuToggle"
-        type="button"
-        aria-label="Abrir menú"
-        aria-expanded="false"
-        aria-controls="menu"
-      >
-        <i class="fa-solid fa-bars"></i>
-      </button>
-
-      <nav class="main-nav" id="menu">
-        <a class="nav-link" href="/pages/dashboard">
-          <i class="fa-solid fa-house"></i>
-          Inicio
+      <span class="admin-nav-caption">MENÚ PRINCIPAL</span>
+      <nav class="admin-side-nav" aria-label="Secciones de administración">
+        <a class="admin-side-link" href="/pages/admin.html">
+          <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
+          <span>Dashboard</span>
         </a>
-
-        <a class="nav-link" href="/pages/admin">
-          <i class="fa-solid fa-chart-line"></i>
-          Administración
+        <a class="admin-side-link" href="/pages/admin-cuentas.html" data-account-role="">
+          <i class="fa-solid fa-users" aria-hidden="true"></i>
+          <span>Usuarios</span>
         </a>
-
-        <a
-          class="nav-link active"
-          href="/pages/admin-cuentas"
-          aria-current="page"
-        >
-          <i class="fa-solid fa-users-gear"></i>
-          Cuentas
+        <a class="admin-side-link" href="/pages/admin-cuentas.html?rol=2" data-account-role="2">
+          <i class="fa-solid fa-user" aria-hidden="true"></i>
+          <span>Pacientes</span>
         </a>
-
-        <button class="nav-link logout-link" id="logout" type="button">
-          <i class="fa-solid fa-right-from-bracket"></i>
-          Cerrar sesión
-        </button>
+        <a class="admin-side-link" href="/pages/admin-cuentas.html?rol=3" data-account-role="3">
+          <i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i>
+          <span>Farmacias</span>
+        </a>
+        <a class="admin-side-link" href="/pages/admin-cuentas.html?rol=4" data-account-role="4">
+          <i class="fa-solid fa-hospital" aria-hidden="true"></i>
+          <span>EPS</span>
+        </a>
       </nav>
-    </div>
-  </header>
 
-  <main class="page-content admin-page">
-    <div class="container">
+      <div class="admin-sidebar-bottom">
+        <div class="admin-sidebar-user">
+          <span class="admin-avatar"><i class="fa-solid fa-user-shield" aria-hidden="true"></i></span>
+          <span><strong id="adminUserName">Administrador</strong><small>Administrador general</small></span>
+        </div>
+        <button class="admin-logout logout-link" id="logout" type="button">
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <button
+          class="admin-menu-toggle"
+          id="menuToggle"
+          type="button"
+          aria-label="Abrir menú de administración"
+          aria-expanded="false"
+          aria-controls="menu"
+        >
+          <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        </button>
+        <div class="admin-topbar-copy">
+          <span>SaludClick</span>
+          <strong>Gestión de cuentas</strong>
+        </div>
+      </header>
+
+  <main class="admin-content admin-page" id="adminMain">
+        <div class="admin-content-container">
       <section class="page-header admin-page-header">
         <span class="badge">
           <i class="fa-solid fa-shield-halved"></i>
@@ -71,7 +88,7 @@ const bodyClass = "";
         <h1>Gestión de cuentas</h1>
 
         <p>
-          Consulta las cuentas de usuarios y farmacias. Las cuentas con
+          Consulta las cuentas de pacientes, farmacias y EPS. Las cuentas con
           pedidos o pagos registrados estarán protegidas contra eliminación.
         </p>
 
@@ -95,6 +112,96 @@ const bodyClass = "";
         aria-live="polite"
       ></div>
 
+      <section
+        id="createAccountSection"
+        class="card admin-orders-card admin-section"
+        hidden
+      >
+        <div class="admin-orders-header">
+          <div>
+            <span class="admin-eyebrow">NUEVA CUENTA</span>
+            <h2>Crear usuario</h2>
+            <p>Elige el rol que tendrá acceso a SaludClick.</p>
+          </div>
+        </div>
+
+        <form id="createAccountForm" class="admin-create-form">
+          <div class="admin-create-grid">
+            <label class="admin-create-field" for="newAccountName">
+              <span>Nombre completo</span>
+              <input
+                id="newAccountName"
+                name="nombre"
+                type="text"
+                autocomplete="name"
+                maxlength="201"
+                required
+              />
+            </label>
+
+            <label class="admin-create-field" for="newAccountEmail">
+              <span>Correo electrónico</span>
+              <input
+                id="newAccountEmail"
+                name="correo"
+                type="email"
+                autocomplete="email"
+                maxlength="150"
+                required
+              />
+            </label>
+
+            <label class="admin-create-field" for="newAccountPassword">
+              <span>Contraseña</span>
+              <input
+                id="newAccountPassword"
+                name="password"
+                type="password"
+                autocomplete="new-password"
+                minlength="8"
+                required
+              />
+              <small>Mínimo 8 caracteres.</small>
+            </label>
+
+            <label class="admin-create-field" for="confirmAccountPassword">
+              <span>Confirmar contraseña</span>
+              <input
+                id="confirmAccountPassword"
+                name="confirmarPassword"
+                type="password"
+                autocomplete="new-password"
+                minlength="8"
+                required
+              />
+            </label>
+
+            <label class="admin-create-field" for="newAccountRole">
+              <span>Rol</span>
+              <select id="newAccountRole" name="rol_id" required>
+                <option value="">Selecciona un rol</option>
+                <option value="2">Paciente</option>
+                <option value="3">Farmacia</option>
+                <option value="4">EPS</option>
+              </select>
+            </label>
+          </div>
+
+          <div
+            id="createAccountMessage"
+            class="admin-create-message"
+            role="status"
+            aria-live="polite"
+            hidden
+          ></div>
+
+          <button id="createAccountSubmit" class="btn-primary" type="submit">
+            <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+            Crear cuenta
+          </button>
+        </form>
+      </section>
+
       <section class="admin-stats" id="accountStats">
         <article class="admin-stat">
           <i class="fa-solid fa-spinner fa-spin"></i>
@@ -106,7 +213,7 @@ const bodyClass = "";
         <div class="admin-orders-header">
           <div>
             <span class="admin-eyebrow">DIRECTORIO DE CUENTAS</span>
-            <h2>Usuarios y farmacias</h2>
+            <h2>Pacientes, farmacias y EPS</h2>
             <p>Revisa los datos y el historial antes de tomar una decisión.</p>
           </div>
         </div>
@@ -129,8 +236,9 @@ const bodyClass = "";
             <span>Tipo de cuenta</span>
             <select id="accountTypeFilter">
               <option value="">Todos los tipos</option>
-              <option value="2">Usuarios</option>
+              <option value="2">Pacientes</option>
               <option value="3">Farmacias</option>
+              <option value="4">EPS</option>
             </select>
           </label>
         </div>
@@ -175,31 +283,72 @@ const bodyClass = "";
       </section>
     </div>
   </main>
-
-  <footer class="footer">
-    <div class="container footer-container">
-      <div class="footer-col brand-col">
-        <div class="logo-footer">
-          <i class="fa-solid fa-heart-pulse"></i>
-          <span>SaludClick</span>
-        </div>
-        <p class="tagline">Tu bienestar, a un solo clic.</p>
-      </div>
-
-      <div class="footer-col contact-col">
-        <p>
-          <i class="fa-solid fa-location-dot"></i>
-          Medellín - Colombia
-        </p>
-      </div>
     </div>
-
-    <div class="footer-bottom">
-      <p>&copy; 2026 SaludClick - Todos los derechos reservados.</p>
-    </div>
-  </footer>
+  </div>
 
   <script is:inline type="module" src="/js/menu.js"></script>
   <script is:inline type="module" src="/js/admin-cuentas.js"></script>
-  <script is:inline type="module" src="/js/main.js"></script>
 </Layout>
+
+<style>
+  .admin-create-form {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .admin-create-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    gap: 1rem;
+  }
+
+  .admin-create-field {
+    display: grid;
+    align-content: start;
+    gap: 0.45rem;
+    color: #334155;
+    font-weight: 600;
+  }
+
+  .admin-create-field input,
+  .admin-create-field select {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 44px;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #dbe5df;
+    border-radius: 0.65rem;
+    background: #fff;
+    color: #123b2a;
+    font: inherit;
+  }
+
+  .admin-create-field input:focus,
+  .admin-create-field select:focus {
+    outline: 3px solid rgb(25 135 84 / 20%);
+    border-color: #198754;
+  }
+
+  .admin-create-field small {
+    color: #64748b;
+    font-weight: 400;
+  }
+
+  .admin-create-message {
+    padding: 0.75rem 1rem;
+    border-radius: 0.65rem;
+    background: #f1f8f5;
+    color: #17633e;
+  }
+
+  .admin-create-message[data-tipo="error"] {
+    background: #fff1f0;
+    color: #b42318;
+  }
+
+  @media (max-width: 640px) {
+    .admin-create-form > .btn-primary {
+      width: 100%;
+    }
+  }
+</style>

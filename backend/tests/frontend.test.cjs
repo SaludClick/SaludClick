@@ -50,12 +50,17 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     const edge = process.env.EDGE_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
     if (!fs.existsSync(edge)) { t.skip('Microsoft Edge no estÃ¡ instalado; define EDGE_PATH para ejecutar esta prueba.'); return; }
     const realCaptcha = process.env.FRONTEND_TEST_ALLOW_EXTERNAL === '1';
+    const publicRoot = path.resolve(__dirname, '../../frontend/public');
+    const builtRoot = path.resolve(__dirname, '../../frontend/dist');
     const root = process.env.FRONTEND_TEST_ROOT
         ? path.resolve(process.env.FRONTEND_TEST_ROOT)
-        : path.resolve(__dirname, '../../frontend/public');
+        : publicRoot;
     let loginCorrecto = false;
     let loginRequests = 0;
     let orderRequests = 0;
+    let adminAccountCreates = 0;
+    let adminDashboardRequests = 0;
+    const adminAccounts = [];
     const orderIdempotencyKeys = [];
     const medicamentos = [
         ['Acetaminofén', 'Analgésicos', '500 mg', 'acetaminofen.svg'],
@@ -81,6 +86,61 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
             res.end(JSON.stringify({ ok: true, medicamentos }));
             return;
         }
+        if (pathname === '/api/admin/cuentas' && req.method === 'GET') {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, cuentas: adminAccounts }));
+            return;
+        }
+        if (pathname === '/api/admin/cuentas' && req.method === 'POST') {
+            const chunks = [];
+            req.on('data', chunk => chunks.push(chunk));
+            req.on('end', () => {
+                const entrada = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+                adminAccountCreates += 1;
+                const cuenta = {
+                    id: adminAccountCreates,
+                    nombre: entrada.nombre.split(/\s+/)[0],
+                    apellido: entrada.nombre.split(/\s+/).slice(1).join(' '),
+                    correo: entrada.correo.trim().toLowerCase(),
+                    rol_id: Number(entrada.rol_id),
+                    estado: 'ACTIVO'
+                };
+                adminAccounts.push(cuenta);
+                res.writeHead(201, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    ok: true,
+                    mensaje: 'Cuenta creada correctamente.',
+                    cuenta
+                }));
+            });
+            return;
+        }
+        if (pathname === '/api/dashboard/admin') {
+            adminDashboardRequests += 1;
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                ok: true,
+                estadisticas: {
+                    usuarios: { total: 12, activos: 8 },
+                    pedidos: { total: 21, activos: 4 },
+                    ventas: 20500,
+                    inventario: { unidades: 100, disponibles: 4 },
+                    formulas: { total: 3, pendientes: 2 },
+                    estados: []
+                }
+            }));
+            return;
+        }
+        if (pathname === '/api/formulas/admin/all') {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, formulas: [] }));
+            return;
+        }
+        if (pathname === '/api/admin/pedidos' && req.method === 'GET') {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, pedidos: [] }));
+            return;
+        }
         if (pathname === '/api/auth/login') loginRequests += 1;
         if (pathname === '/api/pedidos' && req.method === 'POST') {
             orderRequests += 1;
@@ -97,8 +157,16 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
             res.end(JSON.stringify({ ok: false, mensaje: 'Servicio de datos no disponible.' }));
             return;
         }
-        const file = path.resolve(root, '.' + (pathname === '/' ? '/index.html' : pathname));
-        if (!file.startsWith(root + path.sep) || !fs.existsSync(file)) { res.writeHead(404); res.end(); return; }
+        let staticRoot = root;
+        let file = path.resolve(staticRoot, '.' + (pathname === '/' ? '/index.html' : pathname));
+        if (
+            !fs.existsSync(file) &&
+            (pathname === '/pages/admin-cuentas.html' || pathname.startsWith('/_astro/'))
+        ) {
+            staticRoot = builtRoot;
+            file = path.resolve(staticRoot, '.' + pathname);
+        }
+        if (!file.startsWith(staticRoot + path.sep) || !fs.existsSync(file)) { res.writeHead(404); res.end(); return; }
         res.setHeader('Content-Type', ({ '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' })[path.extname(file)] || 'application/octet-stream');
         res.end(fs.readFileSync(file));
     });
@@ -403,13 +471,81 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         await click('#logout'); await until(() => evaluate('location.pathname === "/login.html"'));
         assert.equal(await evaluate('localStorage.getItem("saludclick_token")'),null); assert.ok(await state());
     });
-    await t.test('registro: contraseÃ±as, documentos y error real de servicio', async () => {
-        await go('/registro.html'); await click('#mostrarPassword'); assert.equal(await evaluate('document.querySelector("#password").type'),'text');
-        await click('#mostrarConfirmarPassword'); assert.equal(await evaluate('document.querySelector("#confirmarPassword").type'),'text');
-        for (const type of ['terminos','privacidad']) { await click(`[data-aviso-legal="${type}"]`); assert.match(await evaluate('document.querySelector("#avisoLegal").textContent'),/no está publicado/); }
-        for (const [id,text] of [['nombre','Prueba Local'],['correo','prueba@example.com'],['telefono','3001234567'],['numeroDocumento','123456'],['password','passwordtest'],['confirmarPassword','passwordtest']]) await value('#'+id,text);
-        await click('#aceptoTerminos'); await click('button[type="submit"]'); await until(() => dialogs.some(s=>s.includes('Servicio de datos no disponible')));
-        assert.equal(await evaluate('location.pathname'),'/registro.html');
+    await t.test('dashboard administrativo usa datos de API y restringe el acceso al rol 1', async () => {
+        await evaluate(`for (const s of [localStorage,sessionStorage]) { s.setItem('saludclick_token','frontend-test-only'); s.setItem('saludclick_user',JSON.stringify({nombre:'Admin de prueba',rol:1})); }`);
+        await go('/pages/admin.html');
+        await until(() => evaluate('document.querySelector("#adminStats")?.getAttribute("aria-busy") === "false"'));
+
+        assert.equal(await evaluate('document.querySelector("#adminMain h1")?.textContent.trim()'), 'Dashboard');
+        assert.match(await evaluate('document.querySelector("#adminStats").textContent'), /12/);
+        assert.match(await evaluate('document.querySelector("#adminStats").textContent'), /Usuarios/);
+        assert.equal(await evaluate('document.querySelectorAll(".admin-side-link").length'), 5);
+        assert.deepEqual(await evaluate('[...document.querySelectorAll(".admin-side-link")].map(link => link.textContent.trim())'), [
+            'Dashboard', 'Usuarios', 'Pacientes', 'Farmacias', 'EPS'
+        ]);
+        assert.equal(await evaluate('document.querySelector(".admin-side-link[aria-current=page]")?.textContent.trim()'), 'Dashboard');
+
+        await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+        await click('#menuToggle');
+        assert.equal(await evaluate('document.querySelector("#menu").classList.contains("active")'), true);
+        assert.equal(await evaluate('document.querySelector("#menuToggle").getAttribute("aria-expanded")'), 'true');
+
+        const requestsBeforeDeniedRole = adminDashboardRequests;
+        await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Farmacia',rol:3}))`);
+        await send('Page.navigate', { url: base + '/pages/admin.html' });
+        await until(() => evaluate('location.pathname === "/pages/dashboard.html"'));
+        assert.equal(adminDashboardRequests, requestsBeforeDeniedRole);
+    });
+    await t.test('el administrador crea cuentas EPS y otros roles no ven el formulario', async subtest => {
+        if (!fs.existsSync(path.join(builtRoot, 'pages/admin-cuentas.html'))) {
+            subtest.skip('Compila el frontend Astro para probar la página administrativa.');
+            return;
+        }
+        await evaluate(`for (const s of [localStorage,sessionStorage]) { s.setItem('saludclick_token','frontend-test-only'); s.setItem('saludclick_user',JSON.stringify({nombre:'Admin de prueba',rol:1})); }`);
+        await go('/pages/admin-cuentas.html');
+        await until(() => evaluate('document.querySelector("#createAccountSection")?.hidden === false'));
+        await go('/pages/admin-cuentas.html?rol=4');
+        await until(() => evaluate('document.querySelector("#accountTypeFilter")?.value === "4"'));
+        assert.equal(await evaluate('document.querySelector("[data-account-role=\\"4\\"]")?.getAttribute("aria-current")'), 'page');
+        await go('/pages/admin-cuentas.html');
+        await until(() => evaluate('document.querySelector("#createAccountSection")?.hidden === false'));
+        assert.deepEqual(await evaluate(`[...document.querySelectorAll('#newAccountRole option')].map(option=>option.value)`), ['', '2', '3', '4']);
+        assert.deepEqual(await evaluate(`[...document.querySelectorAll('#accountTypeFilter option')].map(option=>option.value)`), ['', '2', '3', '4']);
+
+        await value('#newAccountName', 'Ana María Pérez');
+        await value('#newAccountEmail', 'ana.eps@example.test');
+        await value('#newAccountPassword', 'clave-segura-123');
+        await value('#confirmAccountPassword', 'otra-clave-123');
+        await value('#newAccountRole', '4');
+        await click('#createAccountSubmit');
+        await until(() => evaluate('document.querySelector("#createAccountMessage").textContent.includes("no coinciden")'));
+        assert.equal(adminAccountCreates, 0);
+
+        await value('#confirmAccountPassword', 'clave-segura-123');
+        await click('#createAccountSubmit');
+        await until(() => Promise.resolve(adminAccountCreates === 1));
+        await until(() => evaluate('document.querySelector("#createAccountMessage").textContent.includes("Cuenta creada correctamente")'));
+        assert.match(await evaluate('document.querySelector("#accountsTable").textContent'), /EPS/);
+        assert.match(await evaluate('document.querySelector("#accountsTable").textContent'), /ana\.eps@example\.test/);
+        assert.equal(await evaluate('document.querySelector("#newAccountPassword").value'), '');
+        assert.equal(await evaluate('document.querySelector("#confirmAccountPassword").value'), '');
+
+        await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Farmacia',rol:3}))`);
+        await go('/pages/admin-cuentas.html');
+        await until(() => evaluate('document.querySelector("main")?.textContent.includes("Acceso restringido")'));
+        assert.equal(await evaluate('!!document.querySelector("#createAccountForm")'), false);
+        await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Admin de prueba',rol:1}))`);
+    });
+    await t.test('registro informa que las cuentas requieren habilitaciÃ³n administrativa', async () => {
+        await go('/registro.html');
+        const pageState = await evaluate(`(()=>({
+            hasForm: !!document.querySelector('form'),
+            notice: document.querySelector('[role="status"]')?.textContent.trim(),
+            loginLink: !!document.querySelector('a[href="login.html"]')
+        }))()`);
+        assert.equal(pageState.hasForm, false);
+        assert.match(pageState.notice, /creación de cuentas requiere habilitación administrativa/i);
+        assert.equal(pageState.loginLink, true);
     });
     await t.test('sesiÃ³n temporal, persistente y logout usan las claves existentes', async () => {
         const result = await evaluate(`(async()=>{ const a=await import('/js/auth.js'); a.setSession('test-session',{nombre:'Temporal'},false); const temporal=sessionStorage.getItem('saludclick_token')==='test-session' && localStorage.getItem('saludclick_token')===null && a.getToken()==='test-session'; a.setSession('test-persist',{nombre:'Persistente'},true); return temporal && localStorage.getItem('saludclick_token')==='test-persist' && sessionStorage.getItem('saludclick_token')===null; })()`);
@@ -446,7 +582,9 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         // SesiÃ³n ficticia Ãºnicamente en el perfil aislado de esta prueba.
         await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only')`);
         for (const route of routes) {
-            if (route === '/pages/admin.html') await evaluate(`localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Admin de prueba',rol:1}))`);
+            if (route === '/pages/admin.html' || route === '/pages/admin-cuentas.html') {
+                await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Admin de prueba',rol:1}))`);
+            }
             if (route === '/restablecer.html') await go(route+'?token=frontend-test-only');
             else await go(route);
             const controls = await evaluate(`({ links:[...document.querySelectorAll('a[href],script[src]')].map(e=>e.href||e.src), empty:[...document.querySelectorAll('a[href]')].filter(e=>e.getAttribute('href')==='#').length, buttons:[...document.querySelectorAll('button')].every(e=>e.hasAttribute('type')) })`);
@@ -608,12 +746,12 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),null);
         t.diagnostic('Contactar: clic real -> mailto:contacto@saludclick.com (sin enviar correo)');
     });
-    await t.test('clics reales en Iniciar SesiÃ³n y Registrarse', async () => {
-        for (const [href,destino] of [['login.html','/login.html'],['registro.html','/registro.html']]) {
-            await abrirInicioReal(); await evaluate(`sessionStorage.clear(); localStorage.removeItem('saludclick_token')`); await abrirInicioReal();
-            await mouseClick(`.botones-nav a[href="${href}"]`); await esperarPagina(destino);
-            t.diagnostic(`${href}: clic real -> ${await evaluate('location.href')}`);
-        }
+    await t.test('el inicio ofrece acceso a login y no expone registro', async () => {
+        await abrirInicioReal();
+        assert.equal(await evaluate(`!!document.querySelector('.botones-nav a[href="registro.html"]')`), false);
+        await mouseClick('.botones-nav a[href="login.html"]');
+        await esperarPagina('/login.html');
+        t.diagnostic(`login.html: clic real -> ${await evaluate('location.href')}`);
     });
     await t.test('servicios de Inicio visibles y accesibles en móvil', async () => {
         await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
@@ -646,13 +784,14 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         assert.notEqual(focus.outlineStyle,'none');
         assert.ok(parseFloat(focus.outlineWidth) >= 2);
     });
-    await t.test('EV-ACC-003 etiquetas y mensajes de validación', async () => {
+    await t.test('EV-ACC-003 aviso accesible de registro deshabilitado', async () => {
         await go('/registro.html');
-        const result = await evaluate(`(()=>{const form=document.querySelector('#registroForm');const fields=[...form.querySelectorAll('input:not([type=hidden]),select,textarea')];return {unlabeled:fields.filter(e=>!e.labels?.length&&!e.hasAttribute('aria-label')&&!e.hasAttribute('aria-labelledby')).map(e=>e.id||e.name||e.type),invalid:!form.checkValidity(),validation:fields.find(e=>!e.checkValidity())?.validationMessage||'',status:document.querySelector('#avisoLegal')?.getAttribute('role')}})()`);
-        assert.deepEqual(result.unlabeled,[]);
-        assert.equal(result.invalid,true);
-        assert.ok(result.validation.length > 0);
-        assert.equal(result.status,'status');
+        const result = await evaluate(`(()=>({
+            form: !!document.querySelector('form'),
+            status: document.querySelector('[role="status"]')?.getAttribute('role'),
+            login: !!document.querySelector('a[href="login.html"]')
+        }))()`);
+        assert.deepEqual(result, { form: false, status: 'status', login: true });
     });
     await t.test('EV-ACC-004 contraste de texto WCAG AA', async () => {
         await go('/index.html');

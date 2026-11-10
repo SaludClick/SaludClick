@@ -8,6 +8,7 @@ router.get("/pedidos", requireAdmin, c.pedidos);
 router.patch("/pedidos/:id", requireAdmin, c.estadoPedido);
 
 // Gestión de cuentas de usuarios y farmacias.
+router.post("/cuentas", requireAdmin, c.crearCuenta);
 router.get("/cuentas", requireAdmin, c.cuentas);
 router.delete("/cuentas/:id", requireAdmin, c.eliminarCuenta);
 

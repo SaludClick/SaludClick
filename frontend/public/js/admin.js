@@ -1,23 +1,27 @@
 
-import { checkAuthGuard, initAuth, getCurrentUser } from "./auth.js";
+import { checkAuthGuard, getCurrentUser, logout } from "./auth.js";
 import { apiFetch } from "./api.js";
 
 if (checkAuthGuard()) {
     document.addEventListener("DOMContentLoaded", async () => {
         const u = getCurrentUser();
 
-        if (!u || ![1, 3].includes(Number(u.rol))) {
-            location.href = "dashboard.html";
+        if (!u || Number(u.rol_id ?? u.rol) !== 1) {
+            location.replace("dashboard.html");
             return;
         }
 
-        initAuth();
+        const adminName = document.getElementById("adminUserName");
+        if (adminName) adminName.textContent = u.nombre || "Administrador";
+        document.getElementById("logout")?.addEventListener("click", logout);
 
         const stats = document.getElementById("adminStats");
         const states = document.getElementById("orderStates");
         const formulas = document.getElementById("adminFormulas");
         const orders = document.getElementById("adminOrders");
         const msg = document.getElementById("adminMessage");
+        const refresh = document.getElementById("refreshAdmin");
+        let loading = false;
 
         const money = n =>
             new Intl.NumberFormat("es-CO", {
@@ -25,6 +29,10 @@ if (checkAuthGuard()) {
                 currency: "COP",
                 maximumFractionDigits: 0
             }).format(Number(n) || 0);
+        const showError = error => {
+            msg.textContent = error?.message || "No se pudo completar la operación.";
+            msg.setAttribute("role", "alert");
+        };
 
         const esc = v =>
             String(v ?? "").replace(/[&<>"']/g, c => ({
@@ -36,6 +44,12 @@ if (checkAuthGuard()) {
             }[c]));
 
         async function load() {
+            if (loading) return;
+            loading = true;
+            if (refresh) refresh.disabled = true;
+            stats.setAttribute("aria-busy", "true");
+            msg.textContent = "";
+            msg.setAttribute("role", "status");
             try {
                 const [
                     { estadisticas: s },
@@ -65,8 +79,8 @@ if (checkAuthGuard()) {
                     <article class="admin-stat">
                         <i class="fa-solid fa-chart-column"></i>
                         <strong>${money(s.ventas)}</strong>
-                        <span>Ventas simuladas</span>
-                        <small>Pagos aprobados</small>
+                        <span>Pagos aprobados</span>
+                        <small>Monto aprobado registrado</small>
                     </article>
 
                     <article class="admin-stat">
@@ -200,17 +214,26 @@ if (checkAuthGuard()) {
 
                             load();
                         } catch (e) {
-                            msg.textContent = e.message;
+                            showError(e);
                         }
                     });
                 });
 
+                stats.setAttribute("aria-busy", "false");
             } catch (e) {
-                msg.textContent = e.message;
+                stats.setAttribute("aria-busy", "false");
+                stats.innerHTML = '<article class="admin-stat"><span>No hay datos disponibles.</span></article>';
+                states.textContent = "No se pudieron cargar los estados de pedidos.";
+                formulas.textContent = "No se pudieron cargar las fórmulas.";
+                orders.innerHTML = '<tr><td colspan="6">No se pudieron cargar los pedidos.</td></tr>';
+                showError(e);
+            } finally {
+                loading = false;
+                if (refresh) refresh.disabled = false;
             }
         }
 
-        document.getElementById("refreshAdmin").addEventListener("click", load);
+        refresh?.addEventListener("click", load);
 
         load();
     });

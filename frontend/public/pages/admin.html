@@ -9,92 +9,151 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 
-<body>
-    <!-- =====================================================
-         NAVBAR
-    ====================================================== -->
-    <header class="navbar">
-        <div class="container nav-container">
-            <a href="dashboard.html" class="logo">
-                <i class="fa-solid fa-heart-pulse"></i>
-                <span>SaludClick</span>
+<body class="admin-console">
+    <div class="admin-app">
+        <aside class="admin-sidebar" id="menu" aria-label="Navegación administrativa">
+            <a href="admin.html" class="admin-brand" aria-label="SaludClick, dashboard">
+                <span class="admin-brand-mark">
+                    <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
+                </span>
+                <span>SaludClick<small>ADMINISTRACIÓN</small></span>
             </a>
-            <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menú">
-                <i class="fa-solid fa-bars"></i>
-            </button>
-            <nav class="main-nav" id="menu">
-                <a class="nav-link" href="dashboard.html"><i class="fa-solid fa-house"></i> Inicio</a>
-                <a class="nav-link" href="medicamentos.html"><i class="fa-solid fa-pills"></i> Medicamentos</a>
-                <a class="nav-link" href="pedidos.html"><i class="fa-solid fa-cart-shopping"></i> Pedidos</a>
-                <a class="nav-link active" href="admin.html"><i class="fa-solid fa-chart-line"></i> Administración</a>
-                <button class="nav-link logout-link" id="logout" type="button">
-                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
-                </button>
+
+            <span class="admin-nav-caption">MENÚ PRINCIPAL</span>
+            <nav class="admin-side-nav" aria-label="Secciones de administración">
+                <a class="admin-side-link active" href="admin.html" aria-current="page">
+                    <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a class="admin-side-link" href="admin-cuentas.html">
+                    <i class="fa-solid fa-users" aria-hidden="true"></i>
+                    <span>Usuarios</span>
+                </a>
+                <a class="admin-side-link" href="admin-cuentas.html?rol=2">
+                    <i class="fa-solid fa-user" aria-hidden="true"></i>
+                    <span>Pacientes</span>
+                </a>
+                <a class="admin-side-link" href="admin-cuentas.html?rol=3">
+                    <i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i>
+                    <span>Farmacias</span>
+                </a>
+                <a class="admin-side-link" href="admin-cuentas.html?rol=4">
+                    <i class="fa-solid fa-hospital" aria-hidden="true"></i>
+                    <span>EPS</span>
+                </a>
             </nav>
-        </div>
-    </header>
 
-    <!-- =====================================================
-         CONTENIDO PRINCIPAL
-    ====================================================== -->
-    <main class="page-content">
-        <div class="container">
-            <section class="page-header">
-                <span class="badge">Panel administrativo</span>
-                <h1>Operación de SaludClick</h1>
-                <p>Consulta indicadores, pedidos y documentos pendientes. Los datos se obtienen directamente de MySQL.</p>
-            </section>
+            <div class="admin-sidebar-bottom">
+                <div class="admin-sidebar-user">
+                    <span class="admin-avatar"><i class="fa-solid fa-user-shield" aria-hidden="true"></i></span>
+                    <span><strong id="adminUserName">Administrador</strong><small>Administrador general</small></span>
+                </div>
+                <button class="admin-logout logout-link" id="logout" type="button">
+                    <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                    <span>Cerrar sesión</span>
+                </button>
+            </div>
+        </aside>
 
-            <div id="adminMessage" role="status"></div>
+        <div class="admin-main">
+            <header class="admin-topbar">
+                <button
+                    class="admin-menu-toggle"
+                    id="menuToggle"
+                    type="button"
+                    aria-label="Abrir menú de administración"
+                    aria-expanded="false"
+                    aria-controls="menu"
+                >
+                    <i class="fa-solid fa-bars" aria-hidden="true"></i>
+                </button>
+                <div class="admin-topbar-copy">
+                    <span>SaludClick</span>
+                    <strong>Panel administrativo</strong>
+                </div>
+                <div class="admin-topbar-status">
+                    <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                    Acceso de administrador
+                </div>
+            </header>
 
-            <section class="admin-stats" id="adminStats"></section>
+            <main class="admin-content" id="adminMain">
+                <section class="admin-page-heading">
+                    <div>
+                        <span class="admin-eyebrow">RESUMEN GENERAL</span>
+                        <h1>Dashboard</h1>
+                        <p>Indicadores y actividad de la plataforma, consultados desde el backend.</p>
+                    </div>
+                    <button id="refreshAdmin" class="btn-outline admin-refresh" type="button">
+                        <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                        Actualizar datos
+                    </button>
+                </section>
 
-            <section class="admin-columns">
-                <div class="card">
+                <div id="adminMessage" class="admin-message" role="status" aria-live="polite"></div>
+
+                <section class="admin-stats" id="adminStats" aria-label="Estadísticas administrativas" aria-busy="true">
+                    <article class="admin-stat admin-stat-loading">
+                        <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+                        <span>Cargando datos reales...</span>
+                    </article>
+                </section>
+
+                <section class="admin-columns">
+                    <article class="card admin-dashboard-card">
+                        <div class="section-heading">
+                            <div>
+                                <span class="admin-eyebrow">OPERACIÓN</span>
+                                <h2>Pedidos por estado</h2>
+                                <p>Distribución actual de solicitudes.</p>
+                            </div>
+                        </div>
+                        <div id="orderStates" aria-live="polite">
+                            <p class="admin-loading-text">Cargando estados...</p>
+                        </div>
+                    </article>
+
+                    <article class="card admin-dashboard-card">
+                        <div>
+                            <span class="admin-eyebrow">REVISIÓN</span>
+                            <h2>Fórmulas médicas</h2>
+                            <p>Revisa y actualiza documentos enviados por pacientes.</p>
+                        </div>
+                        <div id="adminFormulas" aria-live="polite">
+                            <p class="admin-loading-text">Cargando fórmulas...</p>
+                        </div>
+                    </article>
+                </section>
+
+                <section class="card admin-dashboard-card admin-orders-panel">
                     <div class="section-heading">
                         <div>
-                            <h2>Pedidos por estado</h2>
-                            <p>Distribución actual de solicitudes.</p>
+                            <span class="admin-eyebrow">SEGUIMIENTO</span>
+                            <h2>Pedidos recientes</h2>
+                            <p>Últimos 50 pedidos y su estado operativo.</p>
                         </div>
-                        <button id="refreshAdmin" class="btn-outline" type="button">
-                            <i class="fa-solid fa-rotate"></i> Actualizar
-                        </button>
                     </div>
-                    <div id="orderStates"></div>
-                </div>
-
-                <div class="card">
-                    <h2>Fórmulas pendientes</h2>
-                    <p>Revisa el estado de los documentos enviados por usuarios.</p>
-                    <div id="adminFormulas"></div>
-                </div>
-            </section>
-
-            <section class="card">
-                <div class="section-heading">
-                    <div>
-                        <h2>Operación de pedidos</h2>
-                        <p>Últimos 50 pedidos y su estado operativo.</p>
+                    <div class="orders-table-wrapper">
+                        <table class="orders-table">
+                            <thead>
+                                <tr>
+                                    <th>Pedido</th>
+                                    <th>Usuario</th>
+                                    <th>Fecha</th>
+                                    <th>Total</th>
+                                    <th>Pago</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminOrders">
+                                <tr><td colspan="6" class="admin-loading-text">Cargando pedidos...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
-                </div>
-                <div class="orders-table-wrapper">
-                    <table class="orders-table">
-                        <thead>
-                            <tr>
-                                <th>Pedido</th>
-                                <th>Usuario</th>
-                                <th>Fecha</th>
-                                <th>Total</th>
-                                <th>Pago</th>
-                                <th>Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adminOrders"></tbody>
-                    </table>
-                </div>
-            </section>
+                </section>
+            </main>
         </div>
-    </main>
+    </div>
 
     <!-- =====================================================
          FOOTER
@@ -148,7 +207,6 @@
     ====================================================== -->
     <script type="module" src="../js/menu.js"></script>
     <script type="module" src="../js/admin.js"></script>
-    <script type="module" src="../js/main.js"></script>
 </body>
 
 </html>
