@@ -10,8 +10,9 @@ const CUENTAS_URL = "/api/admin/cuentas";
 
 const ROLES = {
     ADMIN: 1,
-    USUARIO: 2,
-    FARMACIA: 3
+    PACIENTE: 2,
+    FARMACIA: 3,
+    EPS: 4
 };
 
 // ============================================
@@ -25,6 +26,24 @@ const resultados = document.getElementById("accountResults");
 const mensaje = document.getElementById("accountsMessage");
 const botonActualizar = document.getElementById("refreshAccounts");
 const estadisticas = document.getElementById("accountStats");
+const createAccountSection = document.getElementById("createAccountSection");
+const createAccountForm = document.getElementById("createAccountForm");
+const createAccountMessage = document.getElementById("createAccountMessage");
+const createAccountSubmit = document.getElementById("createAccountSubmit");
+const filtroRolInicial = new URLSearchParams(window.location.search).get("rol");
+
+if (filtroTipo && ["2", "3", "4"].includes(filtroRolInicial)) {
+    filtroTipo.value = filtroRolInicial;
+}
+
+for (const enlace of document.querySelectorAll("[data-account-role]")) {
+    const activo = enlace.dataset.accountRole === (
+        ["2", "3", "4"].includes(filtroRolInicial) ? filtroRolInicial : ""
+    );
+    enlace.classList.toggle("active", activo);
+    if (activo) enlace.setAttribute("aria-current", "page");
+    else enlace.removeAttribute("aria-current");
+}
 
 // ============================================
 // ESTADO
@@ -37,16 +56,6 @@ let cargando = false;
 // ============================================
 // UTILIDADES
 // ============================================
-
-function escapar(valor) {
-    return String(valor ?? "").replace(/[&<>"']/g, caracter => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-    })[caracter]);
-}
 
 function mostrarMensaje(texto, tipo = "info") {
     if (!mensaje) return;
@@ -61,10 +70,12 @@ function nombreRol(rol) {
     switch (Number(rol)) {
         case ROLES.ADMIN:
             return "Administrador";
-        case ROLES.USUARIO:
-            return "Usuario";
+        case ROLES.PACIENTE:
+            return "Paciente";
         case ROLES.FARMACIA:
             return "Farmacia";
+        case ROLES.EPS:
+            return "EPS";
         default:
             return "Rol desconocido";
     }
@@ -105,11 +116,15 @@ function renderizarEstadisticas(lista) {
     if (!estadisticas) return;
 
     const usuarios = lista.filter(
-        cuenta => Number(cuenta.rol_id) === ROLES.USUARIO
+        cuenta => Number(cuenta.rol_id) === ROLES.PACIENTE
     ).length;
 
     const farmacias = lista.filter(
         cuenta => Number(cuenta.rol_id) === ROLES.FARMACIA
+    ).length;
+
+    const eps = lista.filter(
+        cuenta => Number(cuenta.rol_id) === ROLES.EPS
     ).length;
 
     const protegidas = lista.filter(tieneHistorial).length;
@@ -131,6 +146,11 @@ function renderizarEstadisticas(lista) {
             icono: "fa-prescription-bottle-medical",
             total: farmacias,
             etiqueta: "Farmacias"
+        },
+        {
+            icono: "fa-hospital",
+            total: eps,
+            etiqueta: "EPS"
         },
         {
             icono: "fa-lock",
@@ -213,7 +233,7 @@ function renderizarTabla() {
         const id = Number(cuenta.id);
         const rol = Number(cuenta.rol_id);
         const historial = tieneHistorial(cuenta);
-        const permitido = [ROLES.USUARIO, ROLES.FARMACIA].includes(rol);
+        const permitido = [ROLES.PACIENTE, ROLES.FARMACIA].includes(rol);
 
         fila.appendChild(crearCelda(id));
 
@@ -344,9 +364,9 @@ async function solicitarEliminacion(id) {
 
     const rol = Number(cuenta.rol_id);
 
-    if (![ROLES.USUARIO, ROLES.FARMACIA].includes(rol)) {
+    if (![ROLES.PACIENTE, ROLES.FARMACIA].includes(rol)) {
         mostrarMensaje(
-            "Solo se pueden eliminar cuentas de usuarios o farmacias.",
+            "Solo se pueden eliminar cuentas de pacientes o farmacias.",
             "error"
         );
         return;
@@ -424,6 +444,66 @@ if (tabla) {
 busqueda?.addEventListener("input", renderizarTabla);
 filtroTipo?.addEventListener("change", renderizarTabla);
 botonActualizar?.addEventListener("click", cargarCuentas);
+document.getElementById("logout")?.addEventListener("click", logout);
+
+function mostrarMensajeCreacion(texto, tipo = "info") {
+    if (!createAccountMessage) return;
+
+    createAccountMessage.textContent = texto;
+    createAccountMessage.dataset.tipo = tipo;
+    createAccountMessage.setAttribute("role", tipo === "error" ? "alert" : "status");
+    createAccountMessage.hidden = !texto;
+}
+
+createAccountForm?.addEventListener("submit", async event => {
+    event.preventDefault();
+
+    if (cargando || eliminando || !createAccountForm.reportValidity()) return;
+
+    const formData = new FormData(createAccountForm);
+    const password = String(formData.get("password") || "");
+    const confirmarPassword = String(formData.get("confirmarPassword") || "");
+
+    if (password !== confirmarPassword) {
+        mostrarMensajeCreacion("Las contraseñas no coinciden.", "error");
+        createAccountForm.elements.confirmarPassword.focus();
+        return;
+    }
+
+    const rolId = Number(formData.get("rol_id"));
+    const body = {
+        nombre: String(formData.get("nombre") || ""),
+        correo: String(formData.get("correo") || ""),
+        password,
+        rol_id: rolId
+    };
+
+    createAccountSubmit.disabled = true;
+    createAccountSubmit.textContent = "Creando cuenta...";
+    mostrarMensajeCreacion("Creando cuenta...", "info");
+
+    try {
+        const datos = await apiFetch(CUENTAS_URL, {
+            method: "POST",
+            body: JSON.stringify(body)
+        });
+
+        createAccountForm.reset();
+        mostrarMensajeCreacion(
+            datos.mensaje || "La cuenta se creó correctamente.",
+            "success"
+        );
+        await cargarCuentas();
+    } catch (error) {
+        mostrarMensajeCreacion(
+            error.message || "No se pudo crear la cuenta.",
+            "error"
+        );
+    } finally {
+        createAccountSubmit.disabled = false;
+        createAccountSubmit.innerHTML = '<i class="fa-solid fa-user-plus" aria-hidden="true"></i> Crear cuenta';
+    }
+});
 
 // ============================================
 // INICIO Y CONTROL DE ACCESO
@@ -445,6 +525,11 @@ async function iniciar() {
     }
 
     if (rol !== ROLES.ADMIN) {
+        const sidebar = document.getElementById("menu");
+        const topbar = document.querySelector(".admin-topbar");
+        if (sidebar) sidebar.hidden = true;
+        if (topbar) topbar.hidden = true;
+
         mostrarMensaje(
             "Esta página solo está disponible para el administrador.",
             "error"
@@ -467,7 +552,7 @@ async function iniciar() {
 
             const enlace = document.createElement("a");
             enlace.className = "btn-outline";
-            enlace.href = "/pages/dashboard";
+            enlace.href = "/pages/dashboard.html";
             enlace.textContent = "Volver al inicio";
 
             contenedor.append(titulo, texto, enlace);
@@ -476,6 +561,10 @@ async function iniciar() {
 
         return;
     }
+
+    const nombreAdmin = document.getElementById("adminUserName");
+    if (nombreAdmin) nombreAdmin.textContent = usuario.nombre || "Administrador";
+    if (createAccountSection) createAccountSection.hidden = false;
 
     await cargarCuentas();
 }

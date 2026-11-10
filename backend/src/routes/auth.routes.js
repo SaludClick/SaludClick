@@ -3,14 +3,15 @@ const express = require("express");
 const router = express.Router();
 
 const { validarJWT } = require("../middlewares/auth.middleware");
+const { requireAdmin } = require("../middlewares/admin.middleware");
 
 const authController = require("../controllers/auth.controller");
 const {
     verificarRecaptcha
 } = require("../middlewares/recaptcha.middleware");
 
-// Registro
-router.post("/register", authController.register);
+// El registro de cuentas queda disponible únicamente para administradores.
+router.post("/register", requireAdmin, authController.register);
 
 // Inicio de sesión
 router.post("/login", verificarRecaptcha, authController.login);

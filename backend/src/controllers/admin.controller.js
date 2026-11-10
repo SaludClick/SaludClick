@@ -51,6 +51,45 @@ async function cuentas(req, res) {
     }
 }
 
+async function crearCuenta(req, res) {
+    try {
+        const cuenta = await adminService.crearCuenta(req.body);
+
+        return res.status(201).json({
+            ok: true,
+            mensaje: "Cuenta creada correctamente.",
+            cuenta
+        });
+    } catch (error) {
+        if (error.code === "VALIDACION_CUENTA") {
+            return res.status(400).json({
+                ok: false,
+                mensaje: error.message
+            });
+        }
+
+        if (error.code === "CORREO_DUPLICADO") {
+            return res.status(409).json({
+                ok: false,
+                mensaje: error.message
+            });
+        }
+
+        if (error.code === "ROL_NO_DISPONIBLE") {
+            return res.status(409).json({
+                ok: false,
+                mensaje: error.message
+            });
+        }
+
+        console.error("Error al crear cuenta administrativa:", error.code || "INTERNO");
+        return res.status(500).json({
+            ok: false,
+            mensaje: "No se pudo crear la cuenta."
+        });
+    }
+}
+
 // Solicitar la eliminación permanente de una cuenta.
 
 async function eliminarCuenta(req, res) {
@@ -114,6 +153,7 @@ module.exports = {
     pedidos,
     estadoPedido,
     cuentas,
+    crearCuenta,
     eliminarCuenta
 };
 

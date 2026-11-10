@@ -161,7 +161,18 @@ test("los scripts públicos usan PostgreSQL y el esquema generado incluye defaul
     assert.match(sql, /"solicitudes_usuario_id_idempotency_key_key"/);
     assert.doesNotMatch(sql, /AUTO_INCREMENT|USE saludclick|ENGINE=|ON UPDATE CURRENT_TIMESTAMP/i);
   }
-  assert.match(seed, /ON CONFLICT DO NOTHING/);
+  for (const [id, name] of [
+    [1, "ADMINISTRADOR"],
+    [2, "PACIENTE"],
+    [3, "FARMACIA"],
+    [4, "EPS"]
+  ]) {
+    assert.match(seed, new RegExp(`\\(${id}, '${name}'`));
+  }
+  assert.match(seed, /RAISE EXCEPTION/);
+  assert.match(seed, /pg_get_serial_sequence/);
+  assert.match(seed, /ALTER SEQUENCE/);
+  assert.doesNotMatch(seed, /ON CONFLICT\s+DO NOTHING|setval\s*\(/i);
   assert.doesNotMatch(seed, /INSERT IGNORE|USE saludclick/i);
 
   for (const legacy of ["migration_v2.sql", "upgrade_schema_public.sql"]) {

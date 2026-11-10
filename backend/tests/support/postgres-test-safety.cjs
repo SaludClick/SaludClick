@@ -23,13 +23,13 @@ function getTestDatabaseUrl() {
     if (
         !["postgres:", "postgresql:"].includes(url.protocol) ||
         url.hostname !== "127.0.0.1" ||
-        url.port !== "55432" ||
+        url.port !== "55434" ||
         database !== "saludclick_test" ||
         !url.username ||
         !url.password
     ) {
         throw new Error(
-            "Destino rechazado: se requiere PostgreSQL autenticado en 127.0.0.1:55432/saludclick_test."
+            "Destino rechazado: se requiere PostgreSQL autenticado en 127.0.0.1:55434/saludclick_test."
         );
     }
 

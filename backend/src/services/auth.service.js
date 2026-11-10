@@ -212,73 +212,9 @@ const googleLogin = async (idToken) => {
     let usuario =
         await authRepository.buscarPorCorreo(correo);
 
-    // ======================================
-    // SI NO EXISTE, CREARLO
-    // ======================================
-
-    if (!usuario) {
-
-        const nombreCompleto =
-            String(payload.name || "Usuario").trim();
-
-        const partes =
-            nombreCompleto.split(/\s+/);
-
-        const nombre =
-            payload.given_name ||
-            partes[0] ||
-            "Usuario";
-
-        const apellido =
-            payload.family_name ||
-            partes.slice(1).join(" ") ||
-            "Google";
-
-        /*
-         * La columna password de SaludClick
-         * es NOT NULL.
-         *
-         * Creamos una contraseña interna
-         * aleatoria que el usuario de Google
-         * no necesita conocer.
-         */
-        const passwordAleatoria =
-            crypto.randomBytes(32).toString("hex");
-
-        const passwordHash =
-            await bcrypt.hash(
-                passwordAleatoria,
-                10
-            );
-
-        const nuevoUsuario = {
-            nombre,
-            apellido,
-            correo,
-            telefono: null,
-            tipoDocumento: "GOOGLE",
-            numeroDocumento: `GOOGLE-${crypto.randomBytes(6).toString("hex")}` ,
-            password: passwordHash,
-
-            // Rol predeterminado.
-            rol_id: 2
-        };
-
-        await authRepository.register(
-            nuevoUsuario
-        );
-
-        // Recuperar usuario recién creado
-        // para generar el JWT.
-        usuario =
-            await authRepository.buscarPorCorreo(
-                correo
-            );
-    }
-
     if (!usuario) {
         throw new Error(
-            "No se pudo crear o encontrar el usuario"
+            "No existe una cuenta asociada a este correo de Google."
         );
     }
 

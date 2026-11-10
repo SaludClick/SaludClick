@@ -18,12 +18,14 @@ let updateCall;
 let mailMessages;
 let googlePayload;
 let googleOptions;
+let registrationCalls;
 
 function findUser(correo) { return users.find(user => user.correo === correo); }
 
 const repository = {
     buscarPorCorreo: async correo => findUser(correo),
     register: async usuario => {
+        registrationCalls += 1;
         const saved = { ...usuario, id: nextId++, estado: 'ACTIVO' };
         users.push(saved);
         return saved.id;
@@ -86,6 +88,7 @@ beforeEach(() => {
         estado: 'ACTIVO', rol_id: 2, telefono: null, tipo_documento: null, numeroDocumento: 'D-7', ciudad: 'Bogotá'
     }];
     nextId = 20;
+    registrationCalls = 0;
     recovery = undefined;
     resetCall = undefined;
     updateCall = undefined;
@@ -161,15 +164,14 @@ test('Google verifica audiencia y correo antes de crear o iniciar sesión', asyn
         googlePayload = { email: 'ana@example.test', email_verified: false };
         await assert.rejects(authService.googleLogin('google-valid'), /correo de Google no está verificado/);
     });
-    await t.test('cuenta nueva mantiene rol predeterminado y perfil derivado', async () => {
+    await t.test('cuenta nueva no se registra automáticamente', async () => {
         googlePayload = { email: 'nueva@example.test', email_verified: true, name: 'María Gómez' };
-        const result = await authService.googleLogin('google-valid');
-        const created = findUser('nueva@example.test');
-        assert.equal(created.nombre, 'María');
-        assert.equal(created.apellido, 'Gómez');
-        assert.equal(created.tipoDocumento, 'GOOGLE');
-        assert.equal(created.rol_id, 2);
-        assert.equal(result.usuario.id, created.id);
+        await assert.rejects(
+            authService.googleLogin('google-valid'),
+            /No existe una cuenta asociada a este correo de Google/
+        );
+        assert.equal(findUser('nueva@example.test'), undefined);
+        assert.equal(registrationCalls, 0);
     });
 });
 

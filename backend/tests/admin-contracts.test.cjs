@@ -4,24 +4,44 @@ const http = require('node:http');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const Module = require('node:module');
+const bcrypt = require('bcrypt');
 
 const TEST_SECRET = 'saludclick-admin-contract-test-secret';
 const previousSecret = process.env.JWT_SECRET;
 const originalLoad = Module._load;
 const originalConsoleError = console.error;
 const repositoryCalls = [];
+const createdAccounts = [];
+const existingEmails = new Set();
+const existingRoles = new Set([2, 3, 4]);
 let changedRows = 1;
 let listError;
 let updateError;
+let createAccountError;
 const repository = {
     pedidos: async () => {
         if (listError) throw listError;
         return [{ id: 41, estado: 'PENDIENTE' }];
     },
+    listarCuentas: async () => [
+        { id: 61, nombre: 'Ana', correo: 'ana@example.test', rol_id: 2, estado: 'ACTIVO' }
+    ],
     estadoPedido: async (id, estado) => {
         repositoryCalls.push({ id, estado });
         if (updateError) throw updateError;
         return changedRows;
+    },
+    buscarCuentaPorCorreo: async correo => existingEmails.has(correo) ? { id: 99 } : null,
+    buscarRol: async id => existingRoles.has(id) ? { id } : null,
+    crearCuenta: async cuenta => {
+        if (createAccountError) throw createAccountError;
+        createdAccounts.push(cuenta);
+        const { password, ...cuentaSegura } = cuenta;
+        return {
+            id: 100 + createdAccounts.length,
+            ...cuentaSegura,
+            created_at: new Date('2026-11-10T12:00:00.000Z')
+        };
     }
 };
 
@@ -70,17 +90,22 @@ after(async () => {
     changedRows = 1;
     listError = undefined;
     updateError = undefined;
+    createAccountError = undefined;
+    createdAccounts.length = 0;
+    existingEmails.clear();
+    existingRoles.clear();
+    for (const role of [2, 3, 4]) existingRoles.add(role);
     repositoryCalls.length = 0;
 });
 
-test('GET /api/admin/pedidos conserva JSON y admite exclusivamente roles 1 y 3', async t => {
-    for (const role of [1, 3]) await t.test(`rol ${role}`, async () => {
-        const { response, data } = await request('/api/admin/pedidos', { role });
+test('GET /api/admin/pedidos conserva JSON y admite exclusivamente al administrador', async t => {
+    await t.test('rol administrador', async () => {
+        const { response, data } = await request('/api/admin/pedidos', { role: 1 });
         assert.equal(response.status, 200);
         assert.deepEqual(data, { ok: true, pedidos: [{ id: 41, estado: 'PENDIENTE' }] });
     });
-    await t.test('rol normal', async () => {
-        const { response, data } = await request('/api/admin/pedidos', { role: 2 });
+    for (const role of [2, 3, 4]) await t.test(`rol no administrativo ${role}`, async () => {
+        const { response, data } = await request('/api/admin/pedidos', { role });
         assert.equal(response.status, 403);
         assert.deepEqual(data, { ok: false, mensaje: 'Acceso restringido al personal administrativo.' });
     });
@@ -91,18 +116,168 @@ test('GET /api/admin/pedidos conserva JSON y admite exclusivamente roles 1 y 3',
     });
 });
 
+test('POST /api/admin/cuentas crea solo los roles de paciente, farmacia y EPS', async t => {
+    for (const [rol_id, etiqueta] of [[2, 'Paciente'], [3, 'Farmacia'], [4, 'EPS']]) {
+        await t.test(etiqueta, async () => {
+            const correo = `  Cuenta-${rol_id}@Example.Test `;
+            const { response, data } = await request('/api/admin/cuentas', {
+                method: 'POST',
+                role: 1,
+                body: {
+                    nombre: '  Ana   María Pérez  ',
+                    correo,
+                    password: 'clave-segura-123',
+                    rol_id
+                }
+            });
+
+            assert.equal(response.status, 201);
+            assert.deepEqual(data.cuenta, {
+                id: 100 + createdAccounts.length,
+                nombre: 'Ana',
+                apellido: 'María Pérez',
+                correo: correo.trim().toLowerCase(),
+                rol_id,
+                estado: 'ACTIVO',
+                created_at: '2026-11-10T12:00:00.000Z'
+            });
+            assert.equal(Object.hasOwn(data.cuenta, 'password'), false);
+
+            const guardada = createdAccounts.at(-1);
+            assert.equal(guardada.estado, 'ACTIVO');
+            assert.equal(guardada.rol_id, rol_id);
+            assert.match(guardada.password, /^\$2[aby]\$/);
+            assert.equal(await bcrypt.compare('clave-segura-123', guardada.password), true);
+        });
+    }
+});
+
+test('consultar y eliminar cuentas requieren el JWT exclusivo del administrador', async t => {
+    const admin = await request('/api/admin/cuentas', { role: 1 });
+    assert.equal(admin.response.status, 200);
+    assert.equal(admin.data.cuentas[0].rol_id, 2);
+
+    for (const path of ['/api/admin/cuentas', '/api/admin/cuentas/61']) {
+        const method = path.endsWith('/61') ? 'DELETE' : 'GET';
+        for (const role of [null, 2, 3, 4]) {
+            await t.test(`${method} ${path}, rol ${role ?? 'sin JWT'}`, async () => {
+                const { response } = await request(path, { method, role });
+                assert.equal(response.status, role === null ? 401 : 403);
+            });
+        }
+    }
+});
+
+test('crear cuentas exige administrador y JWT', async t => {
+    const beforeCount = createdAccounts.length;
+    for (const role of [null, 2, 3, 4]) {
+        await t.test(role === null ? 'sin JWT' : `rol ${role}`, async () => {
+            const { response } = await request('/api/admin/cuentas', {
+                method: 'POST',
+                role,
+                body: {
+                    nombre: 'Ana Pérez',
+                    correo: `denied-${role}@example.test`,
+                    password: 'clave-segura-123',
+                    rol_id: 2
+                }
+            });
+            assert.equal(response.status, role === null ? 401 : 403);
+        });
+    }
+    assert.equal(createdAccounts.length, beforeCount);
+});
+
+test('crear cuentas rechaza datos inválidos, rol administrador, duplicados y roles ausentes', async t => {
+    const validBody = {
+        nombre: 'Ana Pérez',
+        correo: 'ana@example.test',
+        password: 'clave-segura-123',
+        rol_id: 2
+    };
+
+    for (const [label, body] of [
+        ['nombre vacío', { ...validBody, nombre: '  ' }],
+        ['correo vacío', { ...validBody, correo: ' ' }],
+        ['correo inválido', { ...validBody, correo: 'no-es-correo' }],
+        ['contraseña corta', { ...validBody, password: '123' }],
+        ['rol administrador', { ...validBody, rol_id: 1 }],
+        ['rol desconocido', { ...validBody, rol_id: 9 }]
+    ]) {
+        await t.test(label, async () => {
+            const { response, data } = await request('/api/admin/cuentas', {
+                method: 'POST',
+                role: 1,
+                body
+            });
+            assert.equal(response.status, 400);
+            assert.equal(data.ok, false);
+        });
+    }
+
+    existingEmails.add(validBody.correo);
+    let result = await request('/api/admin/cuentas', {
+        method: 'POST',
+        role: 1,
+        body: validBody
+    });
+    assert.equal(result.response.status, 409);
+
+    existingEmails.clear();
+    existingRoles.delete(4);
+    result = await request('/api/admin/cuentas', {
+        method: 'POST',
+        role: 1,
+        body: { ...validBody, correo: 'eps@example.test', rol_id: 4 }
+    });
+    assert.equal(result.response.status, 409);
+    assert.match(result.data.mensaje, /rol seleccionado no está disponible/i);
+});
+
+test('el endpoint traduce una colisión concurrente de correo sin exponer datos', async () => {
+    createAccountError = Object.assign(new Error('unique constraint'), { code: 'P2002' });
+    const { response, data } = await request('/api/admin/cuentas', {
+        method: 'POST',
+        role: 1,
+        body: {
+            nombre: 'Ana Pérez',
+            correo: 'concurrente@example.test',
+            password: 'clave-segura-123',
+            rol_id: 2
+        }
+    });
+    assert.equal(response.status, 409);
+    assert.deepEqual(data, {
+        ok: false,
+        mensaje: 'Ya existe una cuenta con ese correo electrónico.'
+    });
+    assert.equal(JSON.stringify(data).includes('clave-segura-123'), false);
+});
+
 test('PATCH /api/admin/pedidos/:id conserva cada estado admitido y su respuesta', async t => {
     for (const estado of ['PENDIENTE', 'APROBADA', 'PREPARANDO', 'LISTA', 'ENTREGADA', 'CANCELADA']) {
         await t.test(estado, async () => {
             const beforeCount = repositoryCalls.length;
             const { response, data } = await request('/api/admin/pedidos/42', {
-                method: 'PATCH', role: 3, body: { estado }
+                method: 'PATCH', role: 1, body: { estado }
             });
             assert.equal(response.status, 200);
             assert.deepEqual(data, { ok: true, mensaje: 'Estado del pedido actualizado.' });
             assert.deepEqual(repositoryCalls[beforeCount], { id: 42, estado });
         });
     }
+    await t.test('farmacia no puede actualizar pedidos administrativos', async () => {
+        const beforeCount = repositoryCalls.length;
+        const { response, data } = await request('/api/admin/pedidos/42', {
+            method: 'PATCH', role: 3, body: { estado: 'APROBADA' }
+        });
+        assert.equal(response.status, 403);
+        assert.deepEqual(data, {
+            ok: false,
+            mensaje: 'Acceso restringido al personal administrativo.'
+        });
+        assert.equal(repositoryCalls.length, beforeCount);
+    });
 });
 
 test('entradas inválidas conservan 400 y no persisten cambios', async t => {
@@ -132,7 +307,7 @@ test('no encontrado y fallos de persistencia conservan las respuestas actuales',
     });
     await t.test('error al listar', async () => {
         listError = new Error('simulated database failure');
-        const { response, data } = await request('/api/admin/pedidos', { role: 3 });
+        const { response, data } = await request('/api/admin/pedidos', { role: 1 });
         assert.equal(response.status, 500);
         assert.deepEqual(data, { ok: false, mensaje: 'No se pudieron cargar los pedidos.' });
         listError = undefined;
@@ -140,7 +315,7 @@ test('no encontrado y fallos de persistencia conservan las respuestas actuales',
     await t.test('error al actualizar', async () => {
         updateError = new Error('simulated update failure');
         const { response, data } = await request('/api/admin/pedidos/42', {
-            method: 'PATCH', role: 3, body: { estado: 'APROBADA' }
+            method: 'PATCH', role: 1, body: { estado: 'APROBADA' }
         });
         assert.equal(response.status, 400);
         assert.deepEqual(data, { ok: false, mensaje: 'simulated update failure' });

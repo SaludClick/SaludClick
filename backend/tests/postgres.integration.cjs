@@ -30,8 +30,9 @@ function suffix() {
 }
 
 async function createFixture(t, { stock = 8, medicineCount = 1 } = {}) {
-    const connection = await pool.connect();
     const fixture = { roles: [], categories: [], users: [], medications: [] };
+    t.after(() => deleteFixture(fixture));
+    const connection = await pool.connect();
     const run = suffix();
     try {
         await connection.query("BEGIN");
@@ -82,7 +83,6 @@ async function createFixture(t, { stock = 8, medicineCount = 1 } = {}) {
         connection.release();
     }
 
-    t.after(() => deleteFixture(fixture));
     return fixture;
 }
 

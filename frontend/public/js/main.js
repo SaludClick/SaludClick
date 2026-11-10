@@ -23,10 +23,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const usuario = getCurrentUser();
 
-    // Enlace administrativo visible únicamente para roles 1 y 3.
+    // El panel administrativo es exclusivo del administrador general.
     const rolUsuario = Number(usuario?.rol || usuario?.rol_id);
 
-    if (usuario && [1, 3].includes(rolUsuario)) {
+    if (usuario && rolUsuario === 1) {
         const menu = document.getElementById("menu");
 
         if (menu) {

@@ -10,6 +10,9 @@ let profile;
 let tokenSearch;
 let formulaRows;
 let account;
+let accountByEmail;
+let accountFindManyArgs;
+let accountFindFirstArgs;
 
 const pool = {
     query: async (sql, params = []) => {
@@ -41,9 +44,24 @@ const pool = {
 const prisma = {
     usuario: {
         count: async ({ where } = {}) => where?.estado ? 8 : 10,
-        findMany: async () => [{ id: 2 }],
-        findUnique: async () => account,
+        findMany: async args => {
+            accountFindManyArgs = args;
+            return [{ id: 2 }];
+        },
+        findFirst: async args => {
+            accountFindFirstArgs = args;
+            return accountByEmail;
+        },
+        findUnique: async ({ where } = {}) => where?.correo ? accountByEmail : account,
+        create: async ({ data, select }) => {
+            prismaCalls.push(['usuario.create', data, select]);
+            const { password, ...safeData } = data;
+            return { id: 77, ...safeData };
+        },
         delete: async ({ where }) => { prismaCalls.push(['usuario.delete', where]); }
+    },
+    rol: {
+        findUnique: async ({ where }) => ({ id: where.id })
     },
     solicitud: {
         count: async ({ where } = {}) => {
@@ -123,6 +141,9 @@ beforeEach(() => {
     profile = { id: 31, nombre: 'Ana', correo: 'ana@example.test' };
     tokenSearch = { token_id: 7, usuario_id: 31, correo: 'ana@example.test' };
     formulaRows = [{ id: 51, nombre: 'receta.pdf', estado: 'PENDIENTE' }];
+    accountByEmail = null;
+    accountFindManyArgs = null;
+    accountFindFirstArgs = null;
     account = {
         id: 42, rol_id: 2, _count: { solicitudes: 0, pagos: 0 },
         formulas_medicas: [{ nombre_archivo: 'abc.pdf' }]
@@ -179,8 +200,42 @@ test('admin repository convierte pedidos, actualiza estados y mantiene filtros d
     }]);
     assert.equal(await adminRepository.estadoPedido('4', 'LISTA'), 1);
     assert.deepEqual(await adminRepository.listarCuentas(), [{ id: 2 }]);
+    assert.deepEqual(accountFindManyArgs.where, { rol_id: { in: [2, 3, 4] } });
     assert.equal(await adminRepository.buscarCuentaParaEliminar('42'), account);
     assert.deepEqual(prismaCalls[0], ['solicitud.updateMany', { id: 4 }, { estado: 'LISTA' }]);
+});
+
+test('admin repository consulta existencia y persiste cuenta activa sin devolver contraseña', async () => {
+    accountByEmail = { id: 91 };
+    assert.deepEqual(await adminRepository.buscarCuentaPorCorreo('ana@example.test'), { id: 91 });
+    assert.deepEqual(accountFindFirstArgs, {
+        where: { correo: { equals: 'ana@example.test', mode: 'insensitive' } },
+        select: { id: true }
+    });
+    assert.deepEqual(await adminRepository.buscarRol(4), { id: 4 });
+
+    prismaCalls.length = 0;
+    const cuenta = await adminRepository.crearCuenta({
+        nombre: 'Ana',
+        apellido: 'Pérez',
+        correo: 'ana@example.test',
+        password: '$2b$10$test-hash',
+        rol_id: 4,
+        estado: 'ACTIVO'
+    });
+
+    assert.equal(cuenta.estado, 'ACTIVO');
+    assert.equal(cuenta.rol_id, 4);
+    assert.equal(Object.hasOwn(cuenta, 'password'), false);
+    assert.deepEqual(prismaCalls[0][1], {
+        nombre: 'Ana',
+        apellido: 'Pérez',
+        correo: 'ana@example.test',
+        password: '$2b$10$test-hash',
+        rol_id: 4,
+        estado: 'ACTIVO'
+    });
+    assert.equal(Object.hasOwn(prismaCalls[0][2], 'password'), false);
 });
 
 test('eliminación de cuenta es transaccional, serializable y valida todas las restricciones', async t => {
