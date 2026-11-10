@@ -1,0 +1,132 @@
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EPS VidaPlena | SaludClick</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+
+<body>
+
+    <header class="navbar">
+        <div class="container nav-container">
+            <a href="admin.html" class="logo">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span>SaludClick</span>
+            </a>
+
+            <nav class="main-nav">
+                <a href="admin.html" class="nav-link">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Volver a administración
+                </a>
+
+                <button class="nav-link logout-link" id="logout" type="button">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    Cerrar sesión
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="page-content">
+        <div class="container">
+
+            <section class="page-header">
+                <span class="badge">Módulo administrativo</span>
+                <h1>EPS VidaPlena</h1>
+                <p>
+                    Administración y consulta de afiliados registrados
+                    en la base de datos de EPS VidaPlena.
+                </p>
+            </section>
+
+            <section class="admin-stats" id="epsStats">
+                <div class="card">
+                    <h3>Total de afiliados</h3>
+                    <p id="totalAfiliados">Cargando...</p>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="section-heading">
+                    <div>
+                        <h2>Listado de afiliados</h2>
+                        <p>Consulta los registros de EPS VidaPlena.</p>
+                    </div>
+
+                    <button class="btn-outline" id="btnActualizar" type="button">
+                        <i class="fa-solid fa-rotate"></i>
+                        Actualizar
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <input
+                        type="search"
+                        id="buscarAfiliado"
+                        placeholder="Buscar por nombre o documento..."
+                    >
+                </div>
+
+                <div id="epsMessage" role="status"></div>
+
+                <div class="orders-table-wrapper">
+                    <table class="orders-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Documento</th>
+                                <th>Nombre</th>
+                                <th>Teléfono</th>
+                                <th>Ciudad</th>
+                                <th>Régimen</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="tablaAfiliados">
+                            <tr>
+                                <td colspan="7">Cargando afiliados...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-col">
+                <div class="logo-footer">
+                    <i class="fa-solid fa-heart-pulse"></i>
+                    <span>SaludClick</span>
+                </div>
+                <p class="tagline">Tu bienestar, a un solo clic.</p>
+            </div>
+
+            <div class="footer-col">
+                <p>
+                    <i class="fa-solid fa-location-dot"></i>
+                    Medellín - Colombia
+                </p>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>© 2026 SaludClick - Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script type="module" src="../js/eps.js"></script>
+
+</body>
+</html>
