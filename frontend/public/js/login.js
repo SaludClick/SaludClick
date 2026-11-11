@@ -1,5 +1,6 @@
 import { setSession, consumirDestinoPendiente } from "./auth.js";
 import { apiUrl } from "./api.js";
+import { paginaInicio } from './roles.js';
 
 // ==========================================
 // CONFIGURACIÓN DE RECAPTCHA V2 CHECKBOX
@@ -91,21 +92,6 @@ function cargarRecaptcha() {
 // FUNCIÓN PARA OBTENER RUTA SEGÚN ROL
 // ==========================================
 
-function obtenerRutaPorRol(usuario) {
-    const rolId = Number(usuario?.rol_id ?? usuario?.rol);
-
-    switch (rolId) {
-        case 1: // Administrador
-        case 3: // Farmacia / Personal
-            return "pages/admin.html";
-
-        case 2: // Paciente / Cliente
-            return "pages/dashboard.html";
-
-        default:
-            return "index.html";
-    }
-}
 
 // ==========================================
 // GUARDAR SESIÓN Y REDIRIGIR
@@ -129,7 +115,7 @@ function iniciarSesion(
         : null;
 
     const rutaDestino =
-        destinoPendiente || obtenerRutaPorRol(resultado.usuario);
+        destinoPendiente || paginaInicio(resultado.usuario);
 
     window.location.href = rutaDestino;
 }

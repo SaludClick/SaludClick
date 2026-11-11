@@ -1,13 +1,14 @@
 import { checkAuthGuard, getCurrentUser, initAuth } from './auth.js';
 import { apiFetch } from './api.js';
+import { paginaInicio, rolUsuario, ROLES } from './roles.js';
 
 const nextStatus = { APROBADA: ['PREPARANDO', 'Iniciar preparación'], PREPARANDO: ['LISTA', 'Marcar listo'], LISTA: ['ENTREGADA', 'Confirmar entrega'] };
 const element = (tag, text) => { const node = document.createElement(tag); node.textContent = text; return node; };
 
 if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
     const user = getCurrentUser();
-    if (Number(user?.rol_id ?? user?.rol) !== 3) {
-        window.location.replace(Number(user?.rol_id ?? user?.rol) === 1 ? '/pages/admin.html' : '/pages/dashboard.html');
+    if (rolUsuario(user) !== ROLES.FARMACIA) {
+        window.location.replace(paginaInicio(user));
         return;
     }
     initAuth();

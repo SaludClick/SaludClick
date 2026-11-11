@@ -1,13 +1,14 @@
 
 import { checkAuthGuard, getCurrentUser, logout } from "./auth.js";
 import { apiFetch } from "./api.js";
+import { paginaInicio } from './roles.js';
 
 if (checkAuthGuard()) {
     document.addEventListener("DOMContentLoaded", async () => {
         const u = getCurrentUser();
 
         if (!u || Number(u.rol_id ?? u.rol) !== 1) {
-            location.replace("dashboard.html");
+            location.replace(paginaInicio(u));
             return;
         }
 

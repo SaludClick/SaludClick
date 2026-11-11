@@ -1,11 +1,8 @@
+import { PAGINAS_PRIVADAS, paginaInicio, puedeAcceder } from './roles.js';
+
 const TOKEN_KEY = "saludclick_token";
 const USER_KEY = "saludclick_user";
 const DESTINO_KEY = "saludclick_destino_pendiente_v1";
-const PAGINAS_PRIVADAS = new Set([
-    "/pages/dashboard.html", "/pages/medicamentos.html", "/pages/pedidos.html",
-    "/pages/historial.html", "/pages/perfil.html", "/pages/formulas.html",
-    "/pages/admin.html", "/pages/admin-cuentas.html"
-]);
 
 // Lista cerrada: nunca navegar a una URL externa ni regresar al login.
 export function validarDestino(destino) {
@@ -28,11 +25,18 @@ export function validarDestino(destino) {
 export function consumirDestinoPendiente() {
     const destino = validarDestino(sessionStorage.getItem(DESTINO_KEY));
     sessionStorage.removeItem(DESTINO_KEY);
-    return destino || "/pages/dashboard.html";
+    const usuario = getCurrentUser();
+    return destino && puedeAcceder(destino, usuario) ? destino : paginaInicio(usuario);
 }
 
 export function requerirSesion(destino) {
-    if (isAuthenticated()) return true;
+    if (isAuthenticated()) {
+        if (destino && !puedeAcceder(destino, getCurrentUser())) {
+            window.location.replace(paginaInicio(getCurrentUser()));
+            return false;
+        }
+        return true;
+    }
     const seguro = validarDestino(destino);
     if (seguro) sessionStorage.setItem(DESTINO_KEY, seguro);
     else sessionStorage.removeItem(DESTINO_KEY);
@@ -58,7 +62,10 @@ export const getToken = () => sessionStorage.getItem(TOKEN_KEY) || localStorage.
 
 export const getCurrentUser = () => {
     const user = sessionStorage.getItem(USER_KEY) || localStorage.getItem(USER_KEY);
-    return user ? JSON.parse(user) : null;
+    try {
+        const parsed = user ? JSON.parse(user) : null;
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+    } catch { return null; }
 };
 
 export const isAuthenticated = () => !!getToken();
@@ -102,3 +109,19 @@ export const initAuth = () => {
         btnLogout.addEventListener("click", logout);
     }
 };
+
+// La autorización definitiva está en Express. Aquí se evita ofrecer enlaces
+// que el rol actual no puede usar y se conserva su propio acceso a Inicio.
+document.addEventListener('DOMContentLoaded', () => {
+    if (!isAuthenticated()) return;
+    const usuario = getCurrentUser();
+    for (const link of document.querySelectorAll('nav a[href], #sidebar a[href], .logo[href]')) {
+        const url = new URL(link.href, window.location.origin);
+        if (url.origin !== window.location.origin) continue;
+        if (url.pathname === '/pages/dashboard.html') {
+            link.href = paginaInicio(usuario);
+        } else if (PAGINAS_PRIVADAS.has(url.pathname)) {
+            link.hidden = !puedeAcceder(url.pathname, usuario);
+        }
+    }
+});

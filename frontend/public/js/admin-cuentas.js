@@ -1,5 +1,6 @@
 
-import { getToken, getCurrentUser, logout } from "/js/auth.js";
+import { getToken, getCurrentUser, logout, checkAuthGuard } from "/js/auth.js";
+import { paginaInicio } from '/js/roles.js';
 import { apiFetch } from "/js/api.js";
 
 // ============================================
@@ -510,6 +511,7 @@ createAccountForm?.addEventListener("submit", async event => {
 // ============================================
 
 async function iniciar() {
+    if (!checkAuthGuard()) return;
     if (!tabla || !busqueda || !filtroTipo || !resultados) {
         console.error("No se encontraron los elementos HTML requeridos para administrar cuentas.");
         return;
@@ -552,7 +554,7 @@ async function iniciar() {
 
             const enlace = document.createElement("a");
             enlace.className = "btn-outline";
-            enlace.href = "/pages/dashboard.html";
+            enlace.href = paginaInicio(usuario);
             enlace.textContent = "Volver al inicio";
 
             contenedor.append(titulo, texto, enlace);

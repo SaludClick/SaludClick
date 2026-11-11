@@ -57,6 +57,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         ? path.resolve(process.env.FRONTEND_TEST_ROOT)
         : publicRoot;
     let loginCorrecto = false;
+    let loginRole = 2;
     let loginRequests = 0;
     let orderRequests = 0;
     let adminAccountCreates = 0;
@@ -176,7 +177,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         if (pathname === '/api/auth/login' && loginCorrecto) {
             // Respuesta controlada Ãºnicamente en este servidor de pruebas.
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ ok: true, token: 'frontend-test-only', usuario: { nombre: 'Prueba', correo: 'prueba@example.com' } }));
+            res.end(JSON.stringify({ ok: true, token: 'frontend-test-only', usuario: { nombre: 'Prueba', correo: 'prueba@example.com', rol: loginRole } }));
             return;
         }
         if (pathname.startsWith('/api/')) {
@@ -399,7 +400,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     }
 
     await go('/index.html');
-    await evaluate(`localStorage.setItem('saludclick_token', 'frontend-test-only'); localStorage.setItem('saludclick_user', JSON.stringify({nombre:'Prueba',correo:'prueba@example.com'}))`);
+    await evaluate(`localStorage.setItem('saludclick_token', 'frontend-test-only'); localStorage.setItem('saludclick_user', JSON.stringify({nombre:'Prueba',correo:'prueba@example.com',rol:2}))`);
     await t.test('inicio: buscar, Enter, vacÃ­o, solicitar y servicios', async () => {
         await value('#busquedaInicio', 'acetaminofen'); await click('#buscarInicio');
         await esperarPagina('/pages/medicamentos.html');
@@ -478,7 +479,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     });
     await t.test('perfil: validaciÃ³n, guardar sin falso Ã©xito y cancelar', async () => {
         await evaluate(`sessionStorage.removeItem('saludclick_user')`);
-        await evaluate(`localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',correo:'prueba@example.com'}))`);
+        await evaluate(`localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',correo:'prueba@example.com',rol:2}))`);
         await go('/pages/perfil.html'); await until(() => evaluate('document.querySelector("#email").value === "prueba@example.com"')); assert.equal(await evaluate('document.querySelector("#email").value'),'prueba@example.com');
         await value('#nombre','Editado'); await click('#guardarPerfil');
         assert.match(await evaluate('document.querySelector("#mensajePerfil").textContent'),/Servicio de datos no disponible/);
@@ -539,7 +540,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         const requestsBeforeDeniedRole = adminDashboardRequests;
         await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Farmacia',rol:3}))`);
         await send('Page.navigate', { url: base + '/pages/admin.html' });
-        await until(() => evaluate('location.pathname === "/pages/dashboard.html"'));
+        await until(() => evaluate('location.pathname === "/pages/farmacia.html"'));
         assert.equal(adminDashboardRequests, requestsBeforeDeniedRole);
     });
     await t.test('el administrador crea cuentas EPS y otros roles no ven el formulario', async subtest => {
@@ -577,8 +578,8 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         assert.equal(await evaluate('document.querySelector("#confirmAccountPassword").value'), '');
 
         await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Farmacia',rol:3}))`);
-        await go('/pages/admin-cuentas.html');
-        await until(() => evaluate('document.querySelector("main")?.textContent.includes("Acceso restringido")'));
+        await send('Page.navigate', { url: base + '/pages/admin-cuentas.html' });
+        await until(() => evaluate('location.pathname === "/pages/farmacia.html"'));
         assert.equal(await evaluate('!!document.querySelector("#createAccountForm")'), false);
         await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Admin de prueba',rol:1}))`);
     });
@@ -594,7 +595,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         assert.equal(pageState.loginLink, true);
     });
     await t.test('sesiÃ³n temporal, persistente y logout usan las claves existentes', async () => {
-        const result = await evaluate(`(async()=>{ const a=await import('/js/auth.js'); a.setSession('test-session',{nombre:'Temporal'},false); const temporal=sessionStorage.getItem('saludclick_token')==='test-session' && localStorage.getItem('saludclick_token')===null && a.getToken()==='test-session'; a.setSession('test-persist',{nombre:'Persistente'},true); return temporal && localStorage.getItem('saludclick_token')==='test-persist' && sessionStorage.getItem('saludclick_token')===null; })()`);
+        const result = await evaluate(`(async()=>{ const a=await import('/js/auth.js'); a.setSession('test-session',{nombre:'Temporal',rol:2},false); const temporal=sessionStorage.getItem('saludclick_token')==='test-session' && localStorage.getItem('saludclick_token')===null && a.getToken()==='test-session'; a.setSession('test-persist',{nombre:'Persistente',rol:2},true); return temporal && localStorage.getItem('saludclick_token')==='test-persist' && sessionStorage.getItem('saludclick_token')===null; })()`);
         assert.equal(result,true);
         await go('/pages/dashboard.html'); await click('#logout'); await until(() => evaluate('location.pathname === "/login.html"'));
         assert.equal(await evaluate('localStorage.getItem("saludclick_token") || sessionStorage.getItem("saludclick_token")'),null);
@@ -811,7 +812,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         assert.equal(await evaluate('document.querySelectorAll("#servicios button[type=button]").length'),6);
     });
     await t.test('imágenes locales del catálogo de medicamentos cargan', async () => {
-        await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only'); localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Prueba'}))`);
+        await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only'); localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',rol:2}))`);
         await go('/pages/medicamentos.html');
         await until(async () => (await visibleNames()).length === 5);
         await until(async () => await evaluate('[...document.querySelectorAll("#catalogoMedicamentos .tabla-medicamento-imagen")].length === 5 && [...document.querySelectorAll("#catalogoMedicamentos .tabla-medicamento-imagen")].every(img => img.complete)'));
@@ -867,6 +868,32 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         const dimensions = await evaluate('({width:document.documentElement.clientWidth,scrollWidth:document.documentElement.scrollWidth})');
         assert.ok(dimensions.scrollWidth<=dimensions.width,`Desbordamiento horizontal: ${JSON.stringify(dimensions)}`);
         await send('Emulation.clearDeviceMetricsOverride');
+    });
+    await t.test('login respeta el rol incluso si existe un destino pendiente ajeno', async () => {
+        try {
+            for (const [role, home] of [[1, '/pages/admin.html'], [3, '/pages/farmacia.html'], [4, '/pages/perfil.html']]) {
+                await sinSesion();
+                await go('/login.html');
+                await evaluate(`sessionStorage.setItem('${destinoKey}', '/pages/pedidos.html')`);
+                loginRole = role;
+                await login();
+                await esperarPagina(home);
+                assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`), null);
+            }
+        } finally { loginRole = 2; }
+    });
+    await t.test('farmacia y EPS no ven opciones personales en el perfil y las sesiones corruptas fallan cerrado', async () => {
+        for (const [role, home] of [[3, '/pages/farmacia.html'], [4, '/pages/perfil.html']]) {
+            await evaluate(`for (const s of [localStorage,sessionStorage]) { s.setItem('saludclick_token','frontend-test-only'); s.setItem('saludclick_user',JSON.stringify({nombre:'Personal',rol:${role}})); }`);
+            await go('/pages/perfil.html');
+            const forbidden = await evaluate(`[...document.querySelectorAll('nav a[href]')].filter(a=>['/pages/pedidos.html','/pages/formulas.html','/pages/historial.html','/pages/medicamentos.html'].includes(new URL(a.href).pathname)).filter(a=>!a.hidden).length`);
+            assert.equal(forbidden, 0);
+            await send('Page.navigate', { url: base + '/pages/pedidos.html' });
+            await esperarPagina(home);
+        }
+        await evaluate(`sessionStorage.removeItem('saludclick_user'); localStorage.setItem('saludclick_user','invalid-json')`);
+        await send('Page.navigate', { url: base + '/pages/perfil.html' });
+        await esperarPagina('/login.html');
     });
     await t.test('sin excepciones JavaScript propias', () => assert.deepEqual(errors,[]));
 });
