@@ -7,7 +7,7 @@ const http = require('node:http');
 const net = require('node:net');
 const { spawn } = require('node:child_process');
 
-test('las rutas Astro no colisionan con public y conservan las 14 páginas HTML', () => {
+test('las rutas Astro no colisionan con public y conservan las páginas HTML y el panel de farmacia', () => {
     const frontend = path.resolve(__dirname, '../../frontend');
     const publicRoot = path.join(frontend, 'public');
     const pagesRoot = path.join(frontend, 'src/pages');
@@ -31,6 +31,7 @@ test('las rutas Astro no colisionan con public y conservan las 14 páginas HTML'
         'pages/admin.html',
         'pages/chat.html',
         'pages/dashboard.html',
+        'pages/farmacia.html',
         'pages/formulas.html',
         'pages/historial.html',
         'pages/medicamentos.html',
@@ -60,6 +61,9 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     let orderRequests = 0;
     let adminAccountCreates = 0;
     let adminDashboardRequests = 0;
+    let farmaciaStatus = 'APROBADA';
+    let farmaciaUpdates = 0;
+    let farmaciaRequests = 0;
     const adminAccounts = [];
     const orderIdempotencyKeys = [];
     const medicamentos = [
@@ -81,6 +85,29 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     }));
     const server = http.createServer((req, res) => {
         const pathname = new URL(req.url, 'http://localhost').pathname;
+        if (pathname.startsWith('/api/farmacia/')) {
+            farmaciaRequests++;
+            res.setHeader('Content-Type', 'application/json');
+            if (req.method === 'PATCH') {
+                let raw = '';
+                req.on('data', chunk => { raw += chunk; });
+                req.on('end', () => {
+                    const body = JSON.parse(raw);
+                    assert.equal(body.estadoActual, farmaciaStatus);
+                    farmaciaStatus = body.estado;
+                    farmaciaUpdates++;
+                    res.end(JSON.stringify({ ok: true, pedido: { id: 81, estado: farmaciaStatus } }));
+                });
+                return;
+            }
+            const paginacion = { pagina: 1, tamano: 25, total: 1, paginas: 1 };
+            res.end(JSON.stringify(pathname.endsWith('/inventario') ? {
+                ok: true, paginacion, medicamentos: [{ nombre: 'Acetaminofén', stock: 10, estado: 'DISPONIBLE', categoria: { nombre: 'Analgésicos' } }]
+            } : {
+                ok: true, paginacion, pedidos: [{ id: 81, estado: farmaciaStatus, tipo_entrega: 'RECOGER', usuario: { nombre: '<img src=x>', apellido: 'Prueba' }, detalles: [{ cantidad: 2, medicamento: { nombre: 'Acetaminofén' } }] }]
+            }));
+            return;
+        }
         if (pathname === '/api/medicamentos') {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true, medicamentos }));
@@ -161,7 +188,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         let file = path.resolve(staticRoot, '.' + (pathname === '/' ? '/index.html' : pathname));
         if (
             !fs.existsSync(file) &&
-            (pathname === '/pages/admin-cuentas.html' || pathname.startsWith('/_astro/'))
+            (pathname === '/pages/admin-cuentas.html' || pathname === '/pages/chat.html' || pathname.startsWith('/_astro/'))
         ) {
             staticRoot = builtRoot;
             file = path.resolve(staticRoot, '.' + pathname);
@@ -471,6 +498,25 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         await click('#logout'); await until(() => evaluate('location.pathname === "/login.html"'));
         assert.equal(await evaluate('localStorage.getItem("saludclick_token")'),null); assert.ok(await state());
     });
+    await t.test('farmacia consulta inventario, avanza pedidos y rechaza usuarios ajenos', async () => {
+        await evaluate(`for (const s of [localStorage,sessionStorage]) { s.setItem('saludclick_token','frontend-test-only'); s.setItem('saludclick_user',JSON.stringify({nombre:'Farmacia',rol:3})); }`);
+        await go('/pages/farmacia.html');
+        await until(() => evaluate('document.querySelector(".farmacia-order button") && document.querySelectorAll("#farmaciaInventory tr").length === 1'));
+        assert.equal(await evaluate('document.querySelector("#farmaciaMain").hidden'), false);
+        assert.equal(await evaluate('document.querySelectorAll("#farmaciaOrders img").length'), 0);
+        assert.match(await evaluate('document.querySelector("#farmaciaInventory").textContent'), /Acetaminofén/);
+        for (const status of ['PREPARANDO', 'LISTA', 'ENTREGADA']) {
+            await click('.farmacia-order button');
+            await until(() => evaluate(`document.querySelector('.farmacia-order h3')?.textContent.includes('${status}')`));
+        }
+        assert.equal(farmaciaUpdates, 3);
+        assert.equal(await evaluate('document.querySelectorAll(".farmacia-order button").length'), 0);
+        const before = farmaciaRequests;
+        await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',rol:2}))`);
+        await send('Page.navigate', { url: base + '/pages/farmacia.html' });
+        await until(() => evaluate('location.pathname === "/pages/dashboard.html"'));
+        assert.equal(farmaciaRequests, before);
+    });
     await t.test('dashboard administrativo usa datos de API y restringe el acceso al rol 1', async () => {
         await evaluate(`for (const s of [localStorage,sessionStorage]) { s.setItem('saludclick_token','frontend-test-only'); s.setItem('saludclick_user',JSON.stringify({nombre:'Admin de prueba',rol:1})); }`);
         await go('/pages/admin.html');
@@ -584,6 +630,10 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         for (const route of routes) {
             if (route === '/pages/admin.html' || route === '/pages/admin-cuentas.html') {
                 await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Admin de prueba',rol:1}))`);
+            } else if (route === '/pages/farmacia.html') {
+                await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Farmacia',rol:3}))`);
+            } else {
+                await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',rol:2}))`);
             }
             if (route === '/restablecer.html') await go(route+'?token=frontend-test-only');
             else await go(route);

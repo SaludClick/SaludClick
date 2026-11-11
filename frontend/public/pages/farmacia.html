@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de farmacia | SaludClick</title>
+  <link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/farmacia.css">
+  <script src="/js/config.js"></script>
+  <script type="module" src="/js/farmacia.js"></script>
+</head>
+<body>
+  <header class="navbar"><div class="container nav-container">
+    <a href="/pages/farmacia.html" class="logo">SaludClick · Farmacia</a>
+    <button type="button" id="menuToggle" class="menu-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="menu">Menú</button>
+    <nav class="main-nav" id="menu" aria-label="Navegación de farmacia">
+      <a href="#pedidosFarmacia" class="nav-link">Pedidos</a><a href="#inventarioFarmacia" class="nav-link">Inventario</a>
+      <a href="/pages/chat.html" class="nav-link">Chat con pacientes</a><a href="/pages/perfil.html" class="nav-link">Mi perfil</a>
+      <button type="button" id="btnLogout" class="nav-link">Cerrar sesión</button>
+    </nav>
+  </div></header>
+  <main class="container farmacia-main" hidden id="farmaciaMain">
+    <h1>Panel de farmacia</h1><p>Hola, <span id="nombreUsuario">personal de farmacia</span>. Organiza la preparación y entrega de medicamentos.</p>
+    <p id="farmaciaMessage" role="status" aria-live="polite"></p>
+    <section id="pedidosFarmacia" aria-labelledby="pedidosTitle">
+      <h2 id="pedidosTitle">Pedidos para atender</h2>
+      <p>Los pedidos avanzan de aprobado a preparando, listo y entregado. Solo se actualizan pedidos con pago aprobado.</p>
+      <form id="filtroPedidos" class="farmacia-filters">
+        <label for="estadoFarmacia">Estado</label><select id="estadoFarmacia">
+          <option value="">Activos</option><option value="APROBADA">Aprobados</option><option value="PREPARANDO">Preparando</option><option value="LISTA">Listos</option><option value="ENTREGADA">Entregados</option>
+        </select><button type="submit">Actualizar pedidos</button>
+      </form>
+      <div id="farmaciaOrders" aria-live="polite" aria-busy="false"></div>
+      <div class="farmacia-pagination"><button type="button" id="ordersPrevious" disabled>Anterior</button><span id="ordersPage"></span><button type="button" id="ordersNext" disabled>Siguiente</button></div>
+    </section>
+    <section id="inventarioFarmacia" aria-labelledby="inventarioTitle">
+      <h2 id="inventarioTitle">Consulta de inventario</h2><p>Consulta las existencias registradas. Esta pantalla no modifica stock ni precios.</p>
+      <form id="buscarInventario" class="farmacia-filters"><label for="buscarFarmacia">Medicamento</label><input id="buscarFarmacia" type="search" maxlength="150" placeholder="Buscar por nombre"><button type="submit">Buscar</button></form>
+      <div class="farmacia-table"><table><caption>Existencias de medicamentos</caption><thead><tr><th scope="col">Medicamento</th><th scope="col">Categoría</th><th scope="col">Stock</th><th scope="col">Estado</th></tr></thead><tbody id="farmaciaInventory"></tbody></table></div>
+      <p id="inventoryEmpty" role="status"></p>
+      <div class="farmacia-pagination"><button type="button" id="inventoryPrevious" disabled>Anterior</button><span id="inventoryPage"></span><button type="button" id="inventoryNext" disabled>Siguiente</button></div>
+    </section>
+  </main>
+  <script type="module" src="/js/menu.js"></script>
+</body>
+</html>
