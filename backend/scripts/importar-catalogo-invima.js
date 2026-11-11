@@ -3,7 +3,7 @@ require("dotenv").config();
 
 const fs = require("node:fs");
 const path = require("node:path");
-const prisma = require("../src/config/prisma");
+let prisma;
 
 const CSV_PATH = path.resolve(__dirname, "../data/catalogo_invima.csv");
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -145,6 +145,10 @@ async function main() {
 
   console.log(`Catálogo validado: ${rows.length} registros.`);
 
+  // Permite verificar el entregable sin credenciales ni conexión a Neon.
+  if (process.argv.includes("--validar")) return;
+  prisma = require("../src/config/prisma");
+
   const existing = await retry(
     () => prisma.medicamento.findMany({
       where: { codigo_fuente: { in: [...seen] } },
@@ -254,11 +258,13 @@ async function main() {
   }
 }
 
-main()
+if (require.main === module) main()
   .catch(error => {
-    console.error("ERROR:", error.message);
+    console.error("ERROR:", prisma ? `Falló la importación (${error.code || error.name}).` : error.message);
     process.exitCode = 1;
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    if (prisma) await prisma.$disconnect();
   });
+
+module.exports = { readCsv, parseCsvLine, categoryFor };

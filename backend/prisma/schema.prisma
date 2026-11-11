@@ -29,72 +29,125 @@ model Rol {
 }
 
 model Usuario {
-  id                  Int                 @id @default(autoincrement())
-  nombre              String              @db.VarChar(100)
-  apellido            String              @db.VarChar(100)
-  correo              String              @unique @db.VarChar(150)
-  telefono            String?             @db.VarChar(20)
-  cedula              String?             @unique @db.VarChar(30)
-  tipo_documento      String?             @db.VarChar(10)
-  ciudad              String?             @db.VarChar(100)
-  password            String              @db.VarChar(255)
-  rol_id              Int
-  estado              EstadoUsuario?       @default(ACTIVO)
-  created_at          DateTime?           @default(now()) @db.Timestamp(0)
-  updated_at          DateTime?           @default(now()) @db.Timestamp(0)
-  pagos               Pago[]
-  recordatorios       Recordatorio[]
-  solicitudes         Solicitud[]
-  tokens_recuperacion TokenRecuperacion[]
-  formulas_medicas    FormulaMedica[]
-  conversaciones_cliente Conversacion[] @relation("ConversacionCliente")
-  conversaciones_asignadas Conversacion[] @relation("ConversacionAgente")
-  mensajes_chat       MensajeChat[]
-  rol                 Rol                 @relation(fields: [rol_id], references: [id])
+  id                       Int                 @id @default(autoincrement())
+  nombre                   String              @db.VarChar(100)
+  apellido                 String              @db.VarChar(100)
+  correo                   String              @unique @db.VarChar(150)
+  telefono                 String?             @db.VarChar(20)
+  cedula                   String?             @unique @db.VarChar(30)
+  tipo_documento           String?             @db.VarChar(10)
+  ciudad                   String?             @db.VarChar(100)
+  password                 String              @db.VarChar(255)
+  rol_id                   Int
+  estado                   EstadoUsuario?      @default(ACTIVO)
+  created_at               DateTime?           @default(now()) @db.Timestamp(0)
+  updated_at               DateTime?           @default(now()) @db.Timestamp(0)
+  pagos                    Pago[]
+  recordatorios            Recordatorio[]
+  solicitudes              Solicitud[]
+  tokens_recuperacion      TokenRecuperacion[]
+  formulas_medicas         FormulaMedica[]
+  conversaciones_cliente   Conversacion[]      @relation("ConversacionCliente")
+  conversaciones_asignadas Conversacion[]      @relation("ConversacionAgente")
+  mensajes_chat            MensajeChat[]
+  rol                      Rol                 @relation(fields: [rol_id], references: [id])
 
   @@index([rol_id])
   @@map("usuarios")
 }
 
 model Medicamento {
-  id                 Int                @id @default(autoincrement())
-  nombre             String             @db.VarChar(150)
-  descripcion        String?
-  categoria_id       Int
-  precio             Decimal            @db.Decimal(10, 2)
-  stock              Int                @default(0)
-  imagen             String?            @db.VarChar(255)
-  estado             EstadoMedicamento? @default(DISPONIBLE)
-  created_at         DateTime?          @default(now()) @db.Timestamp(0)
-  updated_at         DateTime?          @default(now()) @db.Timestamp(0)
-  detalles_solicitud DetalleSolicitud[]
-  categoria          Categoria          @relation(fields: [categoria_id], references: [id])
-  recordatorios      Recordatorio[]
+  id                         Int                 @id @default(autoincrement())
+  nombre                     String              @db.VarChar(150)
+  descripcion                String?
+  categoria_id               Int
+  precio                     Decimal             @db.Decimal(10, 2)
+  stock                      Int                 @default(0)
+  imagen                     String?             @db.VarChar(255)
+  estado                     EstadoMedicamento?  @default(DISPONIBLE)
+  created_at                 DateTime?           @default(now()) @db.Timestamp(0)
+  updated_at                 DateTime?           @default(now()) @db.Timestamp(0)
+  codigo_fuente              String?             @unique @db.VarChar(80)
+  expediente                 String?             @db.VarChar(40)
+  nombre_generico            String?             @db.VarChar(180)
+  principio_activo           String?
+  concentracion              String?             @db.VarChar(120)
+  forma_farmaceutica         String?             @db.VarChar(120)
+  presentacion               String?             @db.VarChar(180)
+  via_administracion         String?             @db.VarChar(120)
+  titular_registro           String?             @db.VarChar(220)
+  registro_sanitario         String?             @db.VarChar(100)
+  estado_registro_invima     String?             @db.VarChar(80)
+  modalidad_comercializacion String?             @db.VarChar(180)
+  cum                        String?             @db.VarChar(80)
+  ium                        String?             @db.VarChar(80)
+  requiere_formula           Boolean?
+  catalogo_verificado        Boolean             @default(false)
+  precio_referencial         Decimal?            @db.Decimal(12, 2)
+  fuente_precio              String?             @db.VarChar(80)
+  fecha_precio               DateTime?           @db.Date
+  imagenes                   ImagenMedicamento[]
+  observaciones_precio       ObservacionPrecio[]
+  detalles_solicitud         DetalleSolicitud[]
+  categoria                  Categoria           @relation(fields: [categoria_id], references: [id])
+  recordatorios              Recordatorio[]
 
   @@index([categoria_id])
   @@index([estado])
+  @@index([nombre])
+  @@index([principio_activo])
+  @@index([registro_sanitario])
+  @@index([estado_registro_invima])
   @@map("medicamentos")
 }
 
-model Solicitud {
-  id            Int                @id @default(autoincrement())
-  usuario_id    Int
-  fecha         DateTime?          @default(now()) @db.Timestamp(0)
-  estado        EstadoSolicitud?   @default(PENDIENTE)
-  tipo_entrega  TipoEntrega?      @default(RECOGER)
-  direccion     String?            @db.VarChar(255)
-  observaciones String?
-  idempotency_key  String?         @db.Uuid
-  idempotency_hash String?         @db.Char(64)
-  created_at    DateTime?          @default(now()) @db.Timestamp(0)
-  updated_at    DateTime?          @default(now()) @db.Timestamp(0)
-  detalles      DetalleSolicitud[]
-  pagos         Pago[]
-  usuario       Usuario            @relation(fields: [usuario_id], references: [id])
+model ImagenMedicamento {
+  id             Int         @id @default(autoincrement())
+  medicamento_id Int
+  url            String      @db.VarChar(500)
+  texto_alt      String?     @db.VarChar(255)
+  es_principal   Boolean     @default(false)
+  created_at     DateTime    @default(now()) @db.Timestamp(0)
+  medicamento    Medicamento @relation(fields: [medicamento_id], references: [id], onDelete: Cascade)
 
+  @@index([medicamento_id])
+  @@map("imagenes_medicamento")
+}
+
+model ObservacionPrecio {
+  id             Int         @id @default(autoincrement())
+  medicamento_id Int
+  valor          Decimal     @db.Decimal(12, 2)
+  moneda         String      @default("COP") @db.VarChar(3)
+  fuente         String      @db.VarChar(80)
+  fecha_corte    DateTime    @db.Date
+  notas          String?
+  created_at     DateTime    @default(now()) @db.Timestamp(0)
+  medicamento    Medicamento @relation(fields: [medicamento_id], references: [id], onDelete: Cascade)
+
+  @@index([medicamento_id, fecha_corte])
+  @@map("observaciones_precio")
+}
+
+model Solicitud {
+  id               Int                @id @default(autoincrement())
+  usuario_id       Int
+  fecha            DateTime?          @default(now()) @db.Timestamp(0)
+  estado           EstadoSolicitud?   @default(PENDIENTE)
+  tipo_entrega     TipoEntrega?       @default(RECOGER)
+  direccion        String?            @db.VarChar(255)
+  observaciones    String?
+  idempotency_key  String?            @db.Uuid
+  idempotency_hash String?            @db.Char(64)
+  created_at       DateTime?          @default(now()) @db.Timestamp(0)
+  updated_at       DateTime?          @default(now()) @db.Timestamp(0)
+  detalles         DetalleSolicitud[]
+  pagos            Pago[]
+  usuario          Usuario            @relation(fields: [usuario_id], references: [id])
+
+  @@unique([usuario_id, idempotency_key], map: "solicitudes_usuario_id_idempotency_key_key")
   @@index([usuario_id])
   @@index([estado])
-  @@unique([usuario_id, idempotency_key], map: "solicitudes_usuario_id_idempotency_key_key")
   @@map("solicitudes")
 }
 
@@ -238,31 +291,33 @@ model FormulaMedica {
 }
 
 model Conversacion {
-  id             Int          @id @default(autoincrement())
-  cliente_id     Int
-  agente_id      Int?
-  estado         EstadoChat    @default(ABIERTA)
-  created_at     DateTime      @default(now()) @db.Timestamp(0)
-  updated_at     DateTime      @updatedAt @db.Timestamp(0)
-  cliente        Usuario       @relation("ConversacionCliente", fields: [cliente_id], references: [id], onDelete: Cascade)
-  agente         Usuario?      @relation("ConversacionAgente", fields: [agente_id], references: [id], onDelete: SetNull)
-  mensajes       MensajeChat[]
+  id         Int           @id @default(autoincrement())
+  cliente_id Int
+  agente_id  Int?
+  estado     EstadoChat    @default(ABIERTA)
+  created_at DateTime      @default(now()) @db.Timestamp(0)
+  updated_at DateTime      @updatedAt @db.Timestamp(0)
+  cliente    Usuario       @relation("ConversacionCliente", fields: [cliente_id], references: [id], onDelete: Cascade)
+  agente     Usuario?      @relation("ConversacionAgente", fields: [agente_id], references: [id], onDelete: SetNull)
+  mensajes   MensajeChat[]
+
   @@index([cliente_id, updated_at])
   @@index([agente_id, estado, updated_at])
   @@map("conversaciones")
 }
 
 model MensajeChat {
-  id               Int          @id @default(autoincrement())
-  conversacion_id  Int
-  remitente_id     Int
-  contenido        String       @db.VarChar(2000)
-  estado           EstadoMensaje @default(ENVIADO)
-  created_at       DateTime     @default(now()) @db.Timestamp(0)
-  entregado_at     DateTime?    @db.Timestamp(0)
-  leido_at         DateTime?    @db.Timestamp(0)
-  conversacion     Conversacion @relation(fields: [conversacion_id], references: [id], onDelete: Cascade)
-  remitente        Usuario      @relation(fields: [remitente_id], references: [id], onDelete: Cascade)
+  id              Int           @id @default(autoincrement())
+  conversacion_id Int
+  remitente_id    Int
+  contenido       String        @db.VarChar(2000)
+  estado          EstadoMensaje @default(ENVIADO)
+  created_at      DateTime      @default(now()) @db.Timestamp(0)
+  entregado_at    DateTime?     @db.Timestamp(0)
+  leido_at        DateTime?     @db.Timestamp(0)
+  conversacion    Conversacion  @relation(fields: [conversacion_id], references: [id], onDelete: Cascade)
+  remitente       Usuario       @relation(fields: [remitente_id], references: [id], onDelete: Cascade)
+
   @@index([conversacion_id, created_at])
   @@index([remitente_id])
   @@map("mensajes_chat")

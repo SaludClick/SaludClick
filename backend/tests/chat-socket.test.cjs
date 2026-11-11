@@ -1,3 +1,4 @@
+require('./support/isolate-database.cjs');
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const jwt = require("jsonwebtoken");

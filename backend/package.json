@@ -10,6 +10,7 @@
                     "test:integration:postgres":  "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.js\" tests/postgres.integration.cjs",
                     "postinstall":  "node scripts/generate-prisma-client.cjs",
                     "catalogo:importar":  "node scripts/importar-catalogo-invima.js",
+                    "catalogo:validar":  "node scripts/importar-catalogo-invima.js --validar",
                     "catalogo:verificar":  "node scripts/verificar-catalogo-neon.js"
                 },
     "repository":  {

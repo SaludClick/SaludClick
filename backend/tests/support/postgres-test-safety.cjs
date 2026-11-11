@@ -2,6 +2,7 @@ const REQUIRED_MIGRATIONS = [
     "20261016220827_init",
     "20261025170000_add_formulas_medicas",
     "20261106000000_add_chat",
+    "20261106190000_catalogo_medicamentos",
     "20261107215000_add_order_idempotency"
 ];
 
