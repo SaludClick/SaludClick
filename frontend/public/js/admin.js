@@ -7,7 +7,8 @@ if (checkAuthGuard()) {
         const u = getCurrentUser();
 
         if (!u || Number(u.rol_id ?? u.rol) !== 1) {
-            location.replace("dashboard.html");
+            const rol = Number(u?.rol_id ?? u?.rol);
+            location.replace(rol === 3 ? "/pages/farmacia.html" : "/pages/dashboard.html");
             return;
         }
 

@@ -36,8 +36,8 @@ test('farmacia middleware permite solo el rol 3 y acepta ambos nombres de campo'
         assert.equal(invoke({ rol: 3 }).nextCalled, true);
     });
 
-    await t.test('rol diferente', () => {
-        assert.deepEqual(invoke({ rol_id: 2 }), {
+    for (const rol of [1, 2, 4]) await t.test(`rol ${rol} rechazado`, () => {
+        assert.deepEqual(invoke({ rol_id: rol }), {
             status: 403,
             body: {
                 ok: false,

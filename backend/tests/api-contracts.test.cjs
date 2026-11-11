@@ -10,6 +10,7 @@ const TEST_SECRET = 'saludclick-api-contract-test-secret';
 const TEST_RECAPTCHA_SECRET = 'test-only-recaptcha-secret';
 const ORDER_IDEMPOTENCY_KEY = 'de305d54-75b4-431b-adb2-eb6b9e546014';
 const orderIdempotencyKeys = [];
+const registerCalls = [];
 const serviceFailures = {};
 const repositoryFailures = {};
 const testRecaptchaMiddleware = createRecaptchaMiddleware({
@@ -69,6 +70,7 @@ const dashboardRepository = {
 const fakeModules = new Map([
     ['../services/auth.service', {
         register: async () => {
+            registerCalls.push(true);
             if (serviceFailures.register) throw serviceFailures.register;
             return { ok: true, mensaje: 'Usuario registrado correctamente', id: 61 };
         },
@@ -121,7 +123,12 @@ const fakeModules = new Map([
         }
     }],
     ['../services/health.service', { health: async () => ({ ok: true, fecha: 'test-clock' }) }],
-    ['../repositories/medication.repository', { listar: async () => [{ id: 4, nombre: 'Mock medicamento' }] }],
+    ['../repositories/medication.repository', {
+        listar: async () => [
+            { id: 4, nombre: 'Medicamento disponible', categoria: 'Prueba', descripcion: '', estado: 'DISPONIBLE' },
+            { id: 5, nombre: 'Medicamento no disponible', categoria: 'Prueba', descripcion: '', estado: 'AGOTADO' }
+        ]
+    }],
     ['../repositories/dashboard.repository', dashboardRepository],
     ['../repositories/admin.repository', {
         pedidos: async () => [{ id: 81 }],
@@ -193,10 +200,10 @@ after(async () => {
     else process.env.JWT_SECRET = secretBefore;
 });
 
-test('los 22 endpoints conservan método, respuesta y códigos HTTP', async t => {
+test('los 24 endpoints conservan método, respuesta y códigos HTTP', async t => {
     const cases = [
         ['GET', '/api/health/', undefined, 200, 'ok'],
-        ['POST', '/api/auth/register', {}, 201, 'id'],
+        ['POST', '/api/auth/register', {}, 201, 'id', 1],
         ['POST', '/api/auth/login', { recaptchaToken: 'test-recaptcha-token' }, 200, 'token'],
         ['POST', '/api/auth/google', { credential: 'accepted', recaptchaToken: 'test-recaptcha-token' }, 200, 'token'],
         ['POST', '/api/auth/recuperar', { correo: 'user@example.test' }, 200, 'mensaje'],
@@ -210,12 +217,15 @@ test('los 22 endpoints conservan método, respuesta y códigos HTTP', async t =>
         ['GET', '/api/medicamentos/', undefined, 200, 'medicamentos'],
         ['GET', '/api/dashboard/me', undefined, 200, 'estadisticas'],
         ['GET', '/api/dashboard/admin', undefined, 200, 'estadisticas', 1],
-        ['GET', '/api/formulas/admin/all', undefined, 200, 'formulas', 3],
+        ['GET', '/api/farmacia/verificar-acceso', undefined, 200, 'mensaje', 3],
+        ['GET', '/api/farmacia/dashboard', undefined, 200, 'estadisticas', 3],
+        ['GET', '/api/eps/verificar-acceso', undefined, 200, 'mensaje', 4],
+        ['GET', '/api/formulas/admin/all', undefined, 200, 'formulas', 1],
         ['PATCH', '/api/formulas/admin/71', { estado: 'VALIDADA' }, 200, 'mensaje', 1],
         ['GET', '/api/formulas/', undefined, 200, 'formulas'],
         ['POST', '/api/formulas/', { nombre: 'mock.pdf', archivo: 'data:application/pdf;base64,JVBERi0xLjQ=' }, 201, 'formula'],
         ['GET', '/api/formulas/999', undefined, 404, 'mensaje'],
-        ['GET', '/api/admin/pedidos', undefined, 200, 'pedidos', 3],
+        ['GET', '/api/admin/pedidos', undefined, 200, 'pedidos', 1],
         ['PATCH', '/api/admin/pedidos/81', { estado: 'APROBADA' }, 200, 'mensaje', 1]
     ];
     for (const [method, path, body, status, key, role] of cases) {
@@ -280,6 +290,41 @@ test('login vacío y JSON malformado responden 400 sin detalles internos', async
     assert.doesNotMatch(JSON.stringify(data), /SyntaxError|stack|body-parser/i);
 });
 
+test('el registro requiere administrador y sigue creando cuentas de forma protegida', async t => {
+    const previousCalls = registerCalls.length;
+    const { response: anonymous } = await call('/api/auth/register', {
+        method: 'POST',
+        auth: false,
+        body: {}
+    });
+    assert.equal(anonymous.status, 401);
+
+    for (const role of [2, 3, 4]) {
+        await t.test(`rol ${role} no puede registrar cuentas`, async () => {
+            const { response } = await call('/api/auth/register', {
+                method: 'POST',
+                role,
+                body: {}
+            });
+            assert.equal(response.status, 403);
+        });
+    }
+
+    assert.equal(registerCalls.length, previousCalls);
+    const { response, data } = await call('/api/auth/register', {
+        method: 'POST',
+        role: 1,
+        body: {}
+    });
+    assert.equal(response.status, 201);
+    assert.deepEqual(data, {
+        ok: true,
+        mensaje: 'Usuario registrado correctamente',
+        id: 61
+    });
+    assert.equal(registerCalls.length, previousCalls + 1);
+});
+
 test('JWT ausente, inválido y vencido conservan respuestas 401', async t => {
     for (const [label, auth, authorization] of [
         ['ausente', false, undefined], ['inválido', true, 'Bearer no-es-jwt'], ['vencido', true, `Bearer ${token(2, -1)}`]
@@ -295,19 +340,80 @@ test('JWT ausente, inválido y vencido conservan respuestas 401', async t => {
     }
 });
 
-test('roles administrativos 1 y 3 pasan; usuario normal recibe 403', async t => {
+test('solo el administrador accede a las rutas administrativas', async t => {
     const adminPaths = ['/api/dashboard/admin', '/api/formulas/admin/all', '/api/admin/pedidos'];
-    for (const role of [1, 3]) for (const path of adminPaths) {
+    for (const path of adminPaths) await t.test(`administrador: ${path}`, async () => {
+        const { response } = await call(path, { role: 1 });
+        assert.equal(response.status, 200);
+    });
+    for (const role of [2, 3, 4]) for (const path of adminPaths) {
         await t.test(`rol ${role}: ${path}`, async () => {
-            const { response } = await call(path, { role });
-            assert.equal(response.status, 200);
+            const { response, data } = await call(path, { role });
+            assert.equal(response.status, 403);
+            assert.deepEqual(data, { ok: false, mensaje: 'Acceso restringido al personal administrativo.' });
         });
     }
-    for (const path of adminPaths) await t.test(`rol 2: ${path}`, async () => {
-        const { response, data } = await call(path, { role: 2 });
-        assert.equal(response.status, 403);
-        assert.deepEqual(data, { ok: false, mensaje: 'Acceso restringido al personal administrativo.' });
-    });
+});
+
+test('las rutas de farmacia y paciente respetan roles separados', async t => {
+    for (const [path, allowedRole] of [
+        ['/api/farmacia/verificar-acceso', 3],
+        ['/api/farmacia/dashboard', 3],
+        ['/api/eps/verificar-acceso', 4]
+    ]) {
+        await t.test(`rol autorizado ${allowedRole}: ${path}`, async () => {
+            const { response, data } = await call(path, { role: allowedRole });
+            assert.equal(response.status, 200);
+            if (path === '/api/farmacia/dashboard') {
+                assert.equal(data.ok, true);
+                assert.deepEqual(data.estadisticas, {
+                    totalMedicamentos: 2,
+                    medicamentosDisponibles: 1
+                });
+            } else {
+                assert.deepEqual(data, {
+                    ok: true,
+                    mensaje: path.includes('/eps/')
+                        ? 'Acceso autorizado al panel EPS.'
+                        : 'Acceso autorizado al panel de farmacia.'
+                });
+            }
+        });
+        for (const role of [1, 2, 3, 4].filter(value => value !== allowedRole)) {
+            await t.test(`rol ${role} rechazado: ${path}`, async () => {
+                const { response, data } = await call(path, { role });
+                assert.equal(response.status, 403);
+                assert.equal(data.ok, false);
+            });
+        }
+
+
+    }
+
+    for (const path of ['/api/pedidos/', '/api/dashboard/me', '/api/formulas/']) {
+        for (const role of [1, 3, 4]) await t.test(`rol ${role}: ${path}`, async () => {
+            const { response, data } = await call(path, { role });
+            assert.equal(response.status, 403);
+            assert.deepEqual(data, { ok: false, mensaje: 'Acceso restringido a pacientes.' });
+        });
+    }
+});
+
+test('los endpoints de farmacia y EPS exigen un JWT válido', async t => {
+    for (const path of ['/api/farmacia/verificar-acceso', '/api/farmacia/dashboard', '/api/eps/verificar-acceso']) {
+        await t.test(`sin token: ${path}`, async () => {
+            const { response, data } = await call(path, { auth: false });
+            assert.equal(response.status, 401);
+            assert.deepEqual(data, { ok: false, mensaje: 'Token no proporcionado' });
+        });
+        await t.test(`token inválido: ${path}`, async () => {
+            const response = await fetch(`${origin}${path}`, {
+                headers: { Authorization: 'Bearer no-es-jwt' }
+            });
+            assert.equal(response.status, 401);
+            assert.deepEqual(await response.json(), { ok: false, mensaje: 'Token inválido' });
+        });
+    }
 });
 
 test('errores de controlador conservan sus status, campos y mensajes', async t => {
@@ -338,7 +444,7 @@ test('controladores de auth y pedidos cubren errores del servicio sin filtrar de
     console.error = () => {};
     try {
         serviceFailures.register = new Error('registro fallido');
-        let result = await call('/api/auth/register', { method: 'POST', body: {} });
+        let result = await call('/api/auth/register', { method: 'POST', role: 1, body: {} });
         assert.equal(result.response.status, 400);
         assert.deepEqual(result.data, { ok: false, mensaje: 'registro fallido' });
         delete serviceFailures.register;

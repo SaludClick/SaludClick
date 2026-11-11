@@ -96,8 +96,10 @@ function obtenerRutaPorRol(usuario) {
 
     switch (rolId) {
         case 1: // Administrador
-        case 3: // Farmacia / Personal
             return "pages/admin.html";
+
+        case 3: // Farmacia / Personal
+            return "pages/farmacia.html";
 
         case 2: // Paciente / Cliente
             return "pages/dashboard.html";
@@ -124,12 +126,10 @@ function iniciarSesion(
 
     alert(`¡Bienvenido, ${resultado.usuario.nombre || "Usuario"}!`);
 
-    const destinoPendiente = continuarAccion
-        ? consumirDestinoPendiente()
-        : null;
-
-    const rutaDestino =
-        destinoPendiente || obtenerRutaPorRol(resultado.usuario);
+    const rutaPorRol = obtenerRutaPorRol(resultado.usuario);
+    const rutaDestino = continuarAccion
+        ? consumirDestinoPendiente(rutaPorRol)
+        : rutaPorRol;
 
     window.location.href = rutaDestino;
 }

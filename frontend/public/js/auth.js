@@ -4,7 +4,7 @@ const DESTINO_KEY = "saludclick_destino_pendiente_v1";
 const PAGINAS_PRIVADAS = new Set([
     "/pages/dashboard.html", "/pages/medicamentos.html", "/pages/pedidos.html",
     "/pages/historial.html", "/pages/perfil.html", "/pages/formulas.html",
-    "/pages/admin.html", "/pages/admin-cuentas.html"
+    "/pages/admin.html", "/pages/admin-cuentas.html", "/pages/farmacia.html"
 ]);
 
 // Lista cerrada: nunca navegar a una URL externa ni regresar al login.
@@ -25,10 +25,10 @@ export function validarDestino(destino) {
     return null;
 }
 
-export function consumirDestinoPendiente() {
+export function consumirDestinoPendiente(destinoPorDefecto = "/pages/dashboard.html") {
     const destino = validarDestino(sessionStorage.getItem(DESTINO_KEY));
     sessionStorage.removeItem(DESTINO_KEY);
-    return destino || "/pages/dashboard.html";
+    return destino || validarDestino(destinoPorDefecto) || "/pages/dashboard.html";
 }
 
 export function requerirSesion(destino) {
