@@ -81,6 +81,7 @@ test('Navegador con API y 50 afiliados reales en PostgreSQL aislado', { timeout:
             assert.equal(await evaluate('getComputedStyle(document.querySelector(".af-pagination nav")).position'),'static');
             await evaluate('window.scrollTo(0,0)');
             if(width===390) await captura('saludclick-afiliados-mobile.png');
+            if(width===768) await captura('saludclick-afiliados-tablet.png');
         }
         assert.deepEqual(browser.errores,[]);
         assert.ok(browser.respuestas.length>=10 && browser.respuestas.every(s=>s===200));

@@ -76,15 +76,22 @@ module.exports = async ({ t, evaluate, go, click, until, send }) => {
             assert.match(await evaluate('document.querySelector("#resumen").textContent'), /1 afiliado requiere revisión/);
             assert.equal(await evaluate(`Array.from(document.querySelectorAll('#filas tr')).find(r=>r.querySelector('.af-document strong').textContent==='0002').querySelector('.af-account-stack .af-badge:last-child').dataset.tone`), 'neutral');
             assert.equal(await evaluate(`Array.from(document.querySelectorAll('#filas tr')).find(r=>r.querySelector('.af-document strong').textContent==='0004').cells[3].querySelector('.af-badge').dataset.tone`), 'neutral');
-            await evaluate(`document.querySelector('#buscar').value='0001'; document.querySelector('#buscar').dispatchEvent(new Event('input'))`);
+            await evaluate(`document.querySelector('#filtroEps').value='2'; document.querySelector('#filtroEps').dispatchEvent(new Event('change'))`);
+            await until(() => evaluate('document.querySelector("#resultados").textContent.includes("25 resultados")'));
+            await evaluate(`document.querySelector('#buscar').value='00049'; document.querySelector('#buscar').dispatchEvent(new Event('input'))`);
             await until(() => evaluate('document.querySelectorAll("#filas tr").length === 1'));
             assert.equal(await evaluate('document.querySelector("#limpiarBusqueda").hidden'),false);
             await evaluate('window.afiliadosNoAutorizado=true'); await click('#filas button');
             await until(() => evaluate('document.querySelector("#detalle").open'));
             assert.equal(await evaluate('document.querySelector("#crearCuenta").hidden'),true);
+            await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+            await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+            assert.equal(await evaluate('document.querySelector("#detalle").contains(document.activeElement)'),true);
             await click('#cerrarFicha'); await click('#limpiarBusqueda');
             await until(() => evaluate('document.querySelectorAll("#filas tr").length === 10'));
             assert.equal(await evaluate('document.querySelector("#limpiarBusqueda").hidden'),true);
+            assert.equal(await evaluate('document.querySelector("#filtroEps").value'),'2');
+            assert.equal(await evaluate('document.activeElement.id'),'buscar');
             for (const width of [1440, 768, 390, 320]) {
                 await send('Emulation.setDeviceMetricsOverride', { width, height:900, deviceScaleFactor:1, mobile:width < 600 });
                 assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true, `Sin desbordamiento a ${width}px`);
