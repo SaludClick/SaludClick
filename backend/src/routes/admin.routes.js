@@ -2,6 +2,13 @@
 const router = require("express").Router();
 const { requireAdmin } = require("../middlewares/admin.middleware");
 const c = require("../controllers/admin.controller");
+const pacientes = require("../controllers/pacientes-autorizados.controller");
+
+// Registro maestro de pacientes autorizados, sin crear cuentas de usuario.
+router.get("/pacientes", requireAdmin, pacientes.listar);
+router.post("/pacientes", requireAdmin, pacientes.crear);
+router.get("/pacientes/:id", requireAdmin, pacientes.consultar);
+router.patch("/pacientes/:id", requireAdmin, pacientes.actualizar);
 
 // Gestión existente de pedidos.
 router.get("/pedidos", requireAdmin, c.pedidos);

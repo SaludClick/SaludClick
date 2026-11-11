@@ -64,7 +64,7 @@ test("el aprovisionamiento guarda bcrypt, restringe roles y no pasa la contraseÃ
   assert.equal(calls.length, 3);
 });
 
-test("el aprovisionamiento rechaza roles fuera de 1/3 antes de consultar o insertar", async () => {
+test("el aprovisionamiento rechaza roles fuera de 1/3/4 antes de consultar o insertar", async () => {
   let queried = false;
 
   const prisma = {
@@ -101,6 +101,33 @@ test("el aprovisionamiento rechaza roles fuera de 1/3 antes de consultar o inser
   );
 
   assert.equal(queried, false);
+});
+
+test("el aprovisionamiento permite crear una cuenta EPS con contraseÃ±a bcrypt", async () => {
+  const calls = [];
+  await provisionAdmin({
+    prisma: {
+      rol: { findUnique: async ({ where }) => ({ id: where.id }) },
+      usuario: {
+        findFirst: async () => null,
+        create: async ({ data }) => { calls.push(data); }
+      }
+    },
+    bcrypt: { hash: async (password, cost) => {
+      assert.equal(password, "local-test-password-2026");
+      assert.equal(cost, 10);
+      return "$2b$10$synthetic-test-hash";
+    } },
+    admin: {
+      name: "Local",
+      surname: "EPS",
+      email: "eps@example.invalid",
+      roleId: 4
+    },
+    password: "local-test-password-2026"
+  });
+  assert.equal(calls[0].rol_id, 4);
+  assert.equal(calls[0].password, "$2b$10$synthetic-test-hash");
 });
 
 test("el aprovisionamiento no crea duplicados de correo", async () => {

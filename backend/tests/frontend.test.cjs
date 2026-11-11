@@ -27,7 +27,9 @@ test('las rutas Astro no colisionan con public y conservan las 16 páginas HTML'
     const expectedRoutes = [
         'index.html',
         'login.html',
+        'pages/admin-afiliados.html',
         'pages/admin-cuentas.html',
+        'pages/admin-pacientes.html',
         'pages/admin.html',
         'pages/chat.html',
         'pages/dashboard.html',
@@ -65,6 +67,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     let adminDashboardRequests = 0;
     let farmaciaDashboardRequests = 0;
     let epsAccessRequests = 0;
+    let vitalixApiRequests = 0;
     const adminAccounts = [];
     const orderIdempotencyKeys = [];
     const medicamentos = [
@@ -86,6 +89,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     }));
     const server = http.createServer((req, res) => {
         const pathname = new URL(req.url, 'http://localhost').pathname;
+        if (pathname.startsWith('/api/chat/')) vitalixApiRequests += 1;
         if (pathname === '/api/medicamentos') {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true, medicamentos }));
@@ -185,7 +189,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         let file = path.resolve(staticRoot, '.' + (pathname === '/' ? '/index.html' : pathname));
         if (
             !fs.existsSync(file) &&
-            (pathname === '/pages/admin-cuentas.html' || pathname === '/pages/farmacia.html' || pathname === '/pages/eps.html' || pathname.startsWith('/_astro/'))
+            (pathname === '/pages/admin-afiliados.html' || pathname === '/login.html' || pathname === '/index.html' || pathname === '/pages/admin-cuentas.html' || pathname === '/pages/admin-pacientes.html' || pathname === '/pages/chat.html' || pathname === '/pages/farmacia.html' || pathname === '/pages/eps.html' || pathname.startsWith('/_astro/'))
         ) {
             staticRoot = builtRoot;
             file = path.resolve(staticRoot, '.' + pathname);
@@ -396,7 +400,14 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     }
 
     await go('/index.html');
+    await require('./support/vitalix-browser.cjs')({ t, evaluate, go, click, until, send, getApiRequests: () => vitalixApiRequests });
+    await require('./support/afiliados-browser.cjs')({ t, evaluate, go, click, until, send });
+    if (process.env.FRONTEND_TEST_VITALIX_ONLY === '1') {
+        assert.deepEqual(errors, [], 'VITALIX no debe producir excepciones JavaScript.');
+        return;
+    }
     await evaluate(`localStorage.setItem('saludclick_token', 'frontend-test-only'); localStorage.setItem('saludclick_user', JSON.stringify({nombre:'Prueba',correo:'prueba@example.com'}))`);
+    await go('/index.html');
     await t.test('inicio: buscar, Enter, vacÃ­o, solicitar y servicios', async () => {
         await value('#busquedaInicio', 'acetaminofen'); await click('#buscarInicio');
         await esperarPagina('/pages/medicamentos.html');
@@ -410,7 +421,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         await until(async () => { try { return (await visibleNames()).length === 1; } catch { return false; } });
         assert.deepEqual(await visibleNames(), ['Ibuprofeno']);
         await go('/index.html');
-        assert.equal(await evaluate('document.querySelector(".hero-botones a").getAttribute("href")'), 'login.html');
+        assert.equal(await evaluate('document.querySelector(".hero-botones a").getAttribute("href")'), '/login.html');
         await go('/index.html'); await click('.hero-botones a[href="#servicios"]');
         await until(() => evaluate('scrollY > 0'));
         assert.ok(['smooth', 'auto'].includes(await evaluate('getComputedStyle(document.documentElement).scrollBehavior')));
@@ -503,9 +514,9 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         assert.equal(await evaluate('document.querySelector("#adminMain h1")?.textContent.trim()'), 'Dashboard');
         assert.match(await evaluate('document.querySelector("#adminStats").textContent'), /12/);
         assert.match(await evaluate('document.querySelector("#adminStats").textContent'), /Usuarios/);
-        assert.equal(await evaluate('document.querySelectorAll(".admin-side-link").length'), 5);
+        assert.equal(await evaluate('document.querySelectorAll(".admin-side-link").length'), 6);
         assert.deepEqual(await evaluate('[...document.querySelectorAll(".admin-side-link")].map(link => link.textContent.trim())'), [
-            'Dashboard', 'Usuarios', 'Pacientes', 'Farmacias', 'EPS'
+            'Dashboard', 'Usuarios', 'Afiliados', 'Pacientes', 'Farmacias', 'EPS'
         ]);
         assert.equal(await evaluate('document.querySelector(".admin-side-link[aria-current=page]")?.textContent.trim()'), 'Dashboard');
 
@@ -835,7 +846,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     await t.test('el inicio ofrece acceso a login y no expone registro', async () => {
         await abrirInicioReal();
         assert.equal(await evaluate(`!!document.querySelector('.botones-nav a[href="registro.html"]')`), false);
-        await mouseClick('.botones-nav a[href="login.html"]');
+        await mouseClick('.home-login-link[href="/login.html"]');
         await esperarPagina('/login.html');
         t.diagnostic(`login.html: clic real -> ${await evaluate('location.href')}`);
     });

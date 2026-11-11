@@ -1,0 +1,58 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+<Layout title="Afiliados | SaludClick" bodyClass="admin-console afiliados-page">
+  <Fragment slot="head"><link rel="stylesheet" href="/css/admin-afiliados.css" /></Fragment>
+  <div class="admin-app">
+    <aside class="admin-sidebar" id="menu" aria-label="Navegación administrativa">
+      <a class="admin-brand" href="/pages/admin.html"><span class="admin-brand-mark">✚</span><span>SaludClick<small>ADMINISTRACIÓN</small></span></a>
+      <span class="admin-nav-caption">MENÚ PRINCIPAL</span>
+      <nav class="admin-side-nav" aria-label="Secciones de administración">
+        <a class="admin-side-link" href="/pages/admin.html"><i class="fa-solid fa-chart-pie" aria-hidden="true"></i><span>Dashboard</span></a>
+        <a class="admin-side-link" href="/pages/admin-cuentas.html"><i class="fa-solid fa-users" aria-hidden="true"></i><span>Usuarios</span></a>
+        <a class="admin-side-link active" aria-current="page" href="/pages/admin-afiliados.html"><i class="fa-solid fa-address-book" aria-hidden="true"></i><span>Afiliados</span></a>
+        <a class="admin-side-link" href="/pages/admin-pacientes.html"><i class="fa-solid fa-user" aria-hidden="true"></i><span>Pacientes</span></a>
+        <a class="admin-side-link" href="/pages/admin-cuentas.html?rol=3"><i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i><span>Farmacias</span></a>
+        <a class="admin-side-link" href="/pages/admin-cuentas.html?rol=4"><i class="fa-solid fa-hospital" aria-hidden="true"></i><span>EPS</span></a>
+      </nav>
+      <div class="admin-sidebar-bottom"><span class="af-sidebar-label">Sesión administrativa</span><button id="logout" class="admin-logout" type="button">Cerrar sesión</button></div>
+    </aside>
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <button class="admin-menu-toggle" id="menuToggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="menu">☰</button>
+        <div class="admin-topbar-copy"><span>Administración / Registro</span><strong>Afiliados</strong></div>
+        <span class="af-private"><i class="fa-solid fa-lock" aria-hidden="true"></i> Acceso administrativo</span>
+      </header>
+      <main class="af-content" id="adminMain">
+        <div class="af-heading"><div><span class="af-eyebrow">REGISTRO DE AFILIACIÓN</span><h1>Afiliados</h1><p>Consulta la información de afiliación y gestiona el acceso de cada persona.</p></div><button id="actualizar" class="af-button af-secondary" type="button"><span aria-hidden="true">↻</span> Actualizar</button></div>
+        <section class="af-summary" aria-label="Resumen de afiliados"><span class="af-summary-icon" aria-hidden="true"><i class="fa-solid fa-users"></i></span><div><span>Total de afiliados</span><strong id="total">—</strong></div><p id="resumen">Consultando el registro…</p></section>
+        <section class="af-register" aria-labelledby="tituloRegistro">
+          <div class="af-register-heading"><div><h2 id="tituloRegistro">Registro de afiliados</h2><p>Información original, disponible para consulta.</p></div><span class="af-page-size">10 por página</span></div>
+          <form id="filtros" class="af-filters" role="search">
+            <label class="af-search">Buscar afiliado<span class="af-input-wrap"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input id="buscar" type="search" maxlength="150" placeholder="Nombre, documento o correo" autocomplete="off" /></span></label>
+            <label>EPS<select id="filtroEps"><option value="">Todas las EPS</option></select></label>
+            <label>Afiliación<select id="filtroEstado"><option value="">Todos los estados</option></select></label>
+            <label>Cuenta<select id="filtroCuenta"><option value="">Todas las cuentas</option><option value="SIN_CUENTA">Sin cuenta</option><option value="ACTIVO">Activa</option><option value="INACTIVO">Inactiva</option></select></label>
+          </form>
+          <div class="af-results"><p id="resultados" role="status" aria-live="polite">Preparando consulta…</p><button id="limpiar" type="button" class="af-link">Limpiar filtros</button></div>
+          <div id="mensaje" class="af-notice" role="alert" hidden></div>
+          <div class="af-table-wrap" id="registro" aria-busy="true">
+            <table class="af-table"><caption class="af-sr-only">Afiliados registrados. Accede a la información completa desde las acciones.</caption><thead><tr id="cabecera"><th scope="col">Nombre completo</th><th scope="col">Documento</th><th scope="col">EPS</th><th scope="col">Afiliación</th><th scope="col">Cuenta</th><th scope="col">Acciones</th></tr></thead><tbody id="filas"></tbody></table>
+            <div id="estadoLista" class="af-list-state" role="status"><span class="af-spinner" aria-hidden="true"></span><strong id="estadoTitulo">Cargando afiliados</strong><p id="estadoDescripcion">Estamos consultando el registro.</p></div>
+          </div>
+          <footer class="af-pagination"><span id="rango">—</span><nav aria-label="Paginación de afiliados"><button id="anterior" class="af-button af-secondary" type="button" disabled aria-label="Página anterior">← <span>Anterior</span></button><span id="pagina" aria-live="polite">Página —</span><button id="siguiente" class="af-button af-secondary" type="button" disabled aria-label="Página siguiente"><span>Siguiente</span> →</button></nav></footer>
+        </section>
+      </main>
+    </div>
+  </div>
+  <dialog id="detalle" class="af-detail" aria-labelledby="tituloDetalle">
+    <header class="af-detail-header"><div><span class="af-eyebrow">FICHA DEL AFILIADO</span><h2 id="tituloDetalle">Información completa</h2></div><button id="cerrar" type="button" class="af-close" aria-label="Cerrar información completa">×</button></header>
+    <div class="af-detail-body"><div class="af-person-heading"><span id="detalleIniciales" class="af-avatar" aria-hidden="true"></span><div><h3 id="detalleNombre"></h3><p id="detalleDocumento"></p></div></div>
+      <section class="af-detail-status" aria-label="Estados independientes"><div><span>Estado de afiliación</span><strong id="estadoAfiliacion"></strong></div><div><span>Estado de cuenta</span><strong id="estadoCuenta"></strong></div></section>
+      <p id="detalleEps" class="af-eps-note"></p>
+      <h3 class="af-section-title">Datos originales</h3><dl id="campos" class="af-fields"></dl>
+      <section class="af-account-section"><h3 class="af-section-title">Acceso a SaludClick</h3><form id="crearCuenta" hidden><p>Revisa la información original antes de habilitar la cuenta de paciente.</p><label class="af-confirm"><input type="checkbox" id="verificado" required /> He verificado los 13 campos y la autorización para crear esta cuenta.</label><label class="af-password-label">Contraseña inicial<input type="password" id="password" minlength="8" required autocomplete="new-password" /></label><button class="af-button af-primary" type="submit">Crear cuenta</button></form><p id="mensajeCuenta" role="status"></p></section>
+    </div>
+  </dialog>
+  <script type="module" src="/js/admin-afiliados.js"></script>
+</Layout>

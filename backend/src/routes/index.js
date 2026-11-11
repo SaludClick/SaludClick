@@ -19,6 +19,7 @@ router.use("/medicamentos", medicationRoutes);
 router.use("/dashboard", dashboardRoutes);
 router.use("/formulas", formulaRoutes);
 router.use("/admin", adminRoutes);
+router.use("/admin/afiliados", require("./afiliados.routes"));
 router.use("/farmacia", farmaciaRoutes);
 router.use("/eps", epsRoutes);
 router.use("/chat", chatRoutes);

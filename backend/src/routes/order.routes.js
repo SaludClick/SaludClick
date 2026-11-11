@@ -2,12 +2,12 @@ const express = require("express");
 
 const router = express.Router();
 
-const { validarJWT } = require("../middlewares/auth.middleware");
+const { requirePaciente } = require("../middlewares/paciente.middleware");
 
 const controller = require("../controllers/order.controller");
 
-// Todas las rutas requieren usuario autenticado
-router.use(validarJWT);
+// Los pedidos pertenecen exclusivamente a pacientes.
+router.use(requirePaciente);
 
 // Listar pedidos del usuario
 router.get("/", controller.listarPedidos);
