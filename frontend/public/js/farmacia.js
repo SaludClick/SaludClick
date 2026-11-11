@@ -8,7 +8,8 @@ if (checkAuthGuard()) {
     if (!usuario || rol !== 3) {
         const destinos = {
             1: "/pages/admin.html",
-            2: "/pages/dashboard.html"
+            2: "/pages/dashboard.html",
+            4: "/pages/eps.html"
         };
         location.replace(destinos[rol] || "/index.html");
     } else {

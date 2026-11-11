@@ -525,6 +525,11 @@ async function iniciar() {
     }
 
     if (rol !== ROLES.ADMIN) {
+        if (rol === ROLES.EPS) {
+            location.replace("/pages/eps.html");
+            return;
+        }
+
         const sidebar = document.getElementById("menu");
         const topbar = document.querySelector(".admin-topbar");
         if (sidebar) sidebar.hidden = true;

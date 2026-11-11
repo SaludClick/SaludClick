@@ -7,7 +7,7 @@ const http = require('node:http');
 const net = require('node:net');
 const { spawn } = require('node:child_process');
 
-test('las rutas Astro no colisionan con public y conservan las 14 páginas HTML', () => {
+test('las rutas Astro no colisionan con public y conservan las 16 páginas HTML', () => {
     const frontend = path.resolve(__dirname, '../../frontend');
     const publicRoot = path.join(frontend, 'public');
     const pagesRoot = path.join(frontend, 'src/pages');
@@ -31,6 +31,7 @@ test('las rutas Astro no colisionan con public y conservan las 14 páginas HTML'
         'pages/admin.html',
         'pages/chat.html',
         'pages/dashboard.html',
+        'pages/eps.html',
         'pages/farmacia.html',
         'pages/formulas.html',
         'pages/historial.html',
@@ -63,6 +64,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     let adminAccountCreates = 0;
     let adminDashboardRequests = 0;
     let farmaciaDashboardRequests = 0;
+    let epsAccessRequests = 0;
     const adminAccounts = [];
     const orderIdempotencyKeys = [];
     const medicamentos = [
@@ -147,6 +149,12 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
             }));
             return;
         }
+        if (pathname === '/api/eps/verificar-acceso') {
+            epsAccessRequests += 1;
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, mensaje: 'Acceso autorizado al panel EPS.' }));
+            return;
+        }
         if (pathname === '/api/formulas/admin/all') {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true, formulas: [] }));
@@ -177,7 +185,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         let file = path.resolve(staticRoot, '.' + (pathname === '/' ? '/index.html' : pathname));
         if (
             !fs.existsSync(file) &&
-            (pathname === '/pages/admin-cuentas.html' || pathname === '/pages/farmacia.html' || pathname.startsWith('/_astro/'))
+            (pathname === '/pages/admin-cuentas.html' || pathname === '/pages/farmacia.html' || pathname === '/pages/eps.html' || pathname.startsWith('/_astro/'))
         ) {
             staticRoot = builtRoot;
             file = path.resolve(staticRoot, '.' + pathname);
@@ -531,6 +539,41 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         await send('Page.navigate', { url: base + '/pages/farmacia.html' });
         await until(() => evaluate('location.pathname === "/pages/dashboard.html"'));
     });
+    await t.test('dashboard EPS valida el acceso y redirige roles no autorizados', async () => {
+        await evaluate(`for (const s of [localStorage,sessionStorage]) { s.setItem('saludclick_token','frontend-test-only'); s.setItem('saludclick_user',JSON.stringify({nombre:'EPS de prueba',rol:4})); }`);
+        await go('/pages/eps.html');
+        await until(() => evaluate('document.querySelector("#epsAccess")?.getAttribute("aria-busy") === "false"'));
+
+        assert.equal(await evaluate('document.querySelector("#epsMain h1")?.textContent.trim()'), 'Dashboard');
+        assert.match(await evaluate('document.querySelector("#epsAccess").textContent'), /Acceso EPS verificado/);
+        assert.match(await evaluate('document.querySelector("#epsMain").textContent'), /no hay endpoints EPS/);
+        assert.equal(await evaluate('document.querySelectorAll(".admin-side-link").length'), 6);
+        assert.deepEqual(await evaluate('[...document.querySelectorAll(".admin-side-link")].map(link => link.querySelector("span")?.textContent.trim())'), [
+            'Dashboard', 'Afiliados', 'Farmacias', 'Autorizaciones', 'Solicitudes', 'Perfil'
+        ]);
+        assert.equal(await evaluate('document.querySelectorAll(".eps-nav-disabled[aria-disabled=true]").length'), 4);
+        assert.equal(epsAccessRequests, 1);
+
+        const adminRequests = adminDashboardRequests;
+        await send('Page.navigate', { url: base + '/pages/admin.html' });
+        await until(() => evaluate('location.pathname === "/pages/eps.html"'));
+        assert.equal(adminDashboardRequests, adminRequests);
+
+        const pharmacyRequests = farmaciaDashboardRequests;
+        await send('Page.navigate', { url: base + '/pages/farmacia.html' });
+        await until(() => evaluate('location.pathname === "/pages/eps.html"'));
+        assert.equal(farmaciaDashboardRequests, pharmacyRequests);
+
+        for (const [rol, destino] of [
+            [1, '/pages/admin.html'],
+            [2, '/pages/dashboard.html'],
+            [3, '/pages/farmacia.html']
+        ]) {
+            await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Rol ${rol}',rol:${rol}}))`);
+            await send('Page.navigate', { url: base + '/pages/eps.html' });
+            await until(() => evaluate(`location.pathname === ${JSON.stringify(destino)}`));
+        }
+    });
     await t.test('el administrador crea cuentas EPS y otros roles no ven el formulario', async subtest => {
         if (!fs.existsSync(path.join(builtRoot, 'pages/admin-cuentas.html'))) {
             subtest.skip('Compila el frontend Astro para probar la página administrativa.');
@@ -681,15 +724,22 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
             assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),null);
         }
     });
-    await t.test('las seis pÃ¡ginas privadas recuerdan accesos directos y no entran en bucle', async () => {
-        for (const pagina of ['dashboard','medicamentos','pedidos','historial','perfil','farmacia']) {
+    await t.test('las siete pÃ¡ginas privadas recuerdan accesos directos y no entran en bucle', async () => {
+        for (const pagina of ['dashboard','medicamentos','pedidos','historial','perfil','farmacia','eps']) {
             await go('/index.html'); await sinSesion();
             const route = `/pages/${pagina}.html`;
             await send('Page.navigate',{url:base+route}); await esperarPagina('/login.html');
             assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),route);
-            await login(pagina === 'farmacia' ? 3 : 2); await esperarPagina(route);
+            await login(pagina === 'farmacia' ? 3 : pagina === 'eps' ? 4 : 2); await esperarPagina(route);
             assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),null);
         }
+    });
+    await t.test('el login EPS sin destino pendiente abre su dashboard', async () => {
+        await go('/index.html'); await sinSesion(); await go('/login.html');
+        await login(4); await esperarPagina('/pages/eps.html');
+        await until(() => evaluate('document.querySelector("#epsAccess")?.getAttribute("aria-busy") === "false"'));
+        assert.match(await evaluate('document.querySelector("#epsAccess").textContent'), /Acceso EPS verificado/);
+        await click('#logout'); await esperarPagina('/login.html');
     });
     await t.test('login fallido y recarga conservan destino; Ã©xito lo consume una sola vez', async () => {
         await go('/index.html'); await sinSesion(); await click('[data-action="pedido"]'); await esperarPagina('/login.html');

@@ -96,16 +96,19 @@ function obtenerRutaPorRol(usuario) {
 
     switch (rolId) {
         case 1: // Administrador
-            return "pages/admin.html";
+            return "/pages/admin.html";
 
         case 3: // Farmacia / Personal
-            return "pages/farmacia.html";
+            return "/pages/farmacia.html";
+
+        case 4: // EPS
+            return "/pages/eps.html";
 
         case 2: // Paciente / Cliente
-            return "pages/dashboard.html";
+            return "/pages/dashboard.html";
 
         default:
-            return "index.html";
+            return "/index.html";
     }
 }
 

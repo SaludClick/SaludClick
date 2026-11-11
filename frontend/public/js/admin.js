@@ -8,7 +8,12 @@ if (checkAuthGuard()) {
 
         if (!u || Number(u.rol_id ?? u.rol) !== 1) {
             const rol = Number(u?.rol_id ?? u?.rol);
-            location.replace(rol === 3 ? "/pages/farmacia.html" : "/pages/dashboard.html");
+            const destinos = {
+                2: "/pages/dashboard.html",
+                3: "/pages/farmacia.html",
+                4: "/pages/eps.html"
+            };
+            location.replace(destinos[rol] || "/pages/dashboard.html");
             return;
         }
 
