@@ -24,20 +24,33 @@ import Layout from '../../layouts/Layout.astro';
         <span class="af-private"><i class="fa-solid fa-lock" aria-hidden="true"></i> Acceso administrativo</span>
       </header>
       <main class="af-content" id="adminMain">
-        <div class="af-heading"><div><span class="af-eyebrow">REGISTRO DE AFILIACIÓN</span><h1>Afiliados</h1><p>Consulta la información de afiliación y gestiona el acceso de cada persona.</p></div><button id="actualizar" class="af-button af-secondary" type="button"><span aria-hidden="true">↻</span> Actualizar</button></div>
-        <section class="af-summary" aria-label="Resumen de afiliados"><span class="af-summary-icon" aria-hidden="true"><i class="fa-solid fa-users"></i></span><div><span>Total de afiliados</span><strong id="total">—</strong></div><p id="resumen">Consultando el registro…</p></section>
+        <div class="af-heading">
+          <div class="af-title-group"><span class="af-page-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3.2"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M19 8v6m-3-3h6"/></svg></span><div><span class="af-eyebrow">ADMINISTRACIÓN · PACIENTES</span><h1>Gestión de afiliados</h1><p>Consulta y administración de pacientes.</p></div></div>
+          <button id="actualizar" class="af-button af-secondary" type="button"><svg class="af-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 7a7 7 0 0 1 11-1l3 6M4 12l3 6a7 7 0 0 0 11-1"/></svg> Actualizar</button>
+        </div>
+        <section class="af-statistics" aria-label="Resumen global de afiliados" aria-describedby="resumen">
+          <article class="af-stat-card"><div><span class="af-stat-label">Total de afiliados</span><strong id="total">—</strong><span class="af-stat-caption">Personas en el registro</span></div><span class="af-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m2-16a3 3 0 0 1 0 6m1 4a5 5 0 0 1 3 4v2"/></svg></span></article>
+          <article class="af-stat-card af-stat-linked"><div><span class="af-stat-label">Afiliados con cuenta</span><strong id="conCuenta" aria-busy="true">—</strong><span class="af-stat-caption">Cuenta vinculada al afiliado</span></div><span class="af-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m1-10 2 2 4-4"/></svg></span></article>
+          <article class="af-stat-card af-stat-unlinked"><div><span class="af-stat-label">Afiliados sin cuenta</span><strong id="sinCuenta" aria-busy="true">—</strong><span class="af-stat-caption">Sin una cuenta vinculada</span></div><span class="af-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m2-9h5"/></svg></span></article>
+        </section>
+        <p id="resumen" class="af-summary-note" role="status" aria-live="polite">Consultando el resumen del registro…</p>
         <section class="af-register" aria-labelledby="tituloRegistro">
-          <div class="af-register-heading"><div><h2 id="tituloRegistro">Registro de afiliados</h2><p>Información original, disponible para consulta.</p></div><span class="af-page-size">10 por página</span></div>
+          <div class="af-register-heading"><div><h2 id="tituloRegistro">Registro de afiliados</h2><p>Encuentra un paciente y consulta su información completa.</p></div><span class="af-page-size">10 por página</span></div>
           <form id="filtros" class="af-filters" role="search">
-            <label class="af-search">Buscar afiliado<span class="af-input-wrap"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input id="buscar" type="search" maxlength="150" placeholder="Nombre, documento o correo" autocomplete="off" /></span></label>
-            <label>EPS<select id="filtroEps"><option value="">Todas las EPS</option></select></label>
-            <label>Afiliación<select id="filtroEstado"><option value="">Todos los estados</option></select></label>
-            <label>Cuenta<select id="filtroCuenta"><option value="">Todas las cuentas</option><option value="SIN_CUENTA">Sin cuenta</option><option value="ACTIVO">Activa</option><option value="INACTIVO">Inactiva</option></select></label>
+            <label class="af-search" for="buscar">Buscar afiliado</label>
+            <div class="af-input-wrap"><svg class="af-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input id="buscar" type="search" maxlength="150" placeholder="Nombres, apellidos, documento o correo" autocomplete="off" aria-describedby="ayudaBusqueda" /><button id="limpiarBusqueda" class="af-clear-search" type="button" aria-label="Limpiar búsqueda" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
+            <p id="ayudaBusqueda" class="af-sr-only">Busca por nombres, apellidos, número de documento o correo electrónico.</p>
+            <div class="af-filter-controls">
+              <label>EPS<select id="filtroEps"><option value="">Todas las EPS</option></select></label>
+              <label>Estado de afiliación<select id="filtroEstado"><option value="">Todos los estados</option></select></label>
+              <label>Estado de cuenta<select id="filtroCuenta"><option value="">Todas las cuentas</option><option value="SIN_CUENTA">Sin cuenta</option><option value="ACTIVO">Activa</option><option value="INACTIVO">Inactiva</option></select></label>
+              <button id="limpiar" type="button" class="af-button af-filter-reset"><svg class="af-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8L3 5Z"/><path d="m16 16 5 5m0-5-5 5"/></svg> Limpiar filtros</button>
+            </div>
           </form>
-          <div class="af-results"><p id="resultados" role="status" aria-live="polite">Preparando consulta…</p><button id="limpiar" type="button" class="af-link">Limpiar filtros</button></div>
+          <div class="af-results"><p id="resultados" role="status" aria-live="polite">Preparando consulta…</p><span>Selecciona un afiliado para ver sus detalles</span></div>
           <div id="mensaje" class="af-notice" role="alert" hidden></div>
           <div class="af-table-wrap" id="registro" aria-busy="true">
-            <table class="af-table"><caption class="af-sr-only">Afiliados registrados. Accede a la información completa desde las acciones.</caption><thead><tr id="cabecera"><th scope="col">Nombre completo</th><th scope="col">Documento</th><th scope="col">EPS</th><th scope="col">Afiliación</th><th scope="col">Cuenta</th><th scope="col">Acciones</th></tr></thead><tbody id="filas"></tbody></table>
+            <table class="af-table"><caption class="af-sr-only">Afiliados registrados. Accede a la información completa desde las acciones.</caption><thead><tr id="cabecera"><th scope="col">Nombre completo</th><th scope="col">Tipo y documento</th><th scope="col">EPS</th><th scope="col">Estado de afiliación</th><th scope="col">Estado de cuenta</th><th scope="col">Acciones</th></tr></thead><tbody id="filas"></tbody></table>
             <div id="estadoLista" class="af-list-state" role="status"><span class="af-spinner" aria-hidden="true"></span><strong id="estadoTitulo">Cargando afiliados</strong><p id="estadoDescripcion">Estamos consultando el registro.</p></div>
           </div>
           <footer class="af-pagination"><span id="rango">—</span><nav aria-label="Paginación de afiliados"><button id="anterior" class="af-button af-secondary" type="button" disabled aria-label="Página anterior">← <span>Anterior</span></button><span id="pagina" aria-live="polite">Página —</span><button id="siguiente" class="af-button af-secondary" type="button" disabled aria-label="Página siguiente"><span>Siguiente</span> →</button></nav></footer>
@@ -46,13 +59,18 @@ import Layout from '../../layouts/Layout.astro';
     </div>
   </div>
   <dialog id="detalle" class="af-detail" aria-labelledby="tituloDetalle">
-    <header class="af-detail-header"><div><span class="af-eyebrow">FICHA DEL AFILIADO</span><h2 id="tituloDetalle">Información completa</h2></div><button id="cerrar" type="button" class="af-close" aria-label="Cerrar información completa">×</button></header>
-    <div class="af-detail-body"><div class="af-person-heading"><span id="detalleIniciales" class="af-avatar" aria-hidden="true"></span><div><h3 id="detalleNombre"></h3><p id="detalleDocumento"></p></div></div>
+    <header class="af-detail-header"><div class="af-detail-identity"><span id="detalleIniciales" class="af-avatar" aria-hidden="true"></span><div><span class="af-eyebrow">FICHA DEL AFILIADO</span><h2 id="tituloDetalle"><span id="detalleNombre">Información del afiliado</span></h2><p id="detalleDocumento"></p></div></div><button id="cerrar" type="button" class="af-close" aria-label="Cerrar ficha">×</button></header>
+    <div class="af-detail-body">
       <section class="af-detail-status" aria-label="Estados independientes"><div><span>Estado de afiliación</span><strong id="estadoAfiliacion"></strong></div><div><span>Estado de cuenta</span><strong id="estadoCuenta"></strong></div></section>
-      <p id="detalleEps" class="af-eps-note"></p>
-      <h3 class="af-section-title">Datos originales</h3><dl id="campos" class="af-fields"></dl>
-      <section class="af-account-section"><h3 class="af-section-title">Acceso a SaludClick</h3><form id="crearCuenta" hidden><p>Revisa la información original antes de habilitar la cuenta de paciente.</p><label class="af-confirm"><input type="checkbox" id="verificado" required /> He verificado los 13 campos y la autorización para crear esta cuenta.</label><label class="af-password-label">Contraseña inicial<input type="password" id="password" minlength="8" required autocomplete="new-password" /></label><button class="af-button af-primary" type="submit">Crear cuenta</button></form><p id="mensajeCuenta" role="status"></p></section>
+      <div id="campos">
+        <section class="af-field-section" aria-labelledby="tituloIdentificacion"><h3 id="tituloIdentificacion"><span aria-hidden="true">01</span> Identificación</h3><dl id="camposIdentificacion" class="af-fields"></dl></section>
+        <section class="af-field-section" aria-labelledby="tituloPersonal"><h3 id="tituloPersonal"><span aria-hidden="true">02</span> Información personal</h3><dl id="camposPersonales" class="af-fields"></dl></section>
+        <section class="af-field-section" aria-labelledby="tituloContacto"><h3 id="tituloContacto"><span aria-hidden="true">03</span> Contacto</h3><dl id="camposContacto" class="af-fields"></dl></section>
+        <section class="af-field-section" aria-labelledby="tituloAfiliacion"><h3 id="tituloAfiliacion"><span aria-hidden="true">04</span> Afiliación y EPS</h3><dl id="camposAfiliacion" class="af-fields"></dl><p id="detalleEps" class="af-eps-note"></p></section>
+      </div>
+      <section class="af-account-section"><h3 class="af-section-title">Estado de cuenta</h3><form id="crearCuenta" hidden><p>Revisa la información original antes de habilitar la cuenta de paciente.</p><label class="af-confirm"><input type="checkbox" id="verificado" required /> He verificado los 13 campos y la autorización para crear esta cuenta.</label><label class="af-password-label">Contraseña inicial<input type="password" id="password" minlength="8" required autocomplete="new-password" /></label><button class="af-button af-primary" type="submit">Crear cuenta</button></form><p id="mensajeCuenta" role="status"></p></section>
     </div>
+    <footer class="af-detail-footer"><span>Información original del registro</span><button id="cerrarFicha" type="button" class="af-button af-secondary">Cerrar ficha</button></footer>
   </dialog>
   <script type="module" src="/js/admin-afiliados.js"></script>
 </Layout>
