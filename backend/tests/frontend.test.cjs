@@ -65,6 +65,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     let farmaciaStatus = 'APROBADA';
     let farmaciaUpdates = 0;
     let farmaciaRequests = 0;
+    let chatRequests = 0;
     const adminAccounts = [];
     const orderIdempotencyKeys = [];
     const medicamentos = [
@@ -86,6 +87,7 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     }));
     const server = http.createServer((req, res) => {
         const pathname = new URL(req.url, 'http://localhost').pathname;
+        if (pathname.startsWith('/api/chat/') || pathname.startsWith('/socket.io/')) chatRequests++;
         if (pathname.startsWith('/api/farmacia/')) {
             farmaciaRequests++;
             res.setHeader('Content-Type', 'application/json');
@@ -894,6 +896,16 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         await evaluate(`sessionStorage.removeItem('saludclick_user'); localStorage.setItem('saludclick_user','invalid-json')`);
         await send('Page.navigate', { url: base + '/pages/perfil.html' });
         await esperarPagina('/login.html');
+    });
+    await t.test('chat rechaza sesiones ausentes y roles ajenos antes de consultar o conectar sockets', async () => {
+        for (const [role, home] of [[null, '/login.html'], [1, '/pages/admin.html'], [4, '/pages/perfil.html'], [99, '/login.html']]) {
+            await sinSesion();
+            if (role !== null) await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only'); localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Personal',rol:${role}}))`);
+            const before = chatRequests;
+            await send('Page.navigate', { url: base + '/pages/chat.html' });
+            await esperarPagina(home);
+            assert.equal(chatRequests, before);
+        }
     });
     await t.test('sin excepciones JavaScript propias', () => assert.deepEqual(errors,[]));
 });

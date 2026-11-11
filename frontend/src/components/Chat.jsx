@@ -3,14 +3,20 @@ import "../styles/chat.css";
 
 const apiBase = () => (window.SALUDCLICK_API_URL || "").replace(/\/+$/, "");
 const getToken = () => typeof window === "undefined" ? null : sessionStorage.getItem("saludclick_token") || localStorage.getItem("saludclick_token");
-const getCurrentUser = () => { if (typeof window === "undefined") return null; const value = sessionStorage.getItem("saludclick_user") || localStorage.getItem("saludclick_user"); return value ? JSON.parse(value) : null; };
+const getCurrentUser = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const value = sessionStorage.getItem('saludclick_user') || localStorage.getItem('saludclick_user');
+    return value ? JSON.parse(value) : null;
+  } catch { return null; }
+};
 async function apiFetch(path, options = {}) {
   const headers = new Headers(options.headers || {});
   headers.set("Authorization", `Bearer ${getToken()}`);
   if (options.body) headers.set("Content-Type", "application/json");
   const response = await fetch(`${apiBase()}/api/${path}`, { ...options, headers });
   const data = await response.json().catch(() => ({}));
-  if (response.status === 401) { window.location.href = "/login"; throw new Error("Tu sesión expiró. Inicia sesión nuevamente."); }
+  if (response.status === 401) { window.location.href = "/login.html"; throw new Error("Tu sesión expiró. Inicia sesión nuevamente."); }
   if (!response.ok || data.ok === false) throw new Error(data.mensaje || "No se pudo completar la operación.");
   return data;
 }
@@ -30,6 +36,8 @@ const displayDate = (date) => new Intl.DateTimeFormat("es-CO", { dateStyle: "sho
 
 function Chat() {
   const user = getCurrentUser();
+  const role = Number(user?.rol_id ?? user?.rol);
+  const allowed = !!getToken() && [2, 3].includes(role);
   const isStaff = Number(user?.rol ?? user?.rol_id) === 3;
   const [conversations, setConversations] = useState([]);
   const [active, setActive] = useState(null);
@@ -42,6 +50,7 @@ function Chat() {
   const endRef = useRef(null);
 
   const loadConversations = useCallback(async () => {
+    if (!allowed) return;
     try {
       let result = await apiFetch("chat/conversaciones");
       if (!isStaff && !result.conversaciones.length) {
@@ -51,15 +60,16 @@ function Chat() {
       setConversations(result.conversaciones);
       if (result.conversaciones[0]) setActive((current) => current || result.conversaciones[0]);
     } catch (e) { setError(e.message); }
-  }, [isStaff]);
+  }, [isStaff, allowed]);
 
   useEffect(() => { loadConversations(); }, []);
 
   useEffect(() => {
-    if (!getToken()) window.location.replace("/login");
-  }, []);
+    if (!allowed) window.location.replace(getToken() && role === 1 ? '/pages/admin.html' : getToken() && role === 4 ? '/pages/perfil.html' : '/login.html');
+  }, [allowed, role]);
 
   useEffect(() => {
+    if (!allowed) return;
     let disposed = false;
     loadSocketClient().then((io) => {
       if (disposed) return;
@@ -73,7 +83,7 @@ function Chat() {
       socket.on("chat:status", ({ estado }) => setMessages((previous) => previous.map((message) => message.remitente_id !== Number(user?.id) ? { ...message, estado } : message)));
     }).catch((e) => setError(e.message));
     return () => { disposed = true; socketRef.current?.disconnect(); };
-  }, [loadConversations]);
+  }, [loadConversations, allowed]);
 
   useEffect(() => {
     if (!active) return;
