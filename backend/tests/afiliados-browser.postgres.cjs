@@ -36,6 +36,10 @@ test('Navegador con API y 50 afiliados reales en PostgreSQL aislado', { timeout:
         await send('Page.navigate',{url:origin + '/pages/admin-afiliados.html'});
         await until(() => evaluate('document.querySelectorAll("#filas tr").length===10'));
         assert.equal(await evaluate('document.querySelector("#total").textContent'),'50');
+        await until(() => evaluate('document.querySelector("#sinCuenta").getAttribute("aria-busy")==="false"'));
+        assert.equal(await evaluate('document.querySelector("#conCuenta").textContent'),'0');
+        assert.equal(await evaluate('document.querySelector("#sinCuenta").textContent'),'50');
+        assert.equal(await evaluate('document.querySelector("#adminMain h1").textContent'),'Gestión de afiliados');
         assert.equal(await evaluate('document.querySelectorAll("#cabecera th").length'),6);
         const filas = await evaluate('[...document.querySelectorAll("#filas tr")].map(r=>({nombre:r.querySelector(".af-person strong").textContent,documento:r.querySelector(".af-document strong").textContent}))');
         for (const f of filas) assert.ok(originales.some(a => `${a.nombres} ${a.apellidos}`===f.nombre && a.documento===f.documento));
@@ -54,10 +58,11 @@ test('Navegador con API y 50 afiliados reales en PostgreSQL aislado', { timeout:
         await until(() => evaluate('document.querySelectorAll("#filas tr").length===1 && document.querySelector("#registro").getAttribute("aria-busy")==="false"'));
         await evaluate('document.querySelector("#filas button").click()');
         await until(() => evaluate('document.querySelector("#detalle").open'));
-        const detalle = await evaluate('[...document.querySelectorAll("#campos .af-field")].map(n=>({campo:n.querySelector("small").textContent,valor:n.querySelector("dd").textContent}))');
+        const detalle = await evaluate('[...document.querySelectorAll("#campos .af-field")].map(n=>({campo:n.dataset.field,valor:n.querySelector("dd").textContent}))');
         assert.equal(detalle.length,13);
         for (const c of CAMPOS) assert.equal(detalle.find(d=>d.campo===c).valor,originales[0][c]);
         assert.equal(await evaluate('document.querySelector("#estadoCuenta").textContent'),'Sin cuenta');
+        assert.equal(await evaluate('document.querySelectorAll("#campos .af-field-section").length'),4);
         assert.equal(await evaluate('document.querySelector("#crearCuenta").hidden'),true);
         await captura('saludclick-afiliados-detalle.png');
         await evaluate('document.querySelector("#cerrar").click();document.querySelector("#limpiar").click()');

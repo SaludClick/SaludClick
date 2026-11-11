@@ -38,6 +38,7 @@ async function startServer() {
 startServer();
 
 async function shutdown() {
+    await require("./src/config/eps-prisma").cerrarConexionEPS();
     await pool.end();
     await prisma.$disconnect();
     process.exit(0);

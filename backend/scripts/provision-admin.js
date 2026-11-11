@@ -1,6 +1,6 @@
 
 const MIN_PASSWORD_LENGTH = 16;
-const ALLOWED_ADMIN_ROLES = new Set([1, 3]);
+const ALLOWED_ADMIN_ROLES = new Set([1, 3, 4]);
 
 async function provisionAdmin({ prisma, bcrypt, admin, password }) {
   const name = String(admin.name || "").trim();
@@ -116,7 +116,7 @@ async function main() {
     const surname = await promptLine(rl, "Apellido: ");
     const email = await promptLine(rl, "Correo: ");
     const documentNumber = await promptLine(rl, "Documento (opcional): ");
-    const roleId = await promptLine(rl, "Rol administrativo (1 o 3): ");
+    const roleId = await promptLine(rl, "Rol de cuenta (1, 3 o 4): ");
 
     rl.close();
 
