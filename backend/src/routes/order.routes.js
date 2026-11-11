@@ -2,12 +2,12 @@ const express = require("express");
 
 const router = express.Router();
 
-const { validarJWT } = require("../middlewares/auth.middleware");
+const { requireUsuario } = require("../middlewares/role.middleware");
 
 const controller = require("../controllers/order.controller");
 
 // Todas las rutas requieren usuario autenticado
-router.use(validarJWT);
+router.use(requireUsuario);
 
 // Listar pedidos del usuario
 router.get("/", controller.listarPedidos);

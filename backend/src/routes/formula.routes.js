@@ -1,10 +1,10 @@
 const router=require("express").Router();
-const {validarJWT}=require("../middlewares/auth.middleware");
+const {requireUsuario}=require("../middlewares/role.middleware");
 const {requireAdmin}=require("../middlewares/admin.middleware");
 const c=require("../controllers/formula.controller");
 router.get("/admin/all",requireAdmin,c.adminList);
 router.patch("/admin/:id",requireAdmin,c.adminEstado);
-router.get("/",validarJWT,c.listar);
-router.post("/",validarJWT,c.crear);
-router.get("/:id",validarJWT,c.ver);
+router.get("/",requireUsuario,c.listar);
+router.post("/",requireUsuario,c.crear);
+router.get("/:id",requireUsuario,c.ver);
 module.exports=router;
