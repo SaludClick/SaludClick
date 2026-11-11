@@ -32,4 +32,13 @@ async function listarInventario({ buscar, skip, take }) {
     return { medicamentos, total };
 }
 
-module.exports = { listarPedidos, listarInventario };
+async function avanzarPedido(id, actual, siguiente) {
+    // Comparar y actualizar en una sola operación evita sobrescribir una
+    // transición concurrente realizada por otra farmacia o el administrador.
+    const result = await prisma.solicitud.updateMany({
+        where: { id, estado: actual, pagos: { some: { estado: 'APROBADO' } } },
+        data: { estado: siguiente, updated_at: new Date() }
+    });
+    return result.count;
+}
+module.exports = { listarPedidos, listarInventario, avanzarPedido };

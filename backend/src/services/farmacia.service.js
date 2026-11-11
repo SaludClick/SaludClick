@@ -26,4 +26,17 @@ async function listarInventario(query = {}) {
     const { medicamentos, total } = await repository.listarInventario({ ...options, buscar: query.buscar?.trim() || '' });
     return { medicamentos, paginacion: pageInfo(options, total) };
 }
-module.exports = { listarPedidos, listarInventario };
+const SIGUIENTE = Object.freeze({ APROBADA: 'PREPARANDO', PREPARANDO: 'LISTA', LISTA: 'ENTREGADA' });
+async function avanzarPedido(idEntrada, body) {
+    if (!/^[1-9]\d*$/.test(String(idEntrada)) || !Number.isSafeInteger(Number(idEntrada))) throw invalid('Pedido no válido.');
+    if (!body || typeof body !== 'object' || Array.isArray(body) ||
+        Object.keys(body).some(key => !['estadoActual', 'estado'].includes(key)) ||
+        !Object.hasOwn(SIGUIENTE, body.estadoActual) || SIGUIENTE[body.estadoActual] !== body.estado) {
+        throw invalid('Solo se permite avanzar de aprobado a preparando, listo y entregado.');
+    }
+    const id = Number(idEntrada);
+    const count = await repository.avanzarPedido(id, body.estadoActual, body.estado);
+    if (!count) throw Object.assign(new Error('El pedido cambió, no existe o no tiene un pago aprobado. Actualiza la lista.'), { status: 409 });
+    return { id, estado: body.estado };
+}
+module.exports = { listarPedidos, listarInventario, avanzarPedido };

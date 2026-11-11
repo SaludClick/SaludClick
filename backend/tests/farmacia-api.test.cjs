@@ -5,12 +5,14 @@ const http = require('node:http');
 const jwt = require('jsonwebtoken');
 const calls = [];
 let fail = false;
+let updateCount = 1;
 const fakePrisma = {};
 for (const name of ['solicitud', 'medicamento']) fakePrisma[name] = {
     findMany: async options => { calls.push({ name, options }); if (fail) throw new Error('private provider diagnostics'); return []; },
     count: async () => 0
 };
 require.cache[require.resolve('../src/config/prisma')].exports = fakePrisma;
+fakePrisma.solicitud.updateMany = async options => { calls.push({ operation: 'update', options }); return { count: updateCount }; };
 const app = require('../src/app');
 const secretBefore = process.env.JWT_SECRET;
 let server, base;
@@ -24,8 +26,9 @@ after(async () => {
     await new Promise(resolve => server.close(resolve));
     if (secretBefore === undefined) delete process.env.JWT_SECRET; else process.env.JWT_SECRET = secretBefore;
 });
-async function request(path, role = 3) {
-    return fetch(base + '/api/farmacia' + path, { headers: role === null ? {} : {
+async function request(path, role = 3, body) {
+    return fetch(base + '/api/farmacia' + path, { method: body === undefined ? 'GET' : 'PATCH', body: body === undefined ? undefined : JSON.stringify(body), headers: role === null ? {} : {
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${jwt.sign({ id: 30, rol: role }, process.env.JWT_SECRET)}`
     } });
 }
@@ -69,4 +72,47 @@ test('fallos del proveedor no filtran diagnosticos privados', async () => {
         assert.equal(response.status, 500);
         assert.equal(JSON.stringify(await response.json()).includes('private provider'), false);
     } finally { fail = false; }
+});
+
+test('farmacia avanza unicamente estados consecutivos con pago aprobado y control de concurrencia', async () => {
+    for (const [estadoActual, estado] of [['APROBADA', 'PREPARANDO'], ['PREPARANDO', 'LISTA'], ['LISTA', 'ENTREGADA']]) {
+        const response = await request('/pedidos/9/estado', 3, { estadoActual, estado });
+        assert.equal(response.status, 200);
+        assert.deepEqual((await response.json()).pedido, { id: 9, estado });
+        const { options } = calls.at(-1);
+        assert.deepEqual(options.where, { id: 9, estado: estadoActual, pagos: { some: { estado: 'APROBADO' } } });
+        assert.equal(options.data.estado, estado);
+        assert.ok(options.data.updated_at instanceof Date);
+    }
+});
+
+test('se rechazan saltos, retrocesos, cancelaciones, campos adicionales e identificadores invalidos', async () => {
+    const bodies = [
+        { estadoActual: 'APROBADA', estado: 'ENTREGADA' },
+        { estadoActual: 'PREPARANDO', estado: 'APROBADA' },
+        { estadoActual: 'LISTA', estado: 'CANCELADA' },
+        { estadoActual: 'ENTREGADA', estado: 'APROBADA' },
+        { estadoActual: 'toString', estado: 'PREPARANDO' },
+        { estadoActual: 'APROBADA', estado: 'PREPARANDO', usuario_id: 99 }, {}
+    ];
+    for (const body of bodies) {
+        const count = calls.length;
+        assert.equal((await request('/pedidos/9/estado', 3, body)).status, 400);
+        assert.equal(calls.length, count);
+    }
+    for (const id of ['0', '-1', '1.2', 'invalid', '9007199254740992']) {
+        assert.equal((await request(`/pedidos/${id}/estado`, 3, { estadoActual: 'APROBADA', estado: 'PREPARANDO' })).status, 400);
+    }
+});
+
+test('otra transicion concurrente responde 409 y otros roles nunca escriben', async () => {
+    const body = { estadoActual: 'APROBADA', estado: 'PREPARANDO' };
+    for (const role of [null, 1, 2, 4, 99]) {
+        const count = calls.length;
+        assert.equal((await request('/pedidos/9/estado', role, body)).status, role === null ? 401 : 403);
+        assert.equal(calls.length, count);
+    }
+    updateCount = 0;
+    try { assert.equal((await request('/pedidos/9/estado', 3, body)).status, 409); }
+    finally { updateCount = 1; }
 });
