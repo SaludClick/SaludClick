@@ -60,6 +60,14 @@ export const setSession = (token, usuario, recordar = true) => {
 
 export const getToken = () => sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
 
+export const actualizarUsuarioSesion = usuario => {
+    const token = getToken();
+    if (!token) return false;
+    const recordar = !sessionStorage.getItem(TOKEN_KEY);
+    setSession(token, usuario, recordar);
+    return true;
+};
+
 export const getCurrentUser = () => {
     const user = sessionStorage.getItem(USER_KEY) || localStorage.getItem(USER_KEY);
     try {

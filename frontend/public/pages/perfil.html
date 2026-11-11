@@ -83,7 +83,8 @@
                             <label for="email">Correo Electrónico</label>
                             <div class="input-icon-wrapper">
                                 <i class="fa-solid fa-envelope input-icon"></i>
-                                <input id="email" type="email" placeholder="ejemplo@correo.com" required>
+                                <input id="email" type="email" placeholder="ejemplo@correo.com" required readonly aria-describedby="correoSoloLectura">
+                                <small id="correoSoloLectura">El correo de la cuenta no se modifica desde el perfil.</small>
                             </div>
                         </div>
 

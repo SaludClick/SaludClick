@@ -180,6 +180,18 @@ test('auth repository confirma la actualización de contraseña y revierte fallo
     assert.ok(sqlCalls.some(({ sql }) => sql === 'RELEASE'));
 });
 
+test('perfil conserva la cedula omitida y solo la actualiza si fue enviada expresamente', async () => {
+    for (const [extra, supplied, document] of [[{}, false, null], [{ numeroDocumento: 'CC-123' }, true, 'CC-123'], [{ cedula: 'CC-456' }, true, 'CC-456'], [{ numeroDocumento: '' }, true, null]]) {
+        sqlCalls.length = 0;
+        await authRepository.actualizarPerfil(31, { nombre: 'Ana', apellido: 'Prueba', ...extra });
+        const call = sqlCalls.find(({ sql }) => sql.includes('UPDATE usuarios'));
+        assert.match(call.sql, /cedula = CASE WHEN \$8 THEN \$5 ELSE cedula END/);
+        assert.equal(call.params[4], document);
+        assert.equal(call.params[6], 31);
+        assert.equal(call.params[7], supplied);
+    }
+});
+
 test('formula repository conserva el propietario, el estado y los filtros de listado', async () => {
     assert.equal(await formulaRepository.crear({
         usuarioId: 31, nombreArchivo: 'abc.pdf', nombreOriginal: 'receta.pdf',

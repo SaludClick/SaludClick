@@ -66,6 +66,9 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     let farmaciaUpdates = 0;
     let farmaciaRequests = 0;
     let chatRequests = 0;
+    let profileEnabled = false;
+    let profileUpdate;
+    const demoProfile = { id: 30, nombre: 'Farmacia', apellido: 'Prueba', correo: 'farmacia@example.test', numeroDocumento: 'DOC-123', rol_id: 3 };
     const adminAccounts = [];
     const orderIdempotencyKeys = [];
     const medicamentos = [
@@ -87,6 +90,19 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
     }));
     const server = http.createServer((req, res) => {
         const pathname = new URL(req.url, 'http://localhost').pathname;
+        if (pathname === '/api/auth/profile' && profileEnabled) {
+            res.setHeader('Content-Type', 'application/json');
+            if (req.method === 'PUT') {
+                let raw = '';
+                req.on('data', chunk => { raw += chunk; });
+                req.on('end', () => {
+                    profileUpdate = JSON.parse(raw);
+                    Object.assign(demoProfile, profileUpdate);
+                    res.end(JSON.stringify({ ok: true, mensaje: 'Perfil actualizado correctamente.', usuario: demoProfile }));
+                });
+            } else res.end(JSON.stringify({ ok: true, usuario: demoProfile }));
+            return;
+        }
         if (pathname.startsWith('/api/chat/') || pathname.startsWith('/socket.io/')) chatRequests++;
         if (pathname.startsWith('/api/farmacia/')) {
             farmaciaRequests++;
@@ -896,6 +912,25 @@ test('controles del frontend en Edge headless', { timeout: 120000 }, async t => 
         await evaluate(`sessionStorage.removeItem('saludclick_user'); localStorage.setItem('saludclick_user','invalid-json')`);
         await send('Page.navigate', { url: base + '/pages/perfil.html' });
         await esperarPagina('/login.html');
+    });
+    await t.test('guardar perfil conserva sesion temporal, rol y documento sin ofrecer cambio de correo', async () => {
+        profileEnabled = true;
+        try {
+            await sinSesion();
+            await evaluate(`(async()=>{const auth=await import('/js/auth.js'); auth.setSession('frontend-test-only',{nombre:'Farmacia',rol:3},false);})()`);
+            await go('/pages/perfil.html');
+            await until(() => evaluate('document.querySelector("#numeroDocumento").value === "DOC-123"'));
+            assert.equal(await evaluate('document.querySelector("#email").readOnly'), true);
+            await value('#numeroDocumento', 'DOC-456');
+            await click('#guardarPerfil');
+            await until(() => evaluate('document.querySelector("#mensajePerfil").textContent.includes("actualizado correctamente")'));
+            assert.equal(profileUpdate.numeroDocumento, 'DOC-456');
+            assert.equal(profileUpdate.rol_id, undefined);
+            assert.equal(profileUpdate.correo, undefined);
+            assert.equal(await evaluate('localStorage.getItem("saludclick_token")'), null);
+            assert.equal(await evaluate('sessionStorage.getItem("saludclick_token")'), 'frontend-test-only');
+            assert.equal(await evaluate('JSON.parse(sessionStorage.getItem("saludclick_user")).rol'), 3);
+        } finally { profileEnabled = false; }
     });
     await t.test('chat rechaza sesiones ausentes y roles ajenos antes de consultar o conectar sockets', async () => {
         for (const [role, home] of [[null, '/login.html'], [1, '/pages/admin.html'], [4, '/pages/perfil.html'], [99, '/login.html']]) {
