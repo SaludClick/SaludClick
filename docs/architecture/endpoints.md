@@ -1,4 +1,27 @@
-# Contratos HTTP actuales
+# Contratos HTTP y referencia histórica
+
+## Contrato vigente tras el PR #3
+
+- `/api/administrativo` contiene usuarios, solicitudes administrativas,
+  mensajes, notificaciones, informes, auditoría, perfil y configuración.
+  El inventario detallado está en `../calidad/reportes/administrador-implementacion.md`.
+- `/api/dashboard/admin` usa exclusivamente estadísticas administrativas y
+  requiere cuenta activa de rol 1, rol vigente y sesión no revocada.
+- El rol 1 recibe 403 en citas, medicamentos, fórmulas, pedidos y operaciones
+  de farmacia. Las antiguas URLs `/api/admin/pedidos` y `/api/formulas/admin/*`
+  son direcciones de compatibilidad bloqueadas, sin acceso clínico.
+- Pedidos personales, dashboard personal y fórmulas propias requieren rol 2.
+- `/api/farmacia/pedidos`, `/api/farmacia/inventario` y
+  `PATCH /api/farmacia/pedidos/:id/estado` requieren rol 3. Se conservan
+  `/api/farmacia/dashboard` y `/api/farmacia/verificar-acceso`.
+- `/api/eps/verificar-acceso` requiere rol 4.
+- Las rutas `/api/chat` y Socket.IO existentes pertenecen a paciente/farmacia;
+  `/api/administrativo` y su namespace son el canal administrativo separado.
+- `POST /api/auth/register` delega en la misma creación administrativa
+  auditada de usuarios; no es registro público.
+
+El inventario que sigue es una referencia histórica de la refactorización,
+no una autorización vigente para las rutas clínicas del administrador.
 
 Inventario de `backend/src/routes`, controladores, servicios y repositorios. Los prefijos se registran en `backend/src/app.js` (`/api`) y `backend/src/routes/index.js`. No introducir cambios de contrato durante la refactorización. Los campos opcionales no se marcan obligatorios salvo que el controlador/servicio actual lo compruebe explícitamente.
 

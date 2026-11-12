@@ -15,4 +15,4 @@ async function main() {
   console.log(JSON.stringify(report,null,2));
   if (total !== 1000 || duplicados.length) process.exitCode = 1;
 }
-main().catch(e=>{console.error(e.message);process.exitCode=1;}).finally(()=>prisma.$disconnect());
+main().catch(e=>{console.error(`No se pudo verificar el catálogo (${e.code || e.name}).`);process.exitCode=1;}).finally(()=>prisma.$disconnect());

@@ -1,10 +1,12 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import FarmaciaOperaciones from "../../components/FarmaciaOperaciones.astro";
 
 const title = "Dashboard de Farmacia | SaludClick";
 ---
 
 <Layout title={title} bodyClass="admin-console">
+  <Fragment slot="head"><link rel="stylesheet" href="/css/farmacia.css" /></Fragment>
   <div class="admin-app">
     <aside class="admin-sidebar" id="menu" aria-label="Navegación de farmacia">
       <a href="/pages/farmacia.html" class="admin-brand" aria-label="SaludClick, dashboard de farmacia">
@@ -24,25 +26,27 @@ const title = "Dashboard de Farmacia | SaludClick";
           <i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i>
           <span>Medicamentos</span>
         </a>
-        <span class="admin-side-link farmacia-nav-disabled" aria-disabled="true" title="Esta operación aún no está habilitada para Farmacia.">
+        <a class="admin-side-link" href="#pedidosFarmacia">
           <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
           <span>Solicitudes</span>
-          <small>No disponible</small>
-        </span>
+
+        </a>
         <span class="admin-side-link farmacia-nav-disabled" aria-disabled="true" title="Esta operación aún no está habilitada para Farmacia.">
           <i class="fa-solid fa-file-medical" aria-hidden="true"></i>
           <span>Fórmulas</span>
           <small>No disponible</small>
         </span>
-        <span class="admin-side-link farmacia-nav-disabled" aria-disabled="true" title="Esta operación aún no está habilitada para Farmacia.">
+        <a class="admin-side-link" href="#pedidosFarmacia">
           <i class="fa-solid fa-truck-medical" aria-hidden="true"></i>
           <span>Entregas</span>
-          <small>No disponible</small>
-        </span>
+
+        </a>
         <a class="admin-side-link" href="/pages/perfil.html">
           <i class="fa-solid fa-user" aria-hidden="true"></i>
           <span>Perfil</span>
         </a>
+        <a class="admin-side-link" href="#inventarioFarmacia"><span>Inventario</span></a>
+        <a class="admin-side-link" href="/pages/chat-farmacia.html"><span>Chat con pacientes</span></a>
       </nav>
 
       <div class="admin-sidebar-bottom">
@@ -79,12 +83,12 @@ const title = "Dashboard de Farmacia | SaludClick";
         </div>
       </header>
 
-      <main class="admin-content" id="farmaciaMain">
+      <main class="admin-content" id="farmaciaMain" hidden>
         <section class="admin-page-heading">
           <div>
             <span class="admin-eyebrow">OPERACIÓN DE FARMACIA</span>
             <h1>Dashboard</h1>
-            <p>Consulta el catálogo de medicamentos. Solicitudes, fórmulas y entregas no están habilitadas para este rol.</p>
+            <p>Consulta el catálogo, organiza los pedidos pagados y revisa las existencias.</p>
           </div>
           <button id="refreshFarmacia" class="btn-outline admin-refresh" type="button">
             <i class="fa-solid fa-rotate" aria-hidden="true"></i>
@@ -125,6 +129,7 @@ const title = "Dashboard de Farmacia | SaludClick";
             </table>
           </div>
         </section>
+        <FarmaciaOperaciones />
       </main>
     </div>
   </div>

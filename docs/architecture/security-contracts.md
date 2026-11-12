@@ -1,6 +1,13 @@
 # Contratos de autenticación y seguridad
 
-Este documento describe los contratos de autenticación actuales.
+Este documento conserva la caracterización histórica y las aclaraciones
+vigentes de la integración. Para la matriz actual, consultar
+`roles-y-permisos.md` y `../calidad/reportes/resolucion-pr3.md`.
+
+Las rutas administrativas y de soporte usan una sesión con estado ACTIVO,
+rol vigente consultado en PostgreSQL y comprobación de revocación. El rol 1
+no accede a citas, medicamentos, pedidos, inventario ni fórmulas médicas.
+Los endpoints personales de pedidos, dashboard y fórmulas exigen rol 2.
 
 La lógica de entrada para registro y restablecimiento se ubica en `backend/src/validators/auth.validator.js`. Las operaciones de perfil pasan por `backend/src/services/user.service.js` y `backend/src/validators/user.validator.js`; la persistencia sigue en `backend/src/repositories/auth.repository.js`. Crear cuentas requiere `requireAdmin` (rol 1).
 
@@ -30,7 +37,9 @@ La lógica de entrada para registro y restablecimiento se ubica en `backend/src/
 
 - `backend/private_uploads` no se sirve mediante `express.static`; el endpoint de lectura verifica JWT, consulta fórmula por `id` y usuario propietario, y luego transmite el archivo.
 - Carga: JWT obligatorio, formatos admitidos PDF/JPEG/PNG/WEBP, máximo 5 MiB, validación de firma básica y nombre de archivo almacenado generado por UUID. Propietario procede de `req.usuario.id`.
-- La administración de fórmulas requiere rol 1. No se debe mover el directorio, cambiar permisos ni relajar la consulta de propiedad en la etapa de arquitectura.
+- El administrador no puede revisar fórmulas. Se mantiene el directorio
+  privado y el control de propietario del paciente; las antiguas rutas
+  administrativas de fórmulas responden 403.
 
 ## Matriz de pruebas de caracterización
 

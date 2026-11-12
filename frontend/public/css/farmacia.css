@@ -1,0 +1,17 @@
+.farmacia-main { max-width: 1100px; padding-top: 2rem; padding-bottom: 3rem; }
+.farmacia-main section { margin-top: 2rem; padding: 1.25rem; border: 1px solid #d6e2dd; border-radius: 12px; background: #fff; scroll-margin-top: 6rem; }
+.farmacia-filters, .farmacia-pagination { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; margin: 1rem 0; }
+.farmacia-main button { background: #146c43; color: white; border: 0; border-radius: 6px; padding: .65rem 1rem; cursor: pointer; }
+.farmacia-main button:disabled { background: #e1e7e3; color: #42564b; cursor: default; }
+.farmacia-main :is(input, select) { padding: .65rem; border: 1px solid #71877b; border-radius: 6px; max-width: 100%; }
+.farmacia-main :is(button, input, select):focus-visible { outline: 3px solid #1456a0; outline-offset: 3px; }
+.farmacia-order { border-bottom: 1px solid #d6e2dd; padding: 1rem 0; }
+.farmacia-order p { overflow-wrap: anywhere; }
+.farmacia-order ul { padding-left: 1.5rem; margin: .75rem 0; }
+.farmacia-table { overflow-x: auto; }
+.farmacia-table table { width: 100%; border-collapse: collapse; }
+.farmacia-table :is(th, td) { text-align: left; padding: .75rem; border-bottom: 1px solid #d6e2dd; }
+.farmacia-table caption { text-align: left; font-weight: 600; margin-bottom: .5rem; }
+#farmaciaMessage[role=alert] { color: #a01818; }
+[hidden] { display: none !important; }
+@media (max-width: 480px) { .farmacia-main section { padding: .75rem; } .farmacia-filters { align-items: stretch; flex-direction: column; } }

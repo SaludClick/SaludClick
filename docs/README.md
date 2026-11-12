@@ -4,6 +4,9 @@ SaludClick es una plataforma web de demostración para gestión de medicamentos,
 
 ## Funcionalidades
 
+La separación actual de usuario, farmacia y administrador, las rutas operativas y
+sus restricciones están documentadas en [Roles y permisos](architecture/roles-y-permisos.md).
+
 ### Usuario
 - Registro e inicio de sesión con JWT.
 - Recuperación de contraseña por correo.

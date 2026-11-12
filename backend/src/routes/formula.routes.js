@@ -1,10 +1,12 @@
 const router=require("express").Router();
+const {requireUsuario}=require("../middlewares/role.middleware");
 const {requireAdmin}=require("../middlewares/admin.middleware");
-const {requirePaciente}=require("../middlewares/paciente.middleware");
 const c=require("../controllers/formula.controller");
-router.get("/admin/all",requireAdmin,c.adminList);
-router.patch("/admin/:id",requireAdmin,c.adminEstado);
-router.get("/",requirePaciente,c.listar);
-router.post("/",requirePaciente,c.crear);
-router.get("/:id",requirePaciente,c.ver);
+// Compatibility URLs must not give administrators clinical review privileges.
+const fueraDeAlcance=(req,res)=>res.status(403).json({ok:false,mensaje:'La administración no revisa ni modifica fórmulas médicas.'});
+router.get("/admin/all",requireAdmin,fueraDeAlcance);
+router.patch("/admin/:id",requireAdmin,fueraDeAlcance);
+router.get("/",requireUsuario,c.listar);
+router.post("/",requireUsuario,c.crear);
+router.get("/:id",requireUsuario,c.ver);
 module.exports=router;

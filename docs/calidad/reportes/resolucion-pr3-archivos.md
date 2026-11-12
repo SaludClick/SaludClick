@@ -1,0 +1,57 @@
+# Archivos de la resolucion del PR #3
+
+Lista de cambios frente al primer padre f73b76e, incluidos los avances integrados desde main. El detalle funcional de los 18 conflictos esta en `resolucion-pr3.md`.
+
+- `backend/database/install_schema_public.sql`
+- `backend/database/saludclick.sql`
+- `backend/package.json`
+- `backend/prisma/schema.prisma`
+- `backend/scripts/importar-catalogo-invima.js`
+- `backend/scripts/verificar-catalogo-neon.js`
+- `backend/src/app.js`
+- `backend/src/controllers/farmacia.controller.js`
+- `backend/src/middlewares/administrative-scope.middleware.js`
+- `backend/src/middlewares/role.middleware.js`
+- `backend/src/repositories/auth.repository.js`
+- `backend/src/repositories/farmacia.repository.js`
+- `backend/src/routes/dashboard.routes.js`
+- `backend/src/routes/farmacia.routes.js`
+- `backend/src/routes/formula.routes.js`
+- `backend/src/routes/order.routes.js`
+- `backend/src/services/farmacia.service.js`
+- `backend/tests/api-contracts.test.cjs`
+- `backend/tests/api-errors.test.cjs`
+- `backend/tests/catalogo-invima.test.cjs`
+- `backend/tests/chat-service.test.cjs`
+- `backend/tests/chat-socket.test.cjs`
+- `backend/tests/cors.test.cjs`
+- `backend/tests/farmacia-api.test.cjs`
+- `backend/tests/frontend-roles.test.cjs`
+- `backend/tests/frontend.test.cjs`
+- `backend/tests/merge-permissions.test.cjs`
+- `backend/tests/patient-access.test.cjs`
+- `backend/tests/repository-layer.test.cjs`
+- `backend/tests/role-middleware.test.cjs`
+- `backend/tests/server-startup.test.cjs`
+- `backend/tests/support/isolate-database.cjs`
+- `docs/README.md`
+- `docs/REVISION_PRIORIDADES_2026-11-10.md`
+- `docs/architecture/endpoints.md`
+- `docs/architecture/roles-y-permisos.md`
+- `docs/architecture/security-contracts.md`
+- `docs/calidad/reportes/resolucion-pr3-archivos.md`
+- `docs/calidad/reportes/resolucion-pr3.md`
+- `frontend/public/css/farmacia.css`
+- `frontend/public/js/admin-cuentas.js`
+- `frontend/public/js/auth.js`
+- `frontend/public/js/config.js`
+- `frontend/public/js/farmacia.js`
+- `frontend/public/js/login.js`
+- `frontend/public/js/perfil.js`
+- `frontend/public/js/roles.js`
+- `frontend/public/pages/dashboard.html`
+- `frontend/public/pages/perfil.html`
+- `frontend/src/components/FarmaciaChat.jsx`
+- `frontend/src/components/FarmaciaOperaciones.astro`
+- `frontend/src/pages/pages/chat-farmacia.astro`
+- `frontend/src/pages/pages/farmacia.astro`

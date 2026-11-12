@@ -1,6 +1,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+let prisma;
 
 const CSV_PATH = path.resolve(__dirname, "../data/catalogo_invima.csv");
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -241,7 +242,11 @@ async function importCatalog(rows, prisma, expectedCount) {
 async function main() {
   if (!fs.existsSync(CSV_PATH)) throw new Error("No se encontró el catálogo CSV.");
   const rows = readCsv(CSV_PATH);
-  const prisma = require("../src/config/prisma");
+  validateCatalogRows(rows, 1000);
+  console.log(`Catálogo validado: ${rows.length} registros.`);
+  // Offline validation must never load credentials or open a database connection.
+  if (process.argv.includes('--validar')) return;
+  prisma = require("../src/config/prisma");
 
   try {
     const result = await importCatalog(rows, prisma, 1000);
@@ -256,13 +261,14 @@ async function main() {
 
 if (require.main === module) {
   main().catch(error => {
-    console.error("ERROR:", error.message);
+    console.error("ERROR:", prisma ? `Falló la importación (${error.code || error.name}).` : error.message);
     process.exitCode = 1;
   });
 }
 
 module.exports = {
   parseCsv,
+  parseCsvLine: line => parseCsv(line)[0] || [],
   readCsv,
   validateCatalogRows,
   categoryFor,

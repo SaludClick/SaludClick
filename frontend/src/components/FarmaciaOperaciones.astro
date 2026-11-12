@@ -1,0 +1,18 @@
+    <section id="pedidosFarmacia" aria-labelledby="pedidosTitle">
+      <h2 id="pedidosTitle">Pedidos para atender</h2>
+      <p>Los pedidos avanzan de aprobado a preparando, listo y entregado. Solo se actualizan pedidos con pago aprobado.</p>
+      <form id="filtroPedidos" class="farmacia-filters">
+        <label for="estadoFarmacia">Estado</label><select id="estadoFarmacia">
+          <option value="">Activos</option><option value="APROBADA">Aprobados</option><option value="PREPARANDO">Preparando</option><option value="LISTA">Listos</option><option value="ENTREGADA">Entregados</option>
+        </select><button type="submit">Actualizar pedidos</button>
+      </form>
+      <div id="farmaciaOrders" aria-live="polite" aria-busy="false"></div>
+      <div class="farmacia-pagination"><button type="button" id="ordersPrevious" disabled>Anterior</button><span id="ordersPage"></span><button type="button" id="ordersNext" disabled>Siguiente</button></div>
+    </section>
+    <section id="inventarioFarmacia" aria-labelledby="inventarioTitle">
+      <h2 id="inventarioTitle">Consulta de inventario</h2><p>Consulta las existencias registradas. Esta pantalla no modifica stock ni precios.</p>
+      <form id="buscarInventario" class="farmacia-filters"><label for="buscarFarmacia">Medicamento</label><input id="buscarFarmacia" type="search" maxlength="150" placeholder="Buscar por nombre"><button type="submit">Buscar</button></form>
+      <div class="farmacia-table"><table><caption>Existencias de medicamentos</caption><thead><tr><th scope="col">Medicamento</th><th scope="col">Categoría</th><th scope="col">Stock</th><th scope="col">Estado</th></tr></thead><tbody id="farmaciaInventory"></tbody></table></div>
+      <p id="inventoryEmpty" role="status"></p>
+      <div class="farmacia-pagination"><button type="button" id="inventoryPrevious" disabled>Anterior</button><span id="inventoryPage"></span><button type="button" id="inventoryNext" disabled>Siguiente</button></div>
+    </section>

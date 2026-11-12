@@ -1,3 +1,4 @@
+require('./support/isolate-database.cjs');
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
@@ -400,7 +401,7 @@ test('las rutas de farmacia y paciente respetan roles separados', async t => {
             const { response, data } = await call(path, { role });
             assert.equal(response.status, 403);
             assert.equal(data.ok, false);
-            assert.match(data.mensaje, /Acceso restringido|no tiene permisos/);
+            assert.match(data.mensaje, /Acceso restringido|Acceso exclusivo|no tiene permisos/);
         });
     }
 });

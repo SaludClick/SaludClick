@@ -45,6 +45,9 @@ app.use(express.static(frontendPath));
 
 // API
 app.use("/api", routes);
+app.use('/api', (req, res) => {
+    res.status(404).json({ ok: false, mensaje: 'Ruta de API no encontrada.' });
+});
 
 // Página principal
 app.get("/", (req, res) => {
@@ -62,7 +65,11 @@ app.use((error, req, res, next) => {
             mensaje: "El cuerpo JSON no es válido."
         });
     }
-    return next(error);
+    if (error?.type === 'entity.too.large') {
+        return res.status(413).json({ ok: false, mensaje: 'El archivo o los datos enviados superan el tamaño permitido.' });
+    }
+    console.error('Error interno de API:', error?.code || error?.name || 'Error');
+    return res.status(500).json({ ok: false, mensaje: 'No se pudo completar la operación. Inténtalo nuevamente.' });
 });
 
 module.exports = app;

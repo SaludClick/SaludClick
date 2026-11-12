@@ -102,7 +102,7 @@ const actualizarPerfil = async (usuarioId, data) => {
     await pool.query(
         `UPDATE usuarios
          SET nombre = $1, apellido = $2, telefono = $3,
-             tipo_documento = $4, cedula = $5, ciudad = $6
+             tipo_documento = $4, cedula = CASE WHEN $8 THEN $5 ELSE cedula END, ciudad = $6
          WHERE id = $7`,
         [
             data.nombre,
@@ -111,7 +111,8 @@ const actualizarPerfil = async (usuarioId, data) => {
             data.tipoDocumento || null,
             data.numeroDocumento || data.cedula || null,
             data.ciudad || null,
-            usuarioId
+            usuarioId,
+            Object.hasOwn(data, 'numeroDocumento') || Object.hasOwn(data, 'cedula')
         ]
     );
     return buscarPerfil(usuarioId);
