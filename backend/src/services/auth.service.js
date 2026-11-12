@@ -121,6 +121,23 @@ const register = async (data) => {
 
 };
 
+// Invitaciones internas: sin contraseña utilizable hasta verificar el correo.
+const invitarCuenta = async ({ correo, rol_id }) => {
+    correo = normalizarCorreo(correo);
+    const autorizadas = require('../config/authorized-accounts').obtenerCuentasAutorizadas();
+    if (!autorizadas.some(c => c.correo === correo && c.rol_id === rol_id)) throw new Error('Cuenta o rol fuera del alcance autorizado.');
+    const existente = await authRepository.buscarPorCorreo(correo);
+    if (existente) throw new Error('El correo ya está registrado; no se modificó la cuenta.');
+    require('../config/activation-url').validarUrlActivacion();
+    const cuentas = require('../repositories/admin.repository');
+    if (await cuentas.buscarCuentaPorCorreo(correo)) throw new Error('El correo ya está registrado; no se modificó la cuenta.');
+    if (!await cuentas.buscarRol(rol_id)) throw new Error('El rol solicitado no existe en PostgreSQL.');
+    await transporter.verify();
+    const cuenta = await cuentas.crearCuenta({ nombre: rol_id === 3 ? 'Farmacia' : 'EPS', apellido: 'SaludClick', correo, rol_id, estado: 'INACTIVO', password: '!ACTIVACION_PENDIENTE' });
+    await solicitarRecuperacion(correo);
+    return { id: cuenta.id, correo, estado: 'INACTIVO' };
+};
+
 // ==========================================
 // LOGIN NORMAL
 // ==========================================
@@ -269,6 +286,8 @@ const solicitarRecuperacion = async (correo) => {
         return;
     }
 
+    if (usuario.password === '!ACTIVACION_PENDIENTE') require('../config/activation-url').validarUrlActivacion();
+
     const token =
         crypto.randomBytes(32).toString("hex");
 
@@ -298,12 +317,19 @@ const solicitarRecuperacion = async (correo) => {
     const enlace =
         `${baseUrl}/restablecer.html?token=${
             encodeURIComponent(token)
-        }`;
+        }${usuario.password === '!ACTIVACION_PENDIENTE' ? '&activacion=1' : ''}`;
 
-    await enviarCorreoRecuperacion(
-        usuario.correo,
-        enlace
-    );
+    if (usuario.password === '!ACTIVACION_PENDIENTE') {
+        const info = await transporter.sendMail({
+            from: process.env.MAIL_FROM || process.env.SMTP_USER,
+            to: usuario.correo,
+            subject: 'Activa tu cuenta de SaludClick',
+            text: `Verifica tu correo y establece tu contraseña para activar la cuenta: ${enlace}\nEl enlace es de un solo uso y vence en 15 minutos. Si vence, solicita otro desde Recuperar contraseña.`
+        });
+        if (info.rejected?.length || !info.accepted?.length) throw new Error('SMTP no aceptó la invitación. La cuenta continúa inactiva.');
+    } else {
+        await enviarCorreoRecuperacion(usuario.correo, enlace);
+    }
 
 };
 
@@ -333,6 +359,11 @@ const restablecerPassword = async (
         throw new Error(
             "El enlace de recuperación es inválido o ya expiró."
         );
+    }
+
+    if (registro.password === '!ACTIVACION_PENDIENTE' &&
+        (typeof nuevaPassword !== 'string' || nuevaPassword.length < 12 || Buffer.byteLength(nuevaPassword) > 72)) {
+        throw new Error('Usa una contraseña de al menos 12 caracteres y máximo 72 bytes.');
     }
 
     const passwordHash =
@@ -368,6 +399,7 @@ const profile = async (usuarioId) => {
 // ==========================================
 
 module.exports = {
+    invitarCuenta,
     register,
     login,
     googleLogin,

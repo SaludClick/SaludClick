@@ -24,7 +24,7 @@ let server,origin;
 const secretoAnterior=process.env.JWT_SECRET;
 before(async()=>{
     process.env.JWT_SECRET='afiliados-source-contract-test';
-    const app=express();app.use(express.json());app.use('/afiliados',crearRouter({servicio:crearServicio({origen,prisma})}));
+    const app=express();app.use(express.json());app.use('/afiliados',crearRouter({servicio:crearServicio({origen,prisma}),authorize:require('./support/administrative-session-fixture.cjs').roles(1)}));
     server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));origin=`http://127.0.0.1:${server.address().port}/afiliados`;
 });
 after(async()=>{await new Promise(r=>server.close(r));if(secretoAnterior===undefined)delete process.env.JWT_SECRET;else process.env.JWT_SECRET=secretoAnterior;});

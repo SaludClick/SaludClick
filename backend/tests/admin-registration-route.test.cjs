@@ -32,6 +32,8 @@ const authController = {
 before(async () => {
     process.env.JWT_SECRET = TEST_SECRET;
     Module._load = function(request, parent, isMain) {
+        if(request.endsWith('/administrative-session.middleware'))return require('./support/administrative-session-fixture.cjs');
+        if(request==='../controllers/administrative.controller')return {createController:()=>({createUser:authController.register})};
         if (
             request === "../controllers/auth.controller" &&
             /auth\.routes\.js$/.test(parent?.filename || "")

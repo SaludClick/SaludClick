@@ -85,6 +85,7 @@ before(async () => {
     process.env.JWT_SECRET = TEST_SECRET;
     console.error = () => {};
     Module._load = function(request, parent, isMain) {
+        if(request.endsWith('/administrative-session.middleware'))return require('./support/administrative-session-fixture.cjs');
         if (
             request === "../repositories/pacientes-autorizados.repository" &&
             /pacientes-autorizados\.service\.js$/.test(parent?.filename || "")

@@ -1,6 +1,6 @@
 const express=require('express');
 const {requireAdmin}=require('../middlewares/admin.middleware');
-function crearRouter({servicio}={}) {
+function crearRouter({servicio,authorize=requireAdmin}={}) {
     const router=express.Router();
     const obtener=()=>servicio||require('../services/afiliados-consulta.service').obtenerServicio();
     function envolver(fn){return async(req,res)=>{
@@ -13,7 +13,7 @@ function crearRouter({servicio}={}) {
             res.status(500).json({ok:false,mensaje:'No fue posible consultar o guardar la cuenta del afiliado.'});
         }
     };}
-    router.use(requireAdmin);
+    router.use(authorize);
     router.get('/diagnostico/conexion',envolver(async(req,res)=>res.json({ok:true,...await obtener().diagnosticar()})));
     router.get('/',envolver(async(req,res)=>res.json({ok:true,...await obtener().listar(req.query)})));
     router.get('/:id',envolver(async(req,res)=>res.json({ok:true,...await obtener().detalle(req.params.id)})));

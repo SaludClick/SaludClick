@@ -12,6 +12,9 @@ const farmaciaRoutes = require("./farmacia.routes");
 const epsRoutes = require("./eps.routes");
 const chatRoutes = require("./chat.routes");
 
+router.use(require('../middlewares/administrative-scope.middleware').administrativeScope);
+router.use('/administrativo',require('./administrative.routes').createRouter({emit:req=>req.app.get('administrativeEvents')?.()}));
+
 router.use("/health", healthRoutes);
 router.use("/auth", authRoutes);
 router.use("/pedidos", orderRoutes);

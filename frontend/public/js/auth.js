@@ -5,7 +5,7 @@ const PAGINAS_PRIVADAS = new Set([
     "/pages/dashboard.html", "/pages/medicamentos.html", "/pages/pedidos.html",
     "/pages/historial.html", "/pages/perfil.html", "/pages/formulas.html",
     "/pages/admin.html", "/pages/admin-cuentas.html", "/pages/farmacia.html",
-    "/pages/eps.html"
+    "/pages/eps.html", "/pages/soporte.html"
 ]);
 
 // Lista cerrada: nunca navegar a una URL externa ni regresar al login.

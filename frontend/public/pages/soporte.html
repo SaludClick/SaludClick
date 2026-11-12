@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atención administrativa · SaludClick</title>
+<link rel="stylesheet" href="/css/administrative.css">
+</head>
+<body class="ad-workspace" data-client="true">
+<div class="ad-shell">
+<aside class="ad-sidebar" id="adminSidebar">
+<a class="ad-brand" href="/">SaludClick<small>ATENCIÓN AL CLIENTE</small>
+</a>
+<button type="button" class="ad-mobile" id="adminMenu" aria-expanded="false" aria-controls="adminNavigation">Abrir menú</button>
+<nav id="adminNavigation" aria-label="Atención administrativa">
+<a id="solicitudes" href="#solicitudes" data-section="solicitudes">Mis solicitudes</a>
+<a id="mensajes" href="#mensajes" data-section="mensajes">Mis conversaciones</a>
+<a id="notificaciones" href="#notificaciones" data-section="notificaciones">Notificaciones</a>
+<a href="/pages/chat.html">VITALIX · preguntas frecuentes</a>
+<a href="/pages/dashboard.html">Volver a mi panel</a>
+</nav>
+</aside>
+<main class="ad-main">
+<header class="ad-topbar">
+<span>Soporte administrativo</span>
+<div class="ad-actions">
+<span id="adminIdentity">
+</span>
+<button type="button" id="adminLogout">Cerrar sesión</button>
+</div>
+</header>
+<div class="ad-heading">
+<div>
+<span class="ad-eyebrow">CUENTAS Y ACCESO</span>
+<h1 id="sectionTitle">Mis solicitudes</h1>
+<p>Contacta con Administración. Para fórmulas, tratamientos o medicamentos, acude al profesional o rol competente. No compartas datos clínicos ni contraseñas.</p>
+</div>
+<button type="button" id="adminRefresh">Actualizar</button>
+</div>
+<p id="adminNotice" class="ad-alert" role="status" aria-live="polite">
+</p>
+<div id="adminView" aria-busy="false">
+</div>
+<section id="caseDetail" class="ad-card" hidden aria-label="Detalle de atención">
+</section>
+</main>
+</div>
+<script src="/socket.io/socket.io.js" defer>
+</script>
+<script type="module" src="/js/administrative.js">
+</script>
+</body>
+</html>

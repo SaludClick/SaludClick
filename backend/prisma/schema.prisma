@@ -29,6 +29,12 @@ model Rol {
 }
 
 model Usuario {
+  atenciones_administrativas AtencionAdministrativa[] @relation("ClienteAdministrativo")
+  atenciones_asignadas AtencionAdministrativa[] @relation("ResponsableAdministrativo")
+  mensajes_administrativos MensajeAdministrativo[]
+  notificaciones_administrativas NotificacionAdministrativa[]
+  actividades_administrativas ActividadAdministrativa[]
+  preferencias_administrativas PreferenciaAdministrativa?
   afiliado Afiliado? @relation("CuentaAfiliado")
   afiliados_verificados Afiliado[] @relation("VerificadorAfiliado")
   id                       Int                 @id @default(autoincrement())
@@ -395,4 +401,82 @@ enum EstadoMensaje {
   ENVIADO
   ENTREGADO
   LEIDO
+}
+
+model AtencionAdministrativa {
+  id Int @id @default(autoincrement())
+  cliente_id Int
+  responsable_id Int?
+  tipo String @db.VarChar(20)
+  asunto String @db.VarChar(160)
+  categoria String @db.VarChar(30)
+  estado String @default("ABIERTA") @db.VarChar(20)
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @default(now()) @db.Timestamptz
+  resuelta_at DateTime? @db.Timestamptz
+  cerrada_at DateTime? @db.Timestamptz
+  cliente Usuario @relation("ClienteAdministrativo",fields:[cliente_id],references:[id],onDelete:Restrict)
+  responsable Usuario? @relation("ResponsableAdministrativo",fields:[responsable_id],references:[id],onDelete:Restrict)
+  mensajes MensajeAdministrativo[]
+  notificaciones NotificacionAdministrativa[]
+  @@index([cliente_id,created_at])
+  @@index([tipo,estado,created_at])
+  @@map("administrative_cases")
+}
+
+model MensajeAdministrativo {
+  id Int @id @default(autoincrement())
+  caso_id Int
+  remitente_id Int
+  contenido String @db.VarChar(2000)
+  created_at DateTime @default(now()) @db.Timestamptz
+  leido_at DateTime? @db.Timestamptz
+  caso AtencionAdministrativa @relation(fields:[caso_id],references:[id],onDelete:Restrict)
+  remitente Usuario @relation(fields:[remitente_id],references:[id],onDelete:Restrict)
+  @@index([caso_id,id])
+  @@map("administrative_messages")
+}
+
+model NotificacionAdministrativa {
+  id Int @id @default(autoincrement())
+  destinatario_id Int
+  caso_id Int?
+  tipo String @db.VarChar(30)
+  titulo String @db.VarChar(160)
+  created_at DateTime @default(now()) @db.Timestamptz
+  leida_at DateTime? @db.Timestamptz
+  destinatario Usuario @relation(fields:[destinatario_id],references:[id],onDelete:Restrict)
+  caso AtencionAdministrativa? @relation(fields:[caso_id],references:[id],onDelete:Restrict)
+  @@index([destinatario_id,leida_at,created_at])
+  @@map("administrative_notifications")
+}
+
+model ActividadAdministrativa {
+  id Int @id @default(autoincrement())
+  actor_id Int
+  accion String @db.VarChar(60)
+  entidad String @db.VarChar(30)
+  registro_id String @db.VarChar(80)
+  resultado String @default("EXITO") @db.VarChar(20)
+  campos String[] @default([])
+  created_at DateTime @default(now()) @db.Timestamptz
+  actor Usuario @relation(fields:[actor_id],references:[id],onDelete:Restrict)
+  @@index([created_at,actor_id])
+  @@map("administrative_audit")
+}
+
+model ConfiguracionAdministrativa {
+  clave String @id @db.VarChar(50)
+  valor Json
+  updated_at DateTime @default(now()) @db.Timestamptz
+  @@map("administrative_settings")
+}
+
+model PreferenciaAdministrativa {
+  usuario_id Int @id
+  notificaciones Boolean @default(true)
+  compacto Boolean @default(false)
+  sesiones_revocadas_at DateTime? @db.Timestamptz
+  usuario Usuario @relation(fields:[usuario_id],references:[id],onDelete:Restrict)
+  @@map("administrative_preferences")
 }

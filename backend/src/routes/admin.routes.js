@@ -1,22 +1,17 @@
-
-const router = require("express").Router();
-const { requireAdmin } = require("../middlewares/admin.middleware");
-const c = require("../controllers/admin.controller");
-const pacientes = require("../controllers/pacientes-autorizados.controller");
-
-// Registro maestro de pacientes autorizados, sin crear cuentas de usuario.
-router.get("/pacientes", requireAdmin, pacientes.listar);
-router.post("/pacientes", requireAdmin, pacientes.crear);
-router.get("/pacientes/:id", requireAdmin, pacientes.consultar);
-router.patch("/pacientes/:id", requireAdmin, pacientes.actualizar);
-
-// Gestión existente de pedidos.
-router.get("/pedidos", requireAdmin, c.pedidos);
-router.patch("/pedidos/:id", requireAdmin, c.estadoPedido);
-
-// Gestión de cuentas de usuarios y farmacias.
-router.post("/cuentas", requireAdmin, c.crearCuenta);
-router.get("/cuentas", requireAdmin, c.cuentas);
-router.delete("/cuentas/:id", requireAdmin, c.eliminarCuenta);
-
-module.exports = router;
+const router=require('express').Router();
+const {requireAdmin}=require('../middlewares/admin.middleware');
+const {createController}=require('../controllers/administrative.controller');
+const patients=require('../controllers/pacientes-autorizados.controller');
+router.use(requireAdmin);
+const handle=name=>(req,res)=>createController()[name](req,res);
+router.get('/cuentas',handle('users'));
+router.post('/cuentas',handle('createUser'));
+router.patch('/cuentas/:id',handle('updateUser'));
+router.delete('/cuentas/:id',(req,res)=>res.status(405).json({ok:false,mensaje:'Las cuentas se desactivan; no se eliminan.'}));
+router.get('/pacientes',patients.listar);
+router.post('/pacientes',patients.crear);
+router.get('/pacientes/:id',patients.consultar);
+router.patch('/pacientes/:id',patients.actualizar);
+router.all('/pedidos',(req,res)=>res.status(403).json({ok:false,mensaje:'Los pedidos no pertenecen al módulo administrativo.'}));
+router.all('/pedidos/:id',(req,res)=>res.status(403).json({ok:false,mensaje:'Los pedidos no pertenecen al módulo administrativo.'}));
+module.exports=router;

@@ -13,6 +13,7 @@ let account;
 let accountByEmail;
 let accountFindManyArgs;
 let accountFindFirstArgs;
+let consumedToken = true;
 
 const pool = {
     query: async (sql, params = []) => {
@@ -35,6 +36,7 @@ const pool = {
         query: async (sql, params = []) => {
             sqlCalls.push({ sql, params });
             if (sqlFailure && sql.includes(sqlFailure)) throw new Error('test transaction failure');
+            if (sql.includes('RETURNING id') && sql.startsWith('DELETE FROM tokens_recuperacion')) return { rows: consumedToken ? [{ id: params[0] }] : [] };
             return { rows: [] };
         },
         release: () => sqlCalls.push({ sql: 'RELEASE' })
@@ -158,6 +160,9 @@ test('auth repository guarda usuarios, búsquedas, perfil y tokens de recuperaci
     }), 31);
     assert.deepEqual(await authRepository.login('ana@example.test'), { id: 31, correo: 'ana@example.test' });
     await authRepository.crearTokenRecuperacion(31, 'hash-token', new Date('2026-01-01'));
+    const insercionToken = sqlCalls.find(({ sql }) => sql.includes('INSERT INTO tokens_recuperacion'));
+    assert.equal(insercionToken.params[2], '2026-01-01T00:00:00.000Z');
+    assert.match(insercionToken.sql, /AT TIME ZONE 'UTC'/);
     assert.equal(await authRepository.buscarTokenRecuperacion('hash-token'), tokenSearch);
     assert.deepEqual(await authRepository.buscarPerfil(31), profile);
     assert.deepEqual(await authRepository.actualizarPerfil(31, {
@@ -178,6 +183,15 @@ test('auth repository confirma la actualización de contraseña y revierte fallo
     await assert.rejects(authRepository.actualizarPassword(31, 'new-hash', 7), /test transaction failure/);
     assert.ok(sqlCalls.some(({ sql }) => sql === 'ROLLBACK'));
     assert.ok(sqlCalls.some(({ sql }) => sql === 'RELEASE'));
+});
+
+test('token consumido o vencido revierte sin cambiar contraseña ni activar', async () => {
+    consumedToken = false;
+    try {
+        await assert.rejects(authRepository.actualizarPassword(31, 'new-hash', 7), /inválido o ya expiró/);
+        assert.ok(sqlCalls.some(({ sql }) => sql === 'ROLLBACK'));
+        assert.ok(!sqlCalls.some(({ sql }) => sql.includes('UPDATE usuarios')));
+    } finally { consumedToken = true; }
 });
 
 test('formula repository conserva el propietario, el estado y los filtros de listado', async () => {

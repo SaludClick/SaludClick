@@ -63,7 +63,7 @@ async function crearCuenta(cuenta) {
             correo: cuenta.correo,
             password: cuenta.password,
             rol_id: cuenta.rol_id,
-            estado: "ACTIVO"
+            estado: cuenta.estado || "ACTIVO"
         },
         select: {
             id: true,

@@ -175,6 +175,11 @@ before(async () => {
     process.env.JWT_SECRET = TEST_SECRET;
     originalLoad = Module._load;
     Module._load = function(request, parent, isMain) {
+        if(request.endsWith('/administrative-session.middleware'))return require('./support/administrative-session-fixture.cjs');
+        if(request==='../controllers/administrative.controller')return {createController:()=>({
+            createUser:async(req,res)=>{try{res.status(201).json(await fakeModules.get('../services/auth.service').register(req.body));}catch(e){res.status(400).json({ok:false,mensaje:e.message});}},
+            dashboard:async(req,res)=>{try{res.json({ok:true,estadisticas:await dashboardRepository.statsAdmin()});}catch{res.status(500).json({ok:false,mensaje:'No se pudieron cargar las estadísticas administrativas.'});}}
+        })};
         if (fakeModules.has(request) && (request !== 'fs/promises' || /formula\.controller\.js$/.test(parent?.filename || ''))) {
             return fakeModules.get(request);
         }
@@ -220,20 +225,20 @@ test('los 24 endpoints conservan método, respuesta y códigos HTTP', async t =>
         ['GET', '/api/farmacia/verificar-acceso', undefined, 200, 'mensaje', 3],
         ['GET', '/api/farmacia/dashboard', undefined, 200, 'estadisticas', 3],
         ['GET', '/api/eps/verificar-acceso', undefined, 200, 'mensaje', 4],
-        ['GET', '/api/formulas/admin/all', undefined, 200, 'formulas', 1],
-        ['PATCH', '/api/formulas/admin/71', { estado: 'VALIDADA' }, 200, 'mensaje', 1],
+        ['GET', '/api/formulas/admin/all', undefined, 403, 'mensaje', 1],
+        ['PATCH', '/api/formulas/admin/71', { estado: 'VALIDADA' }, 403, 'mensaje', 1],
         ['GET', '/api/formulas/', undefined, 200, 'formulas'],
         ['POST', '/api/formulas/', { nombre: 'mock.pdf', archivo: 'data:application/pdf;base64,JVBERi0xLjQ=' }, 201, 'formula'],
         ['GET', '/api/formulas/999', undefined, 404, 'mensaje'],
-        ['GET', '/api/admin/pedidos', undefined, 200, 'pedidos', 1],
-        ['PATCH', '/api/admin/pedidos/81', { estado: 'APROBADA' }, 200, 'mensaje', 1]
+        ['GET', '/api/admin/pedidos', undefined, 403, 'mensaje', 1],
+        ['PATCH', '/api/admin/pedidos/81', { estado: 'APROBADA' }, 403, 'mensaje', 1]
     ];
     for (const [method, path, body, status, key, role] of cases) {
         await t.test(`${method} ${path}`, async () => {
             const { response, data } = await call(path, { method, body, role });
             assert.equal(response.status, status);
             assert.ok(data && Object.hasOwn(data, key), `falta propiedad ${key}`);
-            if (status !== 404) assert.equal(data.ok, true);
+            if (status < 400) assert.equal(data.ok, true);
             if (method === 'POST' && path === '/api/pedidos/') {
                 assert.equal(orderIdempotencyKeys.at(-1), ORDER_IDEMPOTENCY_KEY);
             }
@@ -341,7 +346,7 @@ test('JWT ausente, inválido y vencido conservan respuestas 401', async t => {
 });
 
 test('solo el administrador accede a las rutas administrativas', async t => {
-    const adminPaths = ['/api/dashboard/admin', '/api/formulas/admin/all', '/api/admin/pedidos'];
+    const adminPaths = ['/api/dashboard/admin'];
     for (const path of adminPaths) await t.test(`administrador: ${path}`, async () => {
         const { response } = await call(path, { role: 1 });
         assert.equal(response.status, 200);
@@ -394,7 +399,8 @@ test('las rutas de farmacia y paciente respetan roles separados', async t => {
         for (const role of [1, 3, 4]) await t.test(`rol ${role}: ${path}`, async () => {
             const { response, data } = await call(path, { role });
             assert.equal(response.status, 403);
-            assert.deepEqual(data, { ok: false, mensaje: 'Acceso restringido a pacientes.' });
+            assert.equal(data.ok, false);
+            assert.match(data.mensaje, /Acceso restringido|no tiene permisos/);
         });
     }
 });
@@ -425,12 +431,12 @@ test('errores de controlador conservan sus status, campos y mensajes', async t =
         ['GET', '/api/pedidos/0', undefined, 400, 'Pedido inválido.'],
         ['GET', '/api/pedidos/83', undefined, 404, 'Pedido no encontrado.'],
         ['DELETE', '/api/pedidos/83', undefined, 404, 'Pedido no encontrado.'],
-        ['PATCH', '/api/formulas/admin/71', { estado: 'DESCONOCIDA' }, 400, 'Estado inválido.'],
+        ['PATCH', '/api/formulas/admin/71', { estado: 'DESCONOCIDA' }, 403, 'La administración no tiene permisos para operaciones clínicas o farmacéuticas.'],
         ['POST', '/api/formulas/', { nombre: 'malware.bin', archivo: 'data:application/octet-stream;base64,AA==' }, 400, 'Solo se permiten PDF, JPG, PNG o WEBP.'],
         ['GET', '/api/formulas/0', undefined, 400, 'Fórmula inválida.'],
         ['GET', '/api/formulas/999', undefined, 404, 'Fórmula no encontrada.'],
-        ['PATCH', '/api/admin/pedidos/1', { estado: 'DESCONOCIDA' }, 400, 'Datos inválidos.'],
-        ['PATCH', '/api/admin/pedidos/999', { estado: 'APROBADA' }, 404, 'Pedido no encontrado.']
+        ['PATCH', '/api/admin/pedidos/1', { estado: 'DESCONOCIDA' }, 403, 'Los pedidos no pertenecen al módulo administrativo.'],
+        ['PATCH', '/api/admin/pedidos/999', { estado: 'APROBADA' }, 403, 'Los pedidos no pertenecen al módulo administrativo.']
     ];
     for (const [method, path, body, status, message, success = false] of checks) await t.test(`${method} ${path}`, async () => {
         const { response, data } = await call(path, { method, body, role: path.includes('/admin') ? 1 : 2 });
@@ -565,14 +571,14 @@ test('lectura de fórmula privada limita propietario y no requiere filesystem re
 
             repositoryFailures.formulaListarAdmin = new Error('database unavailable');
             result = await call('/api/formulas/admin/all', { role: 1 });
-            assert.equal(result.response.status, 500);
+            assert.equal(result.response.status, 403);
             delete repositoryFailures.formulaListarAdmin;
 
             repositoryFailures.formulaEstado = new Error('database unavailable');
             result = await call('/api/formulas/admin/71', {
                 method: 'PATCH', role: 1, body: { estado: 'VALIDADA' }
             });
-            assert.equal(result.response.status, 400);
+            assert.equal(result.response.status, 403);
             delete repositoryFailures.formulaEstado;
 
             repositoryFailures.fileAccess = new Error('file unavailable');

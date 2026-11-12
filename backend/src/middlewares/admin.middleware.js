@@ -1,8 +1,8 @@
 
-const { validarJWT } = require("./auth.middleware");
+const { session } = require("./administrative-session.middleware");
 
 const requireAdmin = [
-    validarJWT,
+    session,
     (req, res, next) => {
         const rol = Number(
             req.usuario?.rol_id ?? req.usuario?.rol

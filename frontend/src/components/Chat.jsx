@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import AdministrativeSupport from './AdministrativeSupport.jsx';
 import "../styles/chat.css";
 import { HISTORY_KEY, MAX_TURNS, interpretMessage, readHistory, safeUserText } from "../lib/vitalix-engine.mjs";
 
@@ -277,6 +278,7 @@ function Chat({ embedded = false }) {
             {storageUnavailable ? "El historial solo estará disponible mientras esta página siga abierta." : "Historial temporal en esta pestaña (hasta 40 intercambios). No se envía a servicios de IA."}
           </p>
           <button type="button" className="vitalix-clear" onClick={clearHistory}>Borrar conversación</button>
+          <AdministrativeSupport />
         </section>
       </div>
     </Container>

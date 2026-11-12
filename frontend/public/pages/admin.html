@@ -1,216 +1,97 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Administración | SaludClick</title>
-    <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Administración · SaludClick</title>
+<link rel="stylesheet" href="/css/administrative.css">
 </head>
-
-<body class="admin-console">
-    <div class="admin-app">
-        <aside class="admin-sidebar" id="menu" aria-label="Navegación administrativa">
-            <a href="admin.html" class="admin-brand" aria-label="SaludClick, dashboard">
-                <span class="admin-brand-mark">
-                    <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
-                </span>
-                <span>SaludClick<small>ADMINISTRACIÓN</small></span>
-            </a>
-
-            <span class="admin-nav-caption">MENÚ PRINCIPAL</span>
-            <nav class="admin-side-nav" aria-label="Secciones de administración">
-                <a class="admin-side-link active" href="admin.html" aria-current="page">
-                    <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
-                    <span>Dashboard</span>
-                </a>
-                <a class="admin-side-link" href="admin-cuentas.html">
-                    <i class="fa-solid fa-users" aria-hidden="true"></i>
-                    <span>Usuarios</span>
-                </a>
-                <a class="admin-side-link" href="admin-afiliados.html">
-                    <i class="fa-solid fa-address-book" aria-hidden="true"></i>
-                    <span>Afiliados</span>
-                </a>
-                <a class="admin-side-link" href="admin-pacientes.html">
-                    <i class="fa-solid fa-user" aria-hidden="true"></i>
-                    <span>Pacientes</span>
-                </a>
-                <a class="admin-side-link" href="admin-cuentas.html?rol=3">
-                    <i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i>
-                    <span>Farmacias</span>
-                </a>
-                <a class="admin-side-link" href="admin-cuentas.html?rol=4">
-                    <i class="fa-solid fa-hospital" aria-hidden="true"></i>
-                    <span>EPS</span>
-                </a>
-            </nav>
-
-            <div class="admin-sidebar-bottom">
-                <div class="admin-sidebar-user">
-                    <span class="admin-avatar"><i class="fa-solid fa-user-shield" aria-hidden="true"></i></span>
-                    <span><strong id="adminUserName">Administrador</strong><small>Administrador general</small></span>
-                </div>
-                <button class="admin-logout logout-link" id="logout" type="button">
-                    <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-                    <span>Cerrar sesión</span>
-                </button>
-            </div>
-        </aside>
-
-        <div class="admin-main">
-            <header class="admin-topbar">
-                <button
-                    class="admin-menu-toggle"
-                    id="menuToggle"
-                    type="button"
-                    aria-label="Abrir menú de administración"
-                    aria-expanded="false"
-                    aria-controls="menu"
-                >
-                    <i class="fa-solid fa-bars" aria-hidden="true"></i>
-                </button>
-                <div class="admin-topbar-copy">
-                    <span>SaludClick</span>
-                    <strong>Panel administrativo</strong>
-                </div>
-                <div class="admin-topbar-status">
-                    <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-                    Acceso de administrador
-                </div>
-            </header>
-
-            <main class="admin-content" id="adminMain">
-                <section class="admin-page-heading">
-                    <div>
-                        <span class="admin-eyebrow">RESUMEN GENERAL</span>
-                        <h1>Dashboard</h1>
-                        <p>Indicadores y actividad de la plataforma, consultados desde el backend.</p>
-                    </div>
-                    <button id="refreshAdmin" class="btn-outline admin-refresh" type="button">
-                        <i class="fa-solid fa-rotate" aria-hidden="true"></i>
-                        Actualizar datos
-                    </button>
-                </section>
-
-                <div id="adminMessage" class="admin-message" role="status" aria-live="polite"></div>
-
-                <section class="admin-stats" id="adminStats" aria-label="Estadísticas administrativas" aria-busy="true">
-                    <article class="admin-stat admin-stat-loading">
-                        <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
-                        <span>Cargando datos reales...</span>
-                    </article>
-                </section>
-
-                <section class="admin-columns">
-                    <article class="card admin-dashboard-card">
-                        <div class="section-heading">
-                            <div>
-                                <span class="admin-eyebrow">OPERACIÓN</span>
-                                <h2>Pedidos por estado</h2>
-                                <p>Distribución actual de solicitudes.</p>
-                            </div>
-                        </div>
-                        <div id="orderStates" aria-live="polite">
-                            <p class="admin-loading-text">Cargando estados...</p>
-                        </div>
-                    </article>
-
-                    <article class="card admin-dashboard-card">
-                        <div>
-                            <span class="admin-eyebrow">REVISIÓN</span>
-                            <h2>Fórmulas médicas</h2>
-                            <p>Revisa y actualiza documentos enviados por pacientes.</p>
-                        </div>
-                        <div id="adminFormulas" aria-live="polite">
-                            <p class="admin-loading-text">Cargando fórmulas...</p>
-                        </div>
-                    </article>
-                </section>
-
-                <section class="card admin-dashboard-card admin-orders-panel">
-                    <div class="section-heading">
-                        <div>
-                            <span class="admin-eyebrow">SEGUIMIENTO</span>
-                            <h2>Pedidos recientes</h2>
-                            <p>Últimos 50 pedidos y su estado operativo.</p>
-                        </div>
-                    </div>
-                    <div class="orders-table-wrapper">
-                        <table class="orders-table">
-                            <thead>
-                                <tr>
-                                    <th>Pedido</th>
-                                    <th>Usuario</th>
-                                    <th>Fecha</th>
-                                    <th>Total</th>
-                                    <th>Pago</th>
-                                    <th>Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody id="adminOrders">
-                                <tr><td colspan="6" class="admin-loading-text">Cargando pedidos...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-            </main>
-        </div>
-    </div>
-
-    <!-- =====================================================
-         FOOTER
-    ====================================================== -->
-    <footer id="contacto" class="footer">
-        <div class="container footer-container">
-            
-            <!-- Columna 1: Info e Identidad -->
-            <div class="footer-col brand-col">
-                <div class="logo-footer">
-                    <i class="fa-solid fa-heart-pulse"></i>
-                    <span>SaludClick</span>
-                </div>
-                <p class="tagline">Tu bienestar, a un solo clic.</p>
-            </div>
-
-            <!-- Columna 2: Ubicación y Contacto -->
-            <div class="footer-col contact-col">
-                <p><i class="fa-solid fa-location-dot"></i> Medellín - Colombia</p>
-                <p>
-                    <i class="fa-solid fa-envelope"></i> 
-                    <a href="mailto:juandavidmospa12@gmail.com" class="email-link">juandavidmospa12@gmail.com</a>
-                </p>
-            </div>
-
-            <!-- Columna 3: Enlaces Activos a Redes Sociales -->
-            <div class="footer-col social-col">
-                <p class="social-title">Síguenos en nuestras redes</p>
-                <div class="redes">
-                    <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
-                        <i class="fa-brands fa-facebook-f"></i>
-                    </a>
-                    <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-                        <i class="fa-brands fa-instagram"></i>
-                    </a>
-                    <a href="https://wa.me/573208447006" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
-                        <i class="fa-brands fa-whatsapp"></i>
-                    </a>
-                </div>
-            </div>
-
-        </div>
-
-        <div class="footer-bottom">
-            <p>&copy; 2026 SaludClick - Todos los derechos reservados.</p>
-        </div>
-    </footer>
-
-    <!-- =====================================================
-         JAVASCRIPT
-    ====================================================== -->
-    <script type="module" src="../js/menu.js"></script>
-    <script type="module" src="../js/admin.js"></script>
+<body class="ad-workspace">
+<div class="ad-shell">
+<aside class="ad-sidebar" id="adminSidebar">
+<a class="ad-brand" href="/pages/admin.html">SaludClick<small>ADMINISTRACIÓN</small>
+</a>
+<button type="button" class="ad-mobile" id="adminMenu" aria-expanded="false" aria-controls="adminNavigation">Abrir menú</button>
+<nav id="adminNavigation" aria-label="Administración">
+<a id="dashboard" href="#dashboard" data-section="dashboard">Resumen</a>
+<a id="usuarios" href="#usuarios" data-section="usuarios">Usuarios</a>
+<a id="solicitudes" href="#solicitudes" data-section="solicitudes">Solicitudes</a>
+<a id="mensajes" href="#mensajes" data-section="mensajes">Mensajes</a>
+<a id="notificaciones" href="#notificaciones" data-section="notificaciones">Notificaciones</a>
+<a id="informes" href="#informes" data-section="informes">Informes</a>
+<a id="auditoria" href="#auditoria" data-section="auditoria">Auditoría</a>
+<a id="configuracion" href="#configuracion" data-section="configuracion">Configuración</a>
+</nav>
+<footer>
+<span class="ad-status-dot">
+</span>Atención administrativa<p>Acceso limitado a tus responsabilidades.</p>
+</footer>
+</aside>
+<main class="ad-main">
+<header class="ad-topbar">
+<span>Centro de administración</span>
+<div class="ad-actions">
+<span id="adminIdentity">
+</span>
+<button type="button" id="adminLogout">Cerrar sesión</button>
+</div>
+</header>
+<div class="ad-heading">
+<div>
+<span class="ad-eyebrow">SALUDCLICK / ADMINISTRACIÓN</span>
+<h1 id="sectionTitle">Resumen</h1>
+<p id="sectionDescription">Usuarios, atención y actividad en un solo lugar.</p>
+</div>
+<button type="button" id="adminRefresh">Actualizar</button>
+</div>
+<p id="adminNotice" class="ad-alert" role="status" aria-live="polite">
+</p>
+<div id="adminView" aria-busy="false">
+</div>
+<section id="caseDetail" class="ad-card" hidden aria-label="Detalle de atención">
+</section>
+</main>
+</div>
+<dialog id="userDialog" aria-labelledby="userDialogTitle">
+<h2 id="userDialogTitle">Crear usuario</h2>
+<form id="userForm" class="ad-form">
+<input name="id" type="hidden">
+<label>Nombre<input name="nombre" required maxlength="100" autocomplete="given-name">
+</label>
+<label>Apellido<input name="apellido" required maxlength="100" autocomplete="family-name">
+</label>
+<label>Correo<input name="correo" type="email" required maxlength="150" autocomplete="email">
+</label>
+<label>Documento<input name="cedula" required maxlength="30">
+</label>
+<label>Teléfono<input name="telefono" maxlength="20" autocomplete="tel">
+</label>
+<label>Ciudad<input name="ciudad" maxlength="100" autocomplete="address-level2">
+</label>
+<label>Rol<select name="rol_id">
+<option value="2">Cliente</option>
+<option value="3">Farmacia</option>
+<option value="4">EPS</option>
+</select>
+</label>
+<label>Estado<select name="estado">
+<option>ACTIVO</option>
+<option>INACTIVO</option>
+</select>
+</label>
+<label id="initialPasswordLabel" class="ad-wide">Contraseña inicial<input name="password" type="password" minlength="12" maxlength="72" autocomplete="new-password">
+</label>
+<p id="userFormNotice" role="status" class="ad-wide">
+</p>
+<div class="ad-actions ad-wide">
+<button type="submit" class="ad-primary">Guardar usuario</button>
+<button type="button" id="cancelUser">Cancelar</button>
+</div>
+</form>
+</dialog>
+<script src="/socket.io/socket.io.js" defer>
+</script>
+<script type="module" src="/js/administrative.js">
+</script>
 </body>
-
 </html>
