@@ -29,11 +29,9 @@ module.exports = async function testVitalix({ t, evaluate, go, click, until, sen
         await write('Tengo una cuenta activa'); await waitReply();
         assert.equal(await evaluate(`[...document.querySelectorAll('.vitalix-message-assistant')].at(-1).querySelector('a').getAttribute('href')`), '/recuperar.html');
         for (const [message, pattern] of [
-            ['Necesito una cuenta', 'todavía no puede enviar'],
-            ['¿Cómo sé si aprobaron mi solicitud?', 'no está disponible'],
-            ['Quiero hablar con el administrador', 'no se ha enviado ningún mensaje'],
-            ['Me duele la cabeza', 'No respondo consultas médicas'],
-            ['xyz desconocido', 'No he comprendido'],
+            ['¿Cómo sé si aprobaron mi solicitud?', 'La respuesta llegará a este chat'],
+            ['Me duele la cabeza', 'contacta al profesional competente'],
+            ['xyz desconocido', 'Escribe tu consulta aquí'],
             ['Mi cédula es 123456789', 'No compartas']
         ]) {
             await write(message); await waitReply();
@@ -57,7 +55,8 @@ module.exports = async function testVitalix({ t, evaluate, go, click, until, sen
                 assert.equal(await evaluate(`document.activeElement.getAttribute('aria-label')`), 'Cerrar asistente VITALIX');
                 assert.ok(await evaluate(`document.querySelectorAll('.vitalix-turn').length > 0`), 'Conserva el historial entre rutas');
                 await click('.vitalix-shortcuts summary');
-                for (const id of ['solicitar-cuenta','estado-solicitud','problemas-login','contactar-admin','faq-acceso']) {
+                // Account requests and human handoff run against real PostgreSQL in administrative-chat.isolated.cjs.
+                for (const id of ['estado-solicitud','problemas-login','faq-acceso']) {
                     await click(`[data-vitalix-option="${id}"]`);
                     await waitReply();
                     assert.equal(await evaluate(`document.querySelector('[data-vitalix-option="${id}"]').getAttribute('aria-pressed')`), 'true');

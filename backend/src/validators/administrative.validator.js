@@ -6,6 +6,12 @@ function text(value, name, max=200, required=true) {
     return result;
 }
 function id(value) { const n=Number(value); if(!Number.isSafeInteger(n)||n<1) fail('Identificador inválido.'); return n; }
+function message(input,requireKey=false){
+    if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(k=>!['contenido','idempotency_key'].includes(k)))fail('Mensaje con campos no permitidos.');
+    const contenido=text(input.contenido,'Mensaje',2000),key=input.idempotency_key;
+    if((requireKey||key!==undefined)&&(typeof key!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key)))fail('Identificador de envío inválido.');
+    return {contenido,key:key?.toLowerCase()};
+}
 function account(input, creating=false) {
     if (!input || typeof input!=='object' || Array.isArray(input)) fail('Cuenta inválida.');
     const allowed=['nombre','apellido','correo','cedula','telefono','ciudad','rol_id','estado',...(creating?['password']:[])];
@@ -31,8 +37,10 @@ function filters(query={}) {
     }
     if(result.desde&&result.hasta&&result.desde>result.hasta) fail('El rango de fechas no es válido.');
     if(query.rol_id) result.rol_id=id(query.rol_id);
+    result.bandeja=text(query.bandeja,'Bandeja',20,false);
+    if(!['','PENDIENTES','ATENDIDAS'].includes(result.bandeja))fail('Bandeja no permitida.');
     return result;
 }
 const transitions={ABIERTA:['EN_ATENCION','CERRADA'],EN_ATENCION:['RESUELTA','CERRADA'],RESUELTA:['EN_ATENCION','CERRADA'],CERRADA:[]};
 function transition(from,to) { if(!transitions[from]?.includes(to)) fail('La transición de estado no está permitida.',409); }
-module.exports={fail,text,id,account,filters,transition};
+module.exports={fail,text,id,account,filters,transition,message};

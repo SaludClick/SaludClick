@@ -534,14 +534,29 @@ body:has(.vitalix-widget) { padding-bottom: calc(88px + env(safe-area-inset-bott
 .vitalix-shortcuts summary { padding: 14px; cursor: pointer; font-weight: 700; font-size: .85rem; }
 .vitalix-conversation { height: 650px; max-height: 80dvh; min-height: 0; padding: 16px; }
 .vitalix-mode { margin: 0 0 10px; font-size: .75rem; color: #38564a; }
-.vitalix-transcript { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 4px 12px; }
+.vitalix-transcript { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 4px 12px; }
 .vitalix-transcript:focus-visible { outline: 2px solid #128357; outline-offset: -2px; }
-.vitalix-message { overflow-wrap: anywhere; white-space: pre-wrap; }
+.vitalix-message { overflow-wrap: break-word; word-break: normal; white-space: pre-wrap; }
+.vitalix-message[data-vitalix-message] {
+  display: block;
+  box-sizing: border-box;
+  width: fit-content;
+  min-width: min(12rem, 85%);
+  max-width: 85%;
+  margin: 12px auto 0 0;
+  padding: 0;
+  flex: none;
+}
+.vitalix-message-user[data-vitalix-message] { margin-left: auto; margin-right: 0; }
+.vitalix-message[data-vitalix-message] > .vitalix-message-content { box-sizing: border-box; width: 100%; }
+.vitalix-message-user[data-vitalix-message] > .vitalix-message-content { background: inherit; border-radius: inherit; }
+.vitalix-message[data-vitalix-message] .vitalix-message-name { display: block; }
+.vitalix-message[data-vitalix-message] p { overflow-wrap: break-word; word-break: normal; }
 .vitalix-message-user { text-align: left; }
 .vitalix-time { display: block; margin-top: 6px; font-size: .68rem; font-weight: 400; text-align: right; color: #53685b; }
 .vitalix-typing { font-size: .82rem; color: #38564a; padding: 12px 0; }
-.vitalix-composer { display: flex; gap: 8px; flex: none; margin-top: 8px; }
-.vitalix-composer input { flex: 1; min-width: 0; width: 0; border: 1px solid #9dcbb5; border-radius: 12px; padding: 12px; font: inherit; font-size: 16px; background: white; color: #173c31; }
+.vitalix-composer { display: grid; grid-template-columns: minmax(0, 1fr) 46px; min-width: 0; gap: 8px; flex: none; margin-top: 8px; }
+.vitalix-composer input { box-sizing: border-box; min-width: 0; width: 100%; border: 1px solid #9dcbb5; border-radius: 12px; padding: 12px; font: inherit; font-size: 16px; background: white; color: #173c31; }
 .vitalix-composer button { display: grid; place-items: center; flex: 0 0 46px; border: 0; border-radius: 12px; background: #087b58; color: white; cursor: pointer; }
 .vitalix-composer button:disabled { opacity: .55; cursor: default; }
 .vitalix-input-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
@@ -549,7 +564,7 @@ body:has(.vitalix-widget) { padding-bottom: calc(88px + env(safe-area-inset-bott
 .vitalix-conversation .vitalix-disclaimer { padding: 8px 0 0; margin: 0; font-size: .7rem; }
 .vitalix-clear { align-self: flex-end; flex: none; padding: 8px; border: 0; background: transparent; color: #176044; text-decoration: underline; cursor: pointer; }
 .vitalix-widget-body { overflow: hidden; display: flex; }
-.vitalix-widget-body .vitalix-page { display: flex; min-height: 0; }
+.vitalix-widget-body .vitalix-page { display: flex; min-width: 0; min-height: 0; }
 .vitalix-widget-body .vitalix-shell { flex: 1; min-width: 0; }
 .vitalix-widget-body .vitalix-shortcuts { flex: none; max-height: 36%; overflow-y: auto; }
 .vitalix-widget-body .vitalix-menu-heading, .vitalix-widget-body .vitalix-menu-footnote { display: none; }

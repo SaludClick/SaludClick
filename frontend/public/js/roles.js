@@ -5,7 +5,7 @@ const permisos = Object.freeze({
     '/pages/dashboard.html': [2], '/pages/medicamentos.html': [2],
     '/pages/pedidos.html': [2], '/pages/historial.html': [2], '/pages/formulas.html': [2],
     '/pages/chat-farmacia.html': [2, 3], '/pages/perfil.html': [1, 2, 3, 4],
-    '/pages/admin-pacientes.html': [1], '/pages/admin-afiliados.html': [1],
+    '/pages/admin-pacientes.html': [1], '/pages/admin-afiliados.html': [],
     '/pages/eps.html': [4], '/pages/soporte.html': [2]
 });
 export const PAGINAS_PRIVADAS = new Set(Object.keys(permisos));

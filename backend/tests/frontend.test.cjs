@@ -277,6 +277,14 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     browser.once('error', error => { browserError = error; });
     browser.once('exit', (code, signal) => { browserExit = { code, signal }; });
     t.after(async () => {
+        // Let Edge release cache handles before falling back to process-tree termination.
+        if (socket?.readyState === WebSocket.OPEN) {
+            try { await send('Browser.close'); } catch { /* Closing DevTools may reject its final command. */ }
+            if (!browserExit) await new Promise(resolve => {
+                const timer = setTimeout(resolve, 2000);
+                browser.once('exit', () => { clearTimeout(timer); resolve(); });
+            });
+        }
         socket?.close();
         if (browser.exitCode === null && browser.signalCode === null && browser.pid) {
             if (process.platform === 'win32') {
@@ -431,6 +439,12 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     async function setCartQuantity(name, quantity) {
         await until(() => evaluate(`[...document.querySelectorAll('#detallePedido tr')].some(r=>r.cells[0]?.textContent.includes(${JSON.stringify(name)}))`));
         await evaluate(`(()=>{const row=[...document.querySelectorAll('#detallePedido tr')].find(r=>r.cells[0]?.textContent.includes(${JSON.stringify(name)})); if(!row) throw new Error('No se encontró la línea del carrito: '+${JSON.stringify(name)}); const input=row.cells[1].querySelector('input'); input.value=${JSON.stringify(String(quantity))}; input.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+    }
+    if (process.env.FRONTEND_TEST_ADMIN_ONLY === '1') {
+        await go('/login.html');
+        await require('./support/administrative-browser.cjs').testWorkspace({t,evaluate,go,click,value,until,send,fixture:administrativeFixture});
+        assert.deepEqual(errors,[]);
+        return;
     }
     if (realCaptcha) {
         await t.test('Astro login renders the configured reCAPTCHA v2 checkbox and blocks empty tokens', async () => {
@@ -879,12 +893,13 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             t.diagnostic(`${accion}: clic real -> ${await evaluate('location.href')}`);
         }
     });
-    await t.test('clic real en Contactar sin autenticaciÃ³n solicita abrir el correo', async () => {
+    await t.test('clic real en Contactar sin autenticacion abre VITALIX sin correo', async () => {
         await abrirInicioReal(); await evaluate(`sessionStorage.clear(); localStorage.removeItem('saludclick_token')`); await abrirInicioReal();
         await mouseClick('#servicios [data-action="contacto"]');
-        assert.match(fs.readFileSync(path.join(root, 'js/main.js'), 'utf8'), /mailto:contacto@saludclick\.com\?subject=Soporte%20SaludClick/);
+        await esperarPagina('/pages/chat.html');
+        assert.doesNotMatch(fs.readFileSync(path.join(root, 'js/main.js'), 'utf8'), /mailto:/);
         assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),null);
-        t.diagnostic('Contactar: clic real -> mailto:contacto@saludclick.com (sin enviar correo)');
+        t.diagnostic('Contactar: clic real -> VITALIX sin iniciar sesion');
     });
     await t.test('el inicio ofrece acceso a login y no expone registro', async () => {
         await abrirInicioReal();

@@ -405,7 +405,9 @@ enum EstadoMensaje {
 
 model AtencionAdministrativa {
   id Int @id @default(autoincrement())
-  cliente_id Int
+  cliente_id Int?
+  visitante_hash String? @unique(map:"administrative_cases_visitante_key") @db.Char(64)
+  visitante_expira_at DateTime? @db.Timestamptz
   responsable_id Int?
   tipo String @db.VarChar(20)
   asunto String @db.VarChar(160)
@@ -415,7 +417,7 @@ model AtencionAdministrativa {
   updated_at DateTime @default(now()) @db.Timestamptz
   resuelta_at DateTime? @db.Timestamptz
   cerrada_at DateTime? @db.Timestamptz
-  cliente Usuario @relation("ClienteAdministrativo",fields:[cliente_id],references:[id],onDelete:Restrict)
+  cliente Usuario? @relation("ClienteAdministrativo",fields:[cliente_id],references:[id],onDelete:Restrict)
   responsable Usuario? @relation("ResponsableAdministrativo",fields:[responsable_id],references:[id],onDelete:Restrict)
   mensajes MensajeAdministrativo[]
   notificaciones NotificacionAdministrativa[]
@@ -427,12 +429,12 @@ model AtencionAdministrativa {
 model MensajeAdministrativo {
   id Int @id @default(autoincrement())
   caso_id Int
-  remitente_id Int
+  remitente_id Int?
   contenido String @db.VarChar(2000)
   created_at DateTime @default(now()) @db.Timestamptz
   leido_at DateTime? @db.Timestamptz
   caso AtencionAdministrativa @relation(fields:[caso_id],references:[id],onDelete:Restrict)
-  remitente Usuario @relation(fields:[remitente_id],references:[id],onDelete:Restrict)
+  remitente Usuario? @relation(fields:[remitente_id],references:[id],onDelete:Restrict)
   @@index([caso_id,id])
   @@map("administrative_messages")
 }
@@ -453,14 +455,14 @@ model NotificacionAdministrativa {
 
 model ActividadAdministrativa {
   id Int @id @default(autoincrement())
-  actor_id Int
+  actor_id Int?
   accion String @db.VarChar(60)
   entidad String @db.VarChar(30)
   registro_id String @db.VarChar(80)
   resultado String @default("EXITO") @db.VarChar(20)
   campos String[] @default([])
   created_at DateTime @default(now()) @db.Timestamptz
-  actor Usuario @relation(fields:[actor_id],references:[id],onDelete:Restrict)
+  actor Usuario? @relation(fields:[actor_id],references:[id],onDelete:Restrict)
   @@index([created_at,actor_id])
   @@map("administrative_audit")
 }

@@ -1,6 +1,9 @@
 const express=require('express');
-const {requireAdmin}=require('../middlewares/admin.middleware');
-function crearRouter({servicio,authorize=requireAdmin}={}) {
+const {session}=require('../middlewares/administrative-session.middleware');
+// Retired administrative entry point. EPS routes and reporting services remain
+// separate; no role acquires access to this legacy account-linking workflow.
+const denyIndependentAffiliates=(req,res)=>res.status(403).json({ok:false,mensaje:'La gestión independiente de afiliados no está habilitada en este panel.'});
+function crearRouter({servicio,authorize=[session,denyIndependentAffiliates]}={}) {
     const router=express.Router();
     const obtener=()=>servicio||require('../services/afiliados-consulta.service').obtenerServicio();
     function envolver(fn){return async(req,res)=>{

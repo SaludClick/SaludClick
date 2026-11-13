@@ -1,91 +1,29 @@
 import { useEffect, useRef, useState } from "react";
-import AdministrativeSupport from './AdministrativeSupport.jsx';
 import "../styles/chat.css";
 import { HISTORY_KEY, MAX_TURNS, interpretMessage, readHistory, safeUserText } from "../lib/vitalix-engine.mjs";
-
-const EMAIL_ADMIN = "contacto@saludclick.com";
-const LINK_CORREO = `mailto:${EMAIL_ADMIN}?subject=Soporte%20de%20acceso%20SaludClick`;
+import {useAdministrativeConversation} from '../hooks/useAdministrativeConversation.js';
 
 const OPCIONES = [
   { id: "solicitar-cuenta", icon: "fa-user-plus", label: "Solicitar una cuenta" },
   { id: "estado-solicitud", icon: "fa-clipboard-check", label: "Consultar estado de solicitud" },
   { id: "problemas-login", icon: "fa-key", label: "Problemas para iniciar sesión" },
-  { id: "contactar-admin", icon: "fa-envelope", label: "Contactar con Administración" },
+  { id: "contactar-admin", icon: "fa-comments", label: "Contactar con Administración" },
   { id: "faq-acceso", icon: "fa-circle-question", label: "Preguntas frecuentes sobre acceso" }
 ];
 
+const HUMAN_REPLY = "¡Claro! Puedo comunicarte directamente con Administración de SaludClick. No necesitas iniciar sesión. Escribe aquí tu solicitud y podrás recibir la respuesta en este mismo chat.";
 const RESPUESTAS = {
-  saludo: { parrafos: ["¡Hola! Soy VITALIX. ¿Cómo puedo ayudarte con el acceso a SaludClick?"] },
-  gracias: { parrafos: ["¡Con gusto! Si necesitas más orientación sobre tu cuenta, escribe tu pregunta o elige un acceso rápido."] },
-  "aclarar-acceso": { parrafos: ["¿Tienes una cuenta activa o todavía estás esperando su aprobación? No compartas tu contraseña."] },
-  privacidad: { parrafos: ["No compartas contraseñas, tokens, cédulas ni información personal. No puedo consultar datos de otras personas. Reformula tu pregunta sin datos sensibles; puedo orientarte sobre acceso o contacto con Administración."] },
-  "fuera-alcance": { parrafos: ["Solo puedo orientar sobre acceso y cuentas de SaludClick. No respondo consultas médicas ni gestiono solicitudes de medicamentos. Para temas de salud, contacta con un profesional de salud; para ayuda con tu cuenta, elige una opción de acceso."] },
-  "no-entendido": {
-    parrafos: ["No he comprendido tu pregunta. Soy un asistente de respuestas programadas. ¿Necesitas una cuenta, consultar cómo dar seguimiento a una solicitud o ayuda para ingresar? También puedes contactar con Administración."],
-    enlace: { texto: "Contactar con Administración", href: LINK_CORREO }
-  },
-  "solicitar-cuenta": {
-    titulo: "Solicitar una cuenta",
-    parrafos: [
-      "El registro público está deshabilitado. Este asistente todavía no puede enviar una solicitud de acceso al Administrador.",
-      "Puedes preparar un correo para Administración. Se abrirá tu aplicación de correo y tendrás que enviarlo. Abrir el borrador no registra una solicitud ni confirma su recepción."
-    ],
-    enlace: { texto: `Escribir a ${EMAIL_ADMIN}`, href: LINK_CORREO },
-    aviso: "No incluyas contraseñas ni información sensible en el correo."
-  },
-  "estado-solicitud": {
-    titulo: "Consultar estado de solicitud",
-    parrafos: [
-      "La consulta automática del estado de solicitudes de acceso aún no está disponible.",
-      "Para pedir una actualización, puedes escribir a Administración. No compartas tu contraseña."
-    ],
-    enlace: {
-      texto: "Consultar con Administración",
-      href: `mailto:${EMAIL_ADMIN}?subject=Consulta%20de%20solicitud%20de%20acceso`
-    },
-    aviso: "El correo no se envía automáticamente desde SaludClick."
-  },
-  "problemas-login": {
-    titulo: "Problemas para iniciar sesión",
-    parrafos: [
-      "Confirma que estás usando el correo asociado a tu cuenta y revisa que no haya espacios adicionales.",
-      "Si olvidaste tu contraseña, utiliza la recuperación de acceso. Si tu cuenta aún no ha sido habilitada, contacta con Administración."
-    ],
-    enlace: { texto: "Ir a recuperar contraseña", href: "/recuperar.html" },
-    enlaceSecundario: { texto: "Contactar con Administración", href: LINK_CORREO },
-    aviso: "Nunca envíes tu contraseña por correo."
-  },
-  "contactar-admin": {
-    titulo: "Contactar con Administración",
-    parrafos: [
-      `Puedes escribir a ${EMAIL_ADMIN} para recibir ayuda con el acceso o tu cuenta.`,
-      "El botón abrirá un borrador en tu aplicación de correo. Debes enviarlo tú; no se ha enviado ningún mensaje desde SaludClick."
-    ],
-    enlace: { texto: "Abrir correo para Administración", href: LINK_CORREO },
-    aviso: "No incluyas contraseñas ni datos sensibles."
-  },
-  "faq-acceso": {
-    titulo: "Preguntas frecuentes sobre acceso",
-    preguntas: [
-      {
-        pregunta: "¿Puedo registrarme desde la página?",
-        respuesta: "No. El registro público está deshabilitado; las cuentas se habilitan mediante Administración."
-      },
-      {
-        pregunta: "¿Cómo solicito acceso?",
-        respuesta: "Escribe a Administración usando la opción para solicitar una cuenta. El correo se abre como borrador y debes enviarlo."
-      },
-      {
-        pregunta: "¿Puedo consultar aquí el estado de mi solicitud?",
-        respuesta: "La consulta automática todavía no está disponible. Contacta con Administración para pedir una actualización."
-      },
-      {
-        pregunta: "¿Qué hago si olvidé mi contraseña?",
-        respuesta: "Usa la recuperación de contraseña en la página de acceso. Si el problema continúa, contacta con Administración."
-      }
-    ],
-    enlace: { texto: "Contactar con Administración", href: LINK_CORREO }
-  }
+  saludo:{parrafos:["¡Hola! Soy VITALIX. Puedo orientarte sobre acceso y cuentas."]},
+  gracias:{parrafos:["Con gusto. Puedes continuar escribiendo aquí."]},
+  "aclarar-acceso":{parrafos:["¿Tienes una cuenta activa o esperas aprobación? No compartas tu clave."]},
+  privacidad:{parrafos:["No compartas claves, tokens, documentos ni información sensible. Reformula tu pregunta sin esos datos."]},
+  "fuera-alcance":{parrafos:["Para consultas médicas o farmacéuticas, contacta al profesional competente. Puedo orientarte sobre acceso y cuentas."]},
+  "no-entendido":{parrafos:["¿Necesitas solicitar una cuenta, ayuda con el acceso o hablar con Administración? Escribe tu consulta aquí."]},
+  "solicitar-cuenta":{titulo:"Solicitar una cuenta",parrafos:[HUMAN_REPLY,"El registro público sigue deshabilitado. Administración revisará tu solicitud desde este chat."]},
+  "estado-solicitud":{titulo:"Consultar tu solicitud",parrafos:["Para consultar tu solicitud, elige Contactar con Administración y escribe aquí. La respuesta llegará a este chat."]},
+  "problemas-login":{titulo:"Recuperar acceso",parrafos:["Revisa el correo de tu cuenta. Si olvidaste tu clave, utiliza la recuperación de acceso. Si necesitas ayuda de una persona, elige Contactar con Administración."],enlace:{texto:"Recuperar acceso",href:"/recuperar.html"}},
+  "contactar-admin":{titulo:"Atención directa",parrafos:[HUMAN_REPLY]},
+  "faq-acceso":{titulo:"Acceso y cuentas",parrafos:["El registro público está deshabilitado. Puedes solicitar una cuenta o atención humana escribiendo en este chat, sin iniciar sesión."]}
 };
 
 function Hora({ at }) {
@@ -131,11 +69,13 @@ function Respuesta({ respuesta, at }) {
   );
 }
 
-function Chat({ embedded = false }) {
+function Chat({ embedded = false, visible = true }) {
+  const human=useAdministrativeConversation(visible);
   const Container = embedded ? "div" : "main";
   const [turns, setTurns] = useState([]);
   const [draft, setDraft] = useState("");
   const [typing, setTyping] = useState(false);
+  const [confirmed,setConfirmed]=useState(false);
   const [ready, setReady] = useState(false);
   const [storageUnavailable, setStorageUnavailable] = useState(false);
   const timer = useRef(null);
@@ -143,6 +83,9 @@ function Chat({ embedded = false }) {
   const log = useRef(null);
   const input = useRef(null);
   const opcionActiva = turns.at(-1)?.intent;
+  const canSend=ready&&!human.checking&&(!human.eligible||human.operational);
+  const nearBottom=useRef(true);
+  useEffect(()=>{if(human.enabled&&human.pendingContent)setDraft(old=>old||human.pendingContent);},[human.enabled,human.pendingContent]);
 
   useEffect(() => {
     try { setTurns(readHistory(window.sessionStorage, Object.keys(RESPUESTAS))); }
@@ -159,13 +102,23 @@ function Chat({ embedded = false }) {
 
   useEffect(() => {
     // Scroll only the transcript; never move keyboard focus or the surrounding page.
-    log.current?.scrollTo({ top: log.current.scrollHeight, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
-  }, [turns, typing]);
+    if(!human.enabled||nearBottom.current)log.current?.scrollTo({ top: log.current.scrollHeight, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+  }, [turns, typing,human.messages,human.enabled]);
 
-  function send(text, quickIntent) {
+  async function send(text, quickIntent) {
     const trimmed = text.trim();
-    if (!trimmed || busy.current || !ready) return;
+    if (!trimmed || busy.current || !canSend) return;
     const intent = quickIntent || interpretMessage(trimmed, opcionActiva);
+    if(human.enabled||(human.eligible&&['contactar-admin','solicitar-cuenta'].includes(intent))){
+      busy.current=true;nearBottom.current=true;
+      // Include only the latest relevant user context when handing over, never the full bot history.
+      const previous=turns.at(-1);
+      const context=!human.enabled&&previous&&!['saludo','gracias','privacidad','fuera-alcance'].includes(previous.intent)?`\n\nContexto del usuario: ${previous.text}`:'';
+      const payload=(trimmed+context).slice(0,2000);
+      setConfirmed(false);
+      try{const sent=await human.send(payload);setConfirmed(sent);setDraft(old=>old.trim()===trimmed?(sent?'':payload):old);}finally{busy.current=false;input.current?.focus({preventScroll:true});}
+      return;
+    }
     const at = new Date().toISOString();
     const turn = { text: safeUserText(trimmed), intent, at, replyAt: new Date(Date.now() + 450).toISOString() };
     busy.current = true;
@@ -198,7 +151,7 @@ function Chat({ embedded = false }) {
         </div>
         <span className="vitalix-status">
           <i aria-hidden="true" />
-          Asistente virtual
+          {human.enabled?'Atención administrativa':'Asistente virtual'}
         </span>
       </section>}
 
@@ -218,7 +171,7 @@ function Chat({ embedded = false }) {
                 key={opcion.id}
                 data-vitalix-option={opcion.id}
                 aria-pressed={opcionActiva === opcion.id}
-                disabled={!ready || typing}
+                disabled={!canSend||typing||human.sending}
                 onClick={() => send(opcion.label, opcion.id)}
               >
                 <i className={`fa-solid ${opcion.icon}`} aria-hidden="true" />
@@ -237,17 +190,19 @@ function Chat({ embedded = false }) {
           className="vitalix-conversation"
           aria-label="Conversación de soporte con VITALIX"
         >
-          <p className="vitalix-mode">Asistente de respuestas programadas · Acceso y cuentas</p>
-          <div className="vitalix-transcript" ref={log} role="log" aria-label="Mensajes de VITALIX" aria-live="polite" aria-relevant="additions text" tabIndex={0}>
+          <p className="vitalix-mode">{human.enabled?`Chat con Administración · ${human.connected?'En tiempo real':'Sincronización automática'}`:'Asistente de respuestas programadas · Acceso y cuentas'}</p>
+          <div className="vitalix-transcript" ref={log} role="log" aria-label="Mensajes de VITALIX" aria-live="polite" aria-relevant="additions text" tabIndex={0} onScroll={()=>{const node=log.current;nearBottom.current=node.scrollHeight-node.scrollTop-node.clientHeight<80;}}>
           <div className="vitalix-welcome">
             <span className="vitalix-welcome-icon" aria-hidden="true">
               <i className="fa-solid fa-comments" />
             </span>
             <div>
               <strong>Hola, soy VITALIX</strong>
-              <p>Escribe tu pregunta o selecciona un acceso rápido. No puedo enviar solicitudes ni consultar aprobaciones.</p>
+              <p>{human.enabled?HUMAN_REPLY:human.eligible?"Escribe tu pregunta o solicita una cuenta o atencion humana desde este chat.":"Escribe tu pregunta sobre acceso y cuentas."}</p>
             </div>
           </div>
+          {human.enabled&&human.hasOlder&&<button type="button" className="vitalix-action" onClick={async()=>{const height=log.current.scrollHeight,top=log.current.scrollTop;nearBottom.current=false;await human.loadOlder();requestAnimationFrame(()=>{if(log.current)log.current.scrollTop=top+log.current.scrollHeight-height;});}}>Ver mensajes anteriores</button>}
+
           {turns.map((turn, index) => (
             <div className="vitalix-turn" key={`${turn.at}-${index}`} role="group" aria-label="Intercambio de mensajes">
               <div className="vitalix-message vitalix-message-user">
@@ -257,28 +212,29 @@ function Chat({ embedded = false }) {
               {!(typing && index === turns.length - 1) && <Respuesta respuesta={RESPUESTAS[turn.intent]} at={turn.replyAt} />}
             </div>
           ))}
-          {typing && <p className="vitalix-typing" role="status">VITALIX está escribiendo...</p>}
+          {human.enabled&&human.messages.map(message=><article key={message.id} data-vitalix-message={message.id} className={`vitalix-message ${(human.visitor?message.remitente_id===null:Number(message.remitente_id)===human.userId)?'vitalix-message-user':'vitalix-message-assistant'}`}><div className="vitalix-message-content"><strong className="vitalix-message-name">{Number(message.rol_id)===1?'Administración':message.nombre||'Tú'}</strong><p>{message.contenido}</p><time className="vitalix-time" dateTime={message.created_at}>{new Date(message.created_at).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'})}</time></div></article>)}
+          {human.enabled?human.sending&&<p className="vitalix-typing" role="status">Enviando a Administración…</p>:typing&&<p className="vitalix-typing" role="status">VITALIX está escribiendo...</p>}
           </div>
           <form className="vitalix-composer" onSubmit={(event) => { event.preventDefault(); send(draft); }}>
-            <label className="vitalix-input-label" htmlFor={embedded ? "vitalix-widget-input" : "vitalix-page-input"}>Mensaje para VITALIX</label>
+            <label className="vitalix-input-label" htmlFor={embedded ? "vitalix-widget-input" : "vitalix-page-input"}>{human.enabled?'Mensaje para Administración':'Mensaje para VITALIX'}</label>
             <input ref={input} id={embedded ? "vitalix-widget-input" : "vitalix-page-input"}
-              type="text" placeholder="Escribe tu mensaje..." value={draft} maxLength={1000}
-              autoComplete="off" disabled={!ready} onChange={(event) => setDraft(event.target.value)}
+              type="text" placeholder="Escribe tu mensaje..." value={draft} maxLength={human.enabled?2000:1000}
+              autoComplete="off" disabled={!canSend} onChange={(event) => setDraft(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
                   event.preventDefault();
                   if (!event.nativeEvent.isComposing) send(draft);
                 }
               }} />
-            <button type="submit" aria-label="Enviar mensaje" disabled={!ready || typing || !draft.trim()}>
+            <button type="submit" aria-label="Enviar mensaje" disabled={!canSend||typing||human.sending || !draft.trim()}>
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m3 3 18 9-18 9 4-9-4-9Z M7 12h14" /></svg>
             </button>
           </form>
+          {confirmed&&<p role="status" className="vitalix-note">Mensaje guardado y enviado a Administración.</p>}
           <p className="vitalix-disclaimer">
-            {storageUnavailable ? "El historial solo estará disponible mientras esta página siga abierta." : "Historial temporal en esta pestaña (hasta 40 intercambios). No se envía a servicios de IA."}
+            {human.enabled?'Los mensajes confirmados se guardan en tu conversación con Administración.':storageUnavailable ? "El historial solo estará disponible mientras esta página siga abierta." : "Historial temporal en esta pestaña (hasta 40 intercambios). No se envía a servicios de IA."}
           </p>
-          <button type="button" className="vitalix-clear" onClick={clearHistory}>Borrar conversación</button>
-          <AdministrativeSupport />
+          {human.enabled?<><p className="vitalix-note" role="alert">{human.error}</p><button type="button" className="vitalix-clear" onClick={()=>human.sync()}>Actualizar conversación</button></>:<><button type="button" className="vitalix-clear" onClick={clearHistory}>Borrar conversación</button></>}
         </section>
       </div>
     </Container>

@@ -100,12 +100,20 @@ before(async () => {
         }
         return originalLoad.call(this, request, parent, isMain);
     };
-    const adminRoutes = require("../src/routes/admin.routes");
+    // Preserve controller/storage contracts on a test-only router. The production
+    // administrative patient endpoints have been retired and are tested separately.
+    const patients = require("../src/controllers/pacientes-autorizados.controller");
+    const adminRoutes = express.Router();
+    adminRoutes.use(require('./support/administrative-session-fixture.cjs').roles(1));
+    adminRoutes.get('/pacientes',patients.listar);
+    adminRoutes.post('/pacientes',patients.crear);
+    adminRoutes.get('/pacientes/:id',patients.consultar);
+    adminRoutes.patch('/pacientes/:id',patients.actualizar);
     Module._load = originalLoad;
 
     const app = express();
     app.use(express.json());
-    app.use("/api/admin", adminRoutes);
+    app.use("/preserved-patient-contract", adminRoutes);
     server = http.createServer(app);
     await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
     origin = `http://127.0.0.1:${server.address().port}`;
@@ -123,15 +131,15 @@ after(async () => {
 
 test("endpoints de pacientes autorizados requieren JWT y rol administrador", async () => {
     for (const [path, method, body] of [
-        ["/api/admin/pacientes", "GET"],
-        ["/api/admin/pacientes", "POST", {
+        ["/preserved-patient-contract/pacientes", "GET"],
+        ["/preserved-patient-contract/pacientes", "POST", {
             nombres: "Ana",
             apellidos: "Pérez",
             tipo_documento: "CC",
             cedula: "1001"
         }],
-        ["/api/admin/pacientes/1", "GET"],
-        ["/api/admin/pacientes/1", "PATCH", { estado: "REVOCADO" }]
+        ["/preserved-patient-contract/pacientes/1", "GET"],
+        ["/preserved-patient-contract/pacientes/1", "PATCH", { estado: "REVOCADO" }]
     ]) {
         for (const role of [null, 2, 3, 4]) {
             const { response } = await request(path, { method, role, body });
@@ -142,7 +150,7 @@ test("endpoints de pacientes autorizados requieren JWT y rol administrador", asy
 });
 
 test("administrador crea, busca y pagina pacientes autorizados", async () => {
-    const creado = await request("/api/admin/pacientes", {
+    const creado = await request("/preserved-patient-contract/pacientes", {
         method: "POST",
         body: {
             nombres: "  Ana   María ",
@@ -156,12 +164,12 @@ test("administrador crea, busca y pagina pacientes autorizados", async () => {
     assert.equal(creado.data.paciente.tipo_documento, "CC");
     assert.equal(creado.data.paciente.estado, "AUTORIZADO");
 
-    const pagina = await request("/api/admin/pacientes?busqueda=001234&page=1&limit=1");
+    const pagina = await request("/preserved-patient-contract/pacientes?busqueda=001234&page=1&limit=1");
     assert.equal(pagina.response.status, 200);
     assert.equal(pagina.data.paginacion.total, 1);
     assert.equal(pagina.data.pacientes[0].cedula, "001234");
 
-    const vacia = await request("/api/admin/pacientes?busqueda=ausente");
+    const vacia = await request("/preserved-patient-contract/pacientes?busqueda=ausente");
     assert.equal(vacia.response.status, 200);
     assert.equal(vacia.data.paginacion.total, 0);
     assert.deepEqual(vacia.data.pacientes, []);
@@ -174,36 +182,36 @@ test("rechaza datos fuera del esquema, cédulas duplicadas y paginación inváli
         tipo_documento: "CC",
         cedula: "002222"
     };
-    const primero = await request("/api/admin/pacientes", {
+    const primero = await request("/preserved-patient-contract/pacientes", {
         method: "POST",
         body: paciente
     });
     assert.equal(primero.response.status, 201);
 
-    const duplicado = await request("/api/admin/pacientes", {
+    const duplicado = await request("/preserved-patient-contract/pacientes", {
         method: "POST",
         body: paciente
     });
     assert.equal(duplicado.response.status, 409);
 
-    const campoNoPermitido = await request("/api/admin/pacientes", {
+    const campoNoPermitido = await request("/preserved-patient-contract/pacientes", {
         method: "POST",
         body: { ...paciente, id: 987, estado: "REVOCADO" }
     });
     assert.equal(campoNoPermitido.response.status, 400);
 
-    const controlNoPermitido = await request("/api/admin/pacientes", {
+    const controlNoPermitido = await request("/preserved-patient-contract/pacientes", {
         method: "POST",
         body: { ...paciente, cedula: "002223", nombres: "Lu\u0000is" }
     });
     assert.equal(controlNoPermitido.response.status, 400);
 
-    const paginacionInvalida = await request("/api/admin/pacientes?page=0");
+    const paginacionInvalida = await request("/preserved-patient-contract/pacientes?page=0");
     assert.equal(paginacionInvalida.response.status, 400);
 });
 
 test("consultar y actualizar un paciente audita el actor enviado por JWT", async () => {
-    const creado = await request("/api/admin/pacientes", {
+    const creado = await request("/preserved-patient-contract/pacientes", {
         method: "POST",
         body: {
             nombres: "Sara",
@@ -214,11 +222,11 @@ test("consultar y actualizar un paciente audita el actor enviado por JWT", async
     });
     const id = creado.data.paciente.id;
 
-    const consultado = await request(`/api/admin/pacientes/${id}`);
+    const consultado = await request(`/preserved-patient-contract/pacientes/${id}`);
     assert.equal(consultado.response.status, 200);
     assert.equal(consultado.data.paciente.cedula, "003333");
 
-    const actualizado = await request(`/api/admin/pacientes/${id}`, {
+    const actualizado = await request(`/preserved-patient-contract/pacientes/${id}`, {
         method: "PATCH",
         body: { apellidos: "Ruiz León", estado: "REVOCADO" }
     });
@@ -226,7 +234,7 @@ test("consultar y actualizar un paciente audita el actor enviado por JWT", async
     assert.equal(actualizado.data.paciente.apellidos, "Ruiz León");
     assert.equal(actualizado.data.paciente.estado, "REVOCADO");
 
-    const inexistente = await request("/api/admin/pacientes/9999", {
+    const inexistente = await request("/preserved-patient-contract/pacientes/9999", {
         method: "PATCH",
         body: { estado: "REVOCADO" }
     });

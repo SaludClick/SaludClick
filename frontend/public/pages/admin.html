@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Administración · SaludClick</title>
 <link rel="stylesheet" href="/css/administrative.css">
+<link rel="stylesheet" href="/css/administrative-chat.css">
 </head>
 <body class="ad-workspace">
 <div class="ad-shell">
@@ -13,13 +14,11 @@
 </a>
 <button type="button" class="ad-mobile" id="adminMenu" aria-expanded="false" aria-controls="adminNavigation">Abrir menú</button>
 <nav id="adminNavigation" aria-label="Administración">
-<a id="dashboard" href="#dashboard" data-section="dashboard">Resumen</a>
+<a id="dashboard" href="#dashboard" data-section="dashboard">Dashboard</a>
 <a id="usuarios" href="#usuarios" data-section="usuarios">Usuarios</a>
 <a id="solicitudes" href="#solicitudes" data-section="solicitudes">Solicitudes</a>
-<a id="mensajes" href="#mensajes" data-section="mensajes">Mensajes</a>
 <a id="notificaciones" href="#notificaciones" data-section="notificaciones">Notificaciones</a>
 <a id="informes" href="#informes" data-section="informes">Informes</a>
-<a id="auditoria" href="#auditoria" data-section="auditoria">Auditoría</a>
 <a id="configuracion" href="#configuracion" data-section="configuracion">Configuración</a>
 </nav>
 <footer>
@@ -31,6 +30,9 @@
 <header class="ad-topbar">
 <span>Centro de administración</span>
 <div class="ad-actions">
+<a id="adminNotificationBell" class="ad-bell" href="#notificaciones" aria-label="Notificaciones sin leer">
+<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span id="adminNotificationCount" hidden>0</span>
+</a>
 <span id="adminIdentity">
 </span>
 <button type="button" id="adminLogout">Cerrar sesión</button>
@@ -39,7 +41,7 @@
 <div class="ad-heading">
 <div>
 <span class="ad-eyebrow">SALUDCLICK / ADMINISTRACIÓN</span>
-<h1 id="sectionTitle">Resumen</h1>
+<h1 id="sectionTitle">Dashboard</h1>
 <p id="sectionDescription">Usuarios, atención y actividad en un solo lugar.</p>
 </div>
 <button type="button" id="adminRefresh">Actualizar</button>

@@ -22,6 +22,7 @@ test('la matriz de pantallas impide cruces entre administrador, farmacia y pacie
         ['/pages/formulas.html', [2]], ['/pages/chat-farmacia.html', [2, 3]],
         ['/pages/eps.html', [4]], ['/pages/soporte.html', [2]],
         ['/pages/perfil.html', [1, 2, 3, 4]], ['/index.html?accion=domicilio', [2]]
+        ,['/pages/admin-afiliados.html', []], ['/pages/admin-pacientes.html', [1]]
     ]) for (const role of [1, 2, 3, 4, 99]) {
         assert.equal(policy.puedeAcceder(route, { rol: role }), roles.includes(role), `${route} rol ${role}`);
     }

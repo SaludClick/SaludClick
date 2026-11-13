@@ -63,13 +63,13 @@ test('CSV neutralizes formulas, quotes fields; PDF is paginated and has valid by
   const start=Number(/startxref\n(\d+)/.exec(pdf)[1]);assert.equal(pdf.slice(start,start+4),'xref');
 });
 test('repository scopes client cases and notifications, and binds SQL injection payloads',async()=>{
-  const calls=[];const prisma={$queryRawUnsafe:async(sql,...args)=>{calls.push({sql,args});return [];}};
+  const calls=[];const prisma={$queryRawUnsafe:async(sql,...args)=>{calls.push({sql,args});return sql.startsWith('SELECT c.id,c.cliente_id FROM administrative_cases')?[{id:5,cliente_id:44}]:[];},$transaction:fn=>fn(prisma)};
   const repo=createRepository(prisma);const payload="' OR TRUE --";
   await repo.cases(44,false,v.filters({buscar:payload}));
   assert.match(calls[0].sql,/c\.cliente_id=\$1/);assert.ok(calls[0].args.includes(payload));assert.ok(!calls[0].sql.includes(payload));
   await assert.rejects(repo.caseDetail(44,false,5),e=>e.status===404);
   await repo.readNotification(44,5);assert.match(calls.at(-1).sql,/destinatario_id=\$2/);assert.deepEqual(calls.at(-1).args,[5,44]);
-  await repo.markRead(44,false,5,7);assert.match(calls.at(-1).sql,/c\.cliente_id=\$1/);assert.deepEqual(calls.at(-1).args,[44,5,7,1]);
+  await repo.markRead(44,false,5,7);const read=calls.findLast(c=>c.sql.startsWith('UPDATE administrative_messages'));assert.match(read.sql,/c\.cliente_id=\$1/);assert.deepEqual(read.args,[44,5,7,1]);
 });
 test('account writes and audit share one transaction; passwords never enter audit fields',async()=>{
   const calls=[];const db={$queryRawUnsafe:async(sql,...args)=>{calls.push({sql,args});return sql.startsWith('INSERT INTO usuarios')?[{id:9,nombre:'Ana'}]:[];}};
@@ -111,12 +111,28 @@ test('HTTP role matrix denies client admin operations and pharmacy administrativ
 
 test('realtime namespace emits invalidations without personal data and disconnects expired sessions',async()=>{
   const {attachAdministrativeSocket}=require('../src/sockets/administrative.socket');
-  const handlers={},emitted=[];let middleware,callback,disconnected=false;
-  const namespace={use(fn){middleware=fn;},on(name,fn){handlers[name]=fn;},emit(...args){emitted.push(args);}};
+  const handlers={},emitted=[],rooms=[],joined=[];let middleware,callback,disconnected=false;
+  const namespace={use(fn){middleware=fn;},on(name,fn){handlers[name]=fn;},to(room){rooms.push(room);return this;},emit(...args){emitted.push(args);}};
   attachAdministrativeSocket({of:name=>{assert.equal(name,'/administrativo');return namespace;}},{set:(key,value)=>{assert.equal(key,'administrativeEvents');callback=value;}},{guard:(req,res,next)=>{assert.deepEqual(req.allowedRoles,[1,2]);req.usuario={id:42,rol_id:2};next();}});
   const socketEvents={};
-  const socket={handshake:{auth:{token:jwt.sign({id:42,rol:2},secret,{expiresIn:-1})}},data:{},on:(name,fn)=>{socketEvents[name]=fn;},disconnect(){disconnected=true;socketEvents.disconnect?.();}};
+  const socket={handshake:{auth:{token:jwt.sign({id:42,rol:2},secret,{expiresIn:-1})}},data:{},join:room=>joined.push(room),on:(name,fn)=>{socketEvents[name]=fn;},disconnect(){disconnected=true;socketEvents.disconnect?.();}};
   await new Promise((resolve,reject)=>middleware(socket,e=>e?reject(e):resolve()));
-  handlers.connection(socket);callback();assert.deepEqual(emitted,[['administrativo:actualizado']]);
+  handlers.connection(socket);callback({caso_id:7,cliente_id:42});assert.deepEqual(emitted,[['administrativo:actualizado',{caso_id:7}]]);
+  assert.deepEqual(rooms,['administrativo:staff','administrativo:cliente:42','administrativo:visitante:7']);assert.deepEqual(joined,['administrativo:cliente:42']);
   await new Promise(r=>setTimeout(r,10));assert.equal(disconnected,true);
+});
+
+test('dashboard includes pending historical conversations in request totals',async()=>{
+  const calls=[];
+  const repo=createRepository({$queryRawUnsafe:async(sql)=>{calls.push(sql);return [{}];}});
+  await repo.dashboard(1);
+  const sql=calls.find(sql=>sql.includes('FROM administrative_cases'));
+  assert.match(sql,/ABIERTA.*EN_ATENCION/);
+  assert.doesNotMatch(sql,/tipo=/);
+});
+test('patient filters accept known authorization states and reject unknown ones',()=>{
+  const {validarPaginacion}=require('../src/validators/pacientes-autorizados.validator');
+  assert.equal(validarPaginacion({estado:'REVOCADO'}).estado,'REVOCADO');
+  assert.throws(()=>validarPaginacion({estado:'ACTIVO'}));
+  assert.equal(validarPaginacion({estado:''}).estado,undefined);
 });

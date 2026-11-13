@@ -1,6 +1,6 @@
 const bcrypt=require('bcrypt');
 const v=require('../validators/administrative.validator');
-const reportTypes=['usuarios','clientes','roles','solicitudes','tiempos','conversaciones','actividad'];
+const reportTypes=['usuarios','pacientes','estados','clientes','roles','solicitudes','atendidas','tiempos','conversaciones','actividad'];
 const categories=['ACCESO','CUENTA','DATOS_PERSONALES','SOPORTE','OTRA_ADMINISTRATIVA'];
 function createService(repo) {
     async function createUser(actor,input) { const data=v.account(input,true); data.password=await bcrypt.hash(data.password,12); return repo.createUser(actor,data); }

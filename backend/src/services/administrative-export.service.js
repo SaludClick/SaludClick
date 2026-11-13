@@ -5,13 +5,17 @@ function cell(value) {
     return '"'+text.replaceAll('"','""')+'"';
 }
 function csv(report) {
-    const keys=Object.keys(report.filas[0]||{});
+    const keys=report.columnas||Object.keys(report.filas[0]||{});
     return '\uFEFF'+[keys.map(cell).join(','),...report.filas.map(row=>keys.map(key=>cell(row[key])).join(','))].join('\r\n');
 }
 function pdf(report) {
     // Minimal paginated PDF with deterministic text, no browser/remote service.
     const ascii=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7e]/g,' ').replace(/([\\()])/g,'\\$1');
     const lines=[`SaludClick - Informe ${report.tipo}`,`Generado: ${report.generadoEn}`,`Desde: ${report.filtros?.desde||'inicio'}  Hasta: ${report.filtros?.hasta||'hoy'}`,`Busqueda: ${report.filtros?.buscar||'todas'}`,`Registros: ${report.filas.length}${report.limitado?' - LIMITE ALCANZADO: acota las fechas':''}`,''];
+    if(report.resumen) lines.push(`Total filtrado: ${report.resumen.total}`);
+    if(report.resumen?.cuentas_acceso!==undefined)lines.push(`Cuentas de acceso: ${report.resumen.cuentas_acceso} | Afiliados EPS: ${report.resumen.afiliados_eps} | Coincidencias ya incluidas: ${report.resumen.coincidencias}`);
+    if(report.aviso)lines.push(report.aviso);
+    if(!report.filas.length) lines.push('No hay resultados para esta consulta.');
     for(const [index,row] of report.filas.entries()) {
         lines.push(`Registro ${index+1}`);
         for(const [key,value] of Object.entries(row)) {

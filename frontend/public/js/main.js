@@ -116,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("[data-action]").forEach(btn => btn.addEventListener("click", () => {
         const action = btn.dataset.action;
         if (action === "contacto") { 
-            window.location.href = "mailto:contacto@saludclick.com?subject=Soporte%20SaludClick"; 
+            window.location.href = "/pages/chat.html";
             return; 
         }
         navegarPrivado(acciones[action] || "/pages/dashboard.html");

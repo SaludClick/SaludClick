@@ -1,0 +1,25 @@
+{
+  "test": "new events refresh notifications and preserve an unsent reply",
+  "scope": "synthetic browser fixture, no production data",
+  "observedBeforeFix": {
+    "callback": "refreshVisible",
+    "documentHidden": true,
+    "viewAriaBusy": "false",
+    "hash": "#notificaciones",
+    "filters": { "buscar": "", "estado": "" },
+    "syntheticEventCallbacks": 1,
+    "observationWindowMs": 7500,
+    "notificationRequestAfterEvent": false,
+    "newNotificationVisible": false
+  },
+  "cause": "CDP evaluated the original page while it was hidden; the production handler intentionally skips hidden documents.",
+  "testCorrection": "Page.bringToFront and an explicit visibility precondition; no application behavior changes.",
+  "regressionPerExecution": {
+    "realBackgroundForegroundCycles": 5,
+    "hiddenPageIsNotReplaced": true,
+    "visiblePageShowsNewNotification": true,
+    "oneRenderedEntryPerNotification": true,
+    "bellAndCounterChecked": true,
+    "draftAndIncomingChatMessageChecked": true
+  }
+}

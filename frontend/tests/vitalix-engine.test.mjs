@@ -10,6 +10,9 @@ test("interpreta orientación libre y conserva el contexto de acceso", () => {
     ["¿Cómo funciona?", "faq-acceso"], ["xyz desconocido", "no-entendido"]
   ]) assert.equal(interpretMessage(text), intent, text);
   assert.equal(interpretMessage("Tengo una cuenta activa", "aclarar-acceso"), "problemas-login");
+  for (const text of ["Necesito atención humana", "Quiero una persona real", "Necesito un asesor humano"]) {
+    assert.equal(interpretMessage(text), "contactar-admin");
+  }
   assert.equal(interpretMessage("No tengo cuenta", "aclarar-acceso"), "solicitar-cuenta");
   assert.equal(interpretMessage("Todavía espero aprobación", "aclarar-acceso"), "estado-solicitud");
 });

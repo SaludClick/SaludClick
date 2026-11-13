@@ -54,7 +54,7 @@ export default function VitalixWidget() {
             <p id="vitalix-widget-subtitle">Asistente virtual de SaludClick</p></div>
           <button type="button" autoFocus onClick={close} aria-label="Cerrar asistente VITALIX">×</button>
         </header>
-        <div className="vitalix-widget-body"><Chat embedded /></div>
+        <div className="vitalix-widget-body"><Chat embedded visible={open} /></div>
       </dialog>
     </aside>
   );

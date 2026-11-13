@@ -113,7 +113,7 @@ function validarPacienteId(entrada) {
 }
 
 function validarPaginacion(consulta) {
-    validarObjeto(consulta, new Set(["busqueda", "page", "limit"]));
+    validarObjeto(consulta, new Set(["busqueda", "page", "limit", "estado"]));
 
     const parsearEntero = (valor, predeterminado, campo) => {
         if (valor === undefined) return predeterminado;
@@ -128,6 +128,7 @@ function validarPaginacion(consulta) {
         return numero;
     };
 
+    if (consulta.estado && !ESTADOS_AUTORIZACION.has(consulta.estado)) throw errorValidacion("Estado de paciente no permitido.");
     const page = parsearEntero(consulta.page, 1, "La página");
     const limit = parsearEntero(consulta.limit, 10, "El tamaño de página");
     if (consulta.busqueda !== undefined && typeof consulta.busqueda !== "string") {
@@ -144,7 +145,7 @@ function validarPaginacion(consulta) {
         throw errorValidacion("El tamaño de página debe estar entre 1 y 50.");
     }
 
-    return { busqueda, page, limit };
+    return { busqueda, page, limit, ...(consulta.estado ? { estado: consulta.estado } : {}) };
 }
 
 module.exports = {

@@ -3,7 +3,17 @@ require('dotenv').config({quiet:true});
 const {Client}=require('pg');
 const fs=require('node:fs');
 const path=require('node:path');
-const expected={administrative_cases:['id','cliente_id','responsable_id','tipo','estado','created_at','resuelta_at'],administrative_messages:['id','caso_id','remitente_id','contenido','leido_at'],administrative_notifications:['id','destinatario_id','caso_id','leida_at'],administrative_audit:['id','actor_id','accion','resultado'],administrative_settings:['clave','valor'],administrative_preferences:['usuario_id','notificaciones','compacto','sesiones_revocadas_at']};
+const expected={
+  usuarios:['id','nombre','apellido','correo','cedula','telefono','ciudad','password','rol_id','estado','created_at','updated_at'],
+  pacientes_autorizados:['id','nombres','apellidos','tipo_documento','cedula','estado','created_at','updated_at'],
+  auditorias_pacientes_autorizados:['id','paciente_id','administrador_id','accion','campos_modificados','created_at'],
+  administrative_cases:['id','cliente_id','visitante_hash','visitante_expira_at','responsable_id','tipo','asunto','categoria','estado','created_at','updated_at','resuelta_at','cerrada_at'],
+  administrative_messages:['id','caso_id','remitente_id','contenido','created_at','leido_at'],
+  administrative_notifications:['id','destinatario_id','caso_id','tipo','titulo','created_at','leida_at'],
+  administrative_audit:['id','actor_id','accion','entidad','registro_id','resultado','campos','created_at'],
+  administrative_settings:['clave','valor','updated_at'],
+  administrative_preferences:['usuario_id','notificaciones','compacto','sesiones_revocadas_at']
+};
 async function main(){
   if(!process.env.DATABASE_URL)throw new Error('DATABASE_NOT_CONFIGURED');
   const url=new URL(process.env.DATABASE_URL);
@@ -11,7 +21,7 @@ async function main(){
   const db=new Client({connectionString:url.toString(),connectionTimeoutMillis:10000});
   try{
     await db.connect();await db.query('BEGIN READ ONLY');await db.query("SET LOCAL statement_timeout='10000'");
-    const columns=(await db.query("SELECT table_name,column_name FROM information_schema.columns WHERE table_schema='public' AND (table_name LIKE 'administrative_%' OR table_name IN ('usuarios','roles','_prisma_migrations'))")).rows;
+    const columns=(await db.query("SELECT table_name,column_name FROM information_schema.columns WHERE table_schema='public' AND (table_name LIKE 'administrative_%' OR table_name IN ('usuarios','roles','pacientes_autorizados','auditorias_pacientes_autorizados','_prisma_migrations'))")).rows;
     const missing=Object.entries(expected).flatMap(([table,fields])=>fields.filter(field=>!columns.some(c=>c.table_name===table&&c.column_name===field)).map(field=>`${table}.${field}`));
     const roles=(await db.query('SELECT id,nombre FROM roles ORDER BY id')).rows;
     const statuses=(await db.query('SELECT rol_id,estado,count(*)::int total FROM usuarios GROUP BY rol_id,estado ORDER BY rol_id')).rows;

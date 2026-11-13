@@ -16,7 +16,7 @@ export function interpretMessage(text, previousIntent = null) {
   if (/medic|pastilla|dosis|dolor|duele|sintoma|enfermedad|diagnost|tratamiento|receta|formula|pedido|farmac|fiebre|embaraz|sangr|urgencia/.test(value)) return "fuera-alcance";
   if (/otro usuario|otras personas|cuentas ajenas|datos de|cuenta de (?:mi|otra|otro)/.test(value)) return "privacidad";
   if (/olvide|olvidado|recuperar|restablecer|cambiar.*(?:clave|contrasena)/.test(value)) return "problemas-login";
-  if (/administr|soporte|contact|hablar con/.test(value)) return "contactar-admin";
+  if (/administr|soporte|contact|hablar con|atencion humana|persona real|asesor humano/.test(value)) return "contactar-admin";
   if (/aprob|estado|seguimiento|pendiente|esperando|habilitad/.test(value)) return "estado-solicitud";
   if (/no (?:puedo|logro|me deja|consigo).*(?:ingres|entr|acced|inici)|problema.*(?:sesion|acceso|ingres)|no funciona.*(?:acceso|login)|bloquead/.test(value)) return "aclarar-acceso";
   if (/no tengo.*cuenta|sin cuenta/.test(value)) return "solicitar-cuenta";

@@ -1,4 +1,4 @@
-const prisma = require("../config/prisma");
+function createRepository(prisma) {
 
 const CAMPOS_PUBLICOS = {
     id: true,
@@ -11,16 +11,27 @@ const CAMPOS_PUBLICOS = {
     updated_at: true
 };
 
-async function listar({ busqueda, page, limit }) {
+async function listar({ busqueda, page, limit, estado }) {
+    // A patient is an authorization record. Email belongs to an optional client
+    // account with the same document; never copy accounts or EPS affiliates here.
+    const cuentas = busqueda ? await prisma.usuario.findMany({
+        where: { rol_id: 2, correo: { contains: busqueda, mode: "insensitive" }, cedula: { not: null } },
+        select: { cedula: true }
+    }) : [];
     const where = busqueda
         ? {
             OR: [
-                { nombres: { contains: busqueda, mode: "insensitive" } },
-                { apellidos: { contains: busqueda, mode: "insensitive" } },
-                { cedula: { contains: busqueda, mode: "insensitive" } }
+                { AND: busqueda.split(/\s+/u).map(term => ({ OR: [
+                    { nombres: { contains: term, mode: "insensitive" } },
+                    { apellidos: { contains: term, mode: "insensitive" } },
+                    { cedula: { contains: term, mode: "insensitive" } }
+                ] })) },
+                { cedula: { in: cuentas.map(c => c.cedula) } }
             ]
         }
         : {};
+
+    if (estado) where.estado = estado;
 
     const [total, pacientes] = await prisma.$transaction([
         prisma.pacienteAutorizado.count({ where }),
@@ -113,9 +124,11 @@ async function actualizar(id, datos, administradorId) {
     }, { isolationLevel: "Serializable" });
 }
 
-module.exports = {
+return {
     listar,
     buscarPorId,
     crear,
     actualizar
 };
+}
+module.exports = { ...createRepository(require("../config/prisma")), createRepository };
