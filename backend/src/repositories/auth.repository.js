@@ -43,14 +43,14 @@ const crearTokenRecuperacion = async (usuarioId, tokenHash, expiraEn) => {
         [usuarioId]
     );
     await pool.query(
-        "INSERT INTO tokens_recuperacion (usuario_id, token_hash, expira_en) VALUES ($1, $2, $3)",
-        [usuarioId, tokenHash, expiraEn]
+        "INSERT INTO tokens_recuperacion (usuario_id, token_hash, expira_en) VALUES ($1, $2, $3::timestamptz AT TIME ZONE 'UTC')",
+        [usuarioId, tokenHash, expiraEn.toISOString()]
     );
 };
 
 const buscarTokenRecuperacion = async (tokenHash) => {
     const { rows } = await pool.query(
-        `SELECT tr.id AS token_id, tr.usuario_id, u.correo
+        `SELECT tr.id AS token_id, tr.usuario_id, u.correo, u.password
          FROM tokens_recuperacion tr
          INNER JOIN usuarios u ON u.id = tr.usuario_id
          WHERE tr.token_hash = $1 AND tr.expira_en > NOW()
@@ -64,13 +64,20 @@ const actualizarPassword = async (usuarioId, passwordHash, tokenId) => {
     const connection = await pool.connect();
     try {
         await connection.query("BEGIN");
+        const consumed = await connection.query(
+            "DELETE FROM tokens_recuperacion WHERE id = $1 AND usuario_id = $2 AND expira_en > NOW() RETURNING id",
+            [tokenId, usuarioId]
+        );
+        if (!consumed.rows.length) throw new Error("El enlace es inválido o ya expiró.");
         await connection.query(
-            "UPDATE usuarios SET password = $1 WHERE id = $2",
+            `UPDATE usuarios SET password = $1,
+             estado = CASE WHEN password = '!ACTIVACION_PENDIENTE' THEN 'ACTIVO' ELSE estado END
+             WHERE id = $2`,
             [passwordHash, usuarioId]
         );
         await connection.query(
-            "DELETE FROM tokens_recuperacion WHERE id = $1",
-            [tokenId]
+            "DELETE FROM tokens_recuperacion WHERE usuario_id = $1",
+            [usuarioId]
         );
         await connection.query("COMMIT");
     } catch (error) {

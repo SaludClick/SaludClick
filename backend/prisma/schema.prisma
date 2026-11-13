@@ -29,6 +29,14 @@ model Rol {
 }
 
 model Usuario {
+  atenciones_administrativas AtencionAdministrativa[] @relation("ClienteAdministrativo")
+  atenciones_asignadas AtencionAdministrativa[] @relation("ResponsableAdministrativo")
+  mensajes_administrativos MensajeAdministrativo[]
+  notificaciones_administrativas NotificacionAdministrativa[]
+  actividades_administrativas ActividadAdministrativa[]
+  preferencias_administrativas PreferenciaAdministrativa?
+  afiliado Afiliado? @relation("CuentaAfiliado")
+  afiliados_verificados Afiliado[] @relation("VerificadorAfiliado")
   id                       Int                 @id @default(autoincrement())
   nombre                   String              @db.VarChar(100)
   apellido                 String              @db.VarChar(100)
@@ -50,10 +58,35 @@ model Usuario {
   conversaciones_cliente   Conversacion[]      @relation("ConversacionCliente")
   conversaciones_asignadas Conversacion[]      @relation("ConversacionAgente")
   mensajes_chat            MensajeChat[]
+  auditorias_pacientes_autorizados AuditoriaPacienteAutorizado[] @relation("AuditoriaAdministrador")
   rol                      Rol                 @relation(fields: [rol_id], references: [id])
 
   @@index([rol_id])
   @@map("usuarios")
+}
+
+// Los 13 valores del CSV se conservan como texto, sin normalización.
+model Afiliado {
+  id String @id
+  nombres String
+  apellidos String
+  tipo_documento String
+  documento String @unique
+  fecha_nacimiento String
+  telefono String
+  correo String
+  direccion String
+  ciudad String
+  regimen String
+  estado String
+  eps_id String
+  usuario_id Int? @unique
+  verificado_por Int?
+  verificado_at DateTime?
+  usuario Usuario? @relation("CuentaAfiliado", fields: [usuario_id], references: [id], onDelete: Restrict)
+  verificador Usuario? @relation("VerificadorAfiliado", fields: [verificado_por], references: [id], onDelete: Restrict)
+
+  @@map("afiliados")
 }
 
 model Medicamento {
@@ -271,6 +304,42 @@ enum EstadoUsuario {
   INACTIVO
 }
 
+enum EstadoPacienteAutorizado {
+  AUTORIZADO
+  REVOCADO
+}
+
+model PacienteAutorizado {
+  id              Int                         @id @default(autoincrement())
+  nombres         String                      @db.VarChar(100)
+  apellidos       String                      @db.VarChar(100)
+  tipo_documento  String                      @db.VarChar(10)
+  cedula          String                      @unique @db.VarChar(30)
+  estado          EstadoPacienteAutorizado    @default(AUTORIZADO)
+  created_at      DateTime                    @default(now()) @db.Timestamp(0)
+  updated_at      DateTime                    @updatedAt @db.Timestamp(0)
+  auditorias      AuditoriaPacienteAutorizado[]
+
+  @@index([estado])
+  @@index([apellidos, nombres])
+  @@map("pacientes_autorizados")
+}
+
+model AuditoriaPacienteAutorizado {
+  id                Int                @id @default(autoincrement())
+  paciente_id       Int
+  administrador_id  Int
+  accion            String             @db.VarChar(30)
+  campos_modificados String[]           @default([])
+  created_at        DateTime           @default(now()) @db.Timestamp(0)
+  paciente          PacienteAutorizado @relation(fields: [paciente_id], references: [id], onDelete: Restrict)
+  administrador     Usuario            @relation("AuditoriaAdministrador", fields: [administrador_id], references: [id], onDelete: Restrict)
+
+  @@index([paciente_id, created_at])
+  @@index([administrador_id, created_at])
+  @@map("auditorias_pacientes_autorizados")
+}
+
 model FormulaMedica {
   id              Int      @id @default(autoincrement())
   usuario_id      Int
@@ -332,4 +401,84 @@ enum EstadoMensaje {
   ENVIADO
   ENTREGADO
   LEIDO
+}
+
+model AtencionAdministrativa {
+  id Int @id @default(autoincrement())
+  cliente_id Int?
+  visitante_hash String? @unique(map:"administrative_cases_visitante_key") @db.Char(64)
+  visitante_expira_at DateTime? @db.Timestamptz
+  responsable_id Int?
+  tipo String @db.VarChar(20)
+  asunto String @db.VarChar(160)
+  categoria String @db.VarChar(30)
+  estado String @default("ABIERTA") @db.VarChar(20)
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @default(now()) @db.Timestamptz
+  resuelta_at DateTime? @db.Timestamptz
+  cerrada_at DateTime? @db.Timestamptz
+  cliente Usuario? @relation("ClienteAdministrativo",fields:[cliente_id],references:[id],onDelete:Restrict)
+  responsable Usuario? @relation("ResponsableAdministrativo",fields:[responsable_id],references:[id],onDelete:Restrict)
+  mensajes MensajeAdministrativo[]
+  notificaciones NotificacionAdministrativa[]
+  @@index([cliente_id,created_at])
+  @@index([tipo,estado,created_at])
+  @@map("administrative_cases")
+}
+
+model MensajeAdministrativo {
+  id Int @id @default(autoincrement())
+  caso_id Int
+  remitente_id Int?
+  contenido String @db.VarChar(2000)
+  created_at DateTime @default(now()) @db.Timestamptz
+  leido_at DateTime? @db.Timestamptz
+  caso AtencionAdministrativa @relation(fields:[caso_id],references:[id],onDelete:Restrict)
+  remitente Usuario? @relation(fields:[remitente_id],references:[id],onDelete:Restrict)
+  @@index([caso_id,id])
+  @@map("administrative_messages")
+}
+
+model NotificacionAdministrativa {
+  id Int @id @default(autoincrement())
+  destinatario_id Int
+  caso_id Int?
+  tipo String @db.VarChar(30)
+  titulo String @db.VarChar(160)
+  created_at DateTime @default(now()) @db.Timestamptz
+  leida_at DateTime? @db.Timestamptz
+  destinatario Usuario @relation(fields:[destinatario_id],references:[id],onDelete:Restrict)
+  caso AtencionAdministrativa? @relation(fields:[caso_id],references:[id],onDelete:Restrict)
+  @@index([destinatario_id,leida_at,created_at])
+  @@map("administrative_notifications")
+}
+
+model ActividadAdministrativa {
+  id Int @id @default(autoincrement())
+  actor_id Int?
+  accion String @db.VarChar(60)
+  entidad String @db.VarChar(30)
+  registro_id String @db.VarChar(80)
+  resultado String @default("EXITO") @db.VarChar(20)
+  campos String[] @default([])
+  created_at DateTime @default(now()) @db.Timestamptz
+  actor Usuario? @relation(fields:[actor_id],references:[id],onDelete:Restrict)
+  @@index([created_at,actor_id])
+  @@map("administrative_audit")
+}
+
+model ConfiguracionAdministrativa {
+  clave String @id @db.VarChar(50)
+  valor Json
+  updated_at DateTime @default(now()) @db.Timestamptz
+  @@map("administrative_settings")
+}
+
+model PreferenciaAdministrativa {
+  usuario_id Int @id
+  notificaciones Boolean @default(true)
+  compacto Boolean @default(false)
+  sesiones_revocadas_at DateTime? @db.Timestamptz
+  usuario Usuario @relation(fields:[usuario_id],references:[id],onDelete:Restrict)
+  @@map("administrative_preferences")
 }

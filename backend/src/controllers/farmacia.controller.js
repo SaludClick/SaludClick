@@ -1,3 +1,36 @@
+const medicationService = require("../services/medication.service");
+
+const verificarAcceso = (req, res) => {
+    res.json({
+        ok: true,
+        mensaje: "Acceso autorizado al panel de farmacia."
+    });
+};
+
+async function dashboard(req, res) {
+    try {
+        const medicamentos = await medicationService.listar();
+        const disponibles = medicamentos.filter(
+            medicamento => medicamento.estado === "DISPONIBLE"
+        ).length;
+
+        res.json({
+            ok: true,
+            medicamentos,
+            estadisticas: {
+                totalMedicamentos: medicamentos.length,
+                medicamentosDisponibles: disponibles
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            ok: false,
+            mensaje: "No se pudo cargar el dashboard de farmacia."
+        });
+    }
+}
+
 const service = require('../services/farmacia.service');
 function handle(operation, message) {
     return async (req, res) => {
@@ -10,6 +43,7 @@ function handle(operation, message) {
     };
 }
 module.exports = {
+    verificarAcceso, dashboard,
     async avanzarPedido(req, res) {
         try { res.json({ ok: true, pedido: await service.avanzarPedido(req.params.id, req.body) }); }
         catch (error) {

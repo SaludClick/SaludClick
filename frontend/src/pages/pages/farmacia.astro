@@ -1,0 +1,167 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import FarmaciaOperaciones from "../../components/FarmaciaOperaciones.astro";
+
+const title = "Dashboard de Farmacia | SaludClick";
+---
+
+<Layout title={title} bodyClass="admin-console">
+  <Fragment slot="head"><link rel="stylesheet" href="/css/farmacia.css" /></Fragment>
+  <div class="admin-app">
+    <aside class="admin-sidebar" id="menu" aria-label="Navegación de farmacia">
+      <a href="/pages/farmacia.html" class="admin-brand" aria-label="SaludClick, dashboard de farmacia">
+        <span class="admin-brand-mark">
+          <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
+        </span>
+        <span>SaludClick<small>FARMACIA</small></span>
+      </a>
+
+      <span class="admin-nav-caption">MENÚ PRINCIPAL</span>
+      <nav class="admin-side-nav" aria-label="Secciones de farmacia">
+        <a class="admin-side-link active" href="/pages/farmacia.html" aria-current="page">
+          <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="admin-side-link" href="/pages/farmacia.html#medicamentos">
+          <i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i>
+          <span>Medicamentos</span>
+        </a>
+        <a class="admin-side-link" href="#pedidosFarmacia">
+          <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
+          <span>Solicitudes</span>
+
+        </a>
+        <span class="admin-side-link farmacia-nav-disabled" aria-disabled="true" title="Esta operación aún no está habilitada para Farmacia.">
+          <i class="fa-solid fa-file-medical" aria-hidden="true"></i>
+          <span>Fórmulas</span>
+          <small>No disponible</small>
+        </span>
+        <a class="admin-side-link" href="#pedidosFarmacia">
+          <i class="fa-solid fa-truck-medical" aria-hidden="true"></i>
+          <span>Entregas</span>
+
+        </a>
+        <a class="admin-side-link" href="/pages/perfil.html">
+          <i class="fa-solid fa-user" aria-hidden="true"></i>
+          <span>Perfil</span>
+        </a>
+        <a class="admin-side-link" href="#inventarioFarmacia"><span>Inventario</span></a>
+        <a class="admin-side-link" href="/pages/chat-farmacia.html"><span>Chat con pacientes</span></a>
+      </nav>
+
+      <div class="admin-sidebar-bottom">
+        <div class="admin-sidebar-user">
+          <span class="admin-avatar"><i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i></span>
+          <span><strong id="farmaciaUserName">Farmacia</strong><small>Personal de farmacia</small></span>
+        </div>
+        <button class="admin-logout" id="logout" type="button">
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <button
+          class="admin-menu-toggle"
+          id="menuToggle"
+          type="button"
+          aria-label="Abrir menú de farmacia"
+          aria-expanded="false"
+          aria-controls="menu"
+        >
+          <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        </button>
+        <div class="admin-topbar-copy">
+          <span>SaludClick</span>
+          <strong>Panel de farmacia</strong>
+        </div>
+        <div class="admin-topbar-status">
+          <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+          Acceso de farmacia
+        </div>
+      </header>
+
+      <main class="admin-content" id="farmaciaMain" hidden>
+        <section class="admin-page-heading">
+          <div>
+            <span class="admin-eyebrow">OPERACIÓN DE FARMACIA</span>
+            <h1>Dashboard</h1>
+            <p>Consulta el catálogo, organiza los pedidos pagados y revisa las existencias.</p>
+          </div>
+          <button id="refreshFarmacia" class="btn-outline admin-refresh" type="button">
+            <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+            Actualizar datos
+          </button>
+        </section>
+
+        <div id="farmaciaMessage" class="admin-message" role="status" aria-live="polite"></div>
+
+        <section class="admin-stats" id="farmaciaStats" aria-label="Estadísticas del catálogo" aria-busy="true">
+          <article class="admin-stat admin-stat-loading">
+            <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+            <span>Cargando datos reales...</span>
+          </article>
+        </section>
+
+        <section class="card admin-dashboard-card farmacia-catalog-panel" id="medicamentos">
+          <div class="section-heading">
+            <div>
+              <span class="admin-eyebrow">CATÁLOGO</span>
+              <h2>Medicamentos</h2>
+              <p>Consulta de solo lectura con datos del backend.</p>
+            </div>
+          </div>
+          <div class="orders-table-wrapper">
+            <table class="orders-table farmacia-catalog-table">
+              <thead>
+                <tr>
+                  <th>Medicamento</th>
+                  <th>Categoría</th>
+                  <th>Descripción</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="farmaciaMedicamentos">
+                <tr><td colspan="4" class="admin-loading-text">Cargando catálogo...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <FarmaciaOperaciones />
+      </main>
+    </div>
+  </div>
+
+  <script is:inline type="module" src="/js/menu.js"></script>
+  <script is:inline type="module" src="/js/farmacia.js"></script>
+</Layout>
+
+<style>
+  .farmacia-nav-disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+  }
+
+  .farmacia-nav-disabled small {
+    margin-left: auto;
+    color: #a7c7b7;
+    font-size: 9px;
+    white-space: nowrap;
+  }
+
+  .farmacia-catalog-panel {
+    margin-top: 20px;
+  }
+
+  .farmacia-catalog-table {
+    min-width: 650px !important;
+  }
+
+  @media (max-width: 620px) {
+    .farmacia-nav-disabled small {
+      display: none;
+    }
+  }
+</style>

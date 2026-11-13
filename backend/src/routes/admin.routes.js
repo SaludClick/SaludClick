@@ -1,15 +1,13 @@
-
-const router = require("express").Router();
-const { requireAdmin } = require("../middlewares/admin.middleware");
-const c = require("../controllers/admin.controller");
-
-// Gestión existente de pedidos.
-router.get("/pedidos", requireAdmin, c.pedidos);
-router.patch("/pedidos/:id", requireAdmin, c.estadoPedido);
-
-// Gestión de cuentas de usuarios y farmacias.
-router.post("/cuentas", requireAdmin, c.crearCuenta);
-router.get("/cuentas", requireAdmin, c.cuentas);
-router.delete("/cuentas/:id", requireAdmin, c.eliminarCuenta);
-
-module.exports = router;
+const router=require('express').Router();
+const {requireAdmin}=require('../middlewares/admin.middleware');
+const {createController}=require('../controllers/administrative.controller');
+router.use(requireAdmin);
+const handle=name=>(req,res)=>createController()[name](req,res);
+router.get('/cuentas',handle('localUsers'));
+router.post('/cuentas',handle('createUser'));
+router.patch('/cuentas/:id',handle('updateUser'));
+router.delete('/cuentas/:id',(req,res)=>res.status(405).json({ok:false,mensaje:'Las cuentas se desactivan; no se eliminan.'}));
+router.all(['/pacientes','/pacientes/:id'],(req,res)=>res.status(403).json({ok:false,mensaje:'La sección independiente de Pacientes ya no pertenece al panel administrativo. Consulta Usuarios.'}));
+router.all('/pedidos',(req,res)=>res.status(403).json({ok:false,mensaje:'Los pedidos no pertenecen al módulo administrativo.'}));
+router.all('/pedidos/:id',(req,res)=>res.status(403).json({ok:false,mensaje:'Los pedidos no pertenecen al módulo administrativo.'}));
+module.exports=router;

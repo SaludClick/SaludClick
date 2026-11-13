@@ -1,3 +1,6 @@
+---
+import VitalixWidget from "../components/VitalixWidget.jsx";
+---
 <!DOCTYPE html>
 <html lang="es">
 
@@ -6,9 +9,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SaludClick - Tu bienestar, a un solo clic</title>
 
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link rel="icon" href="assets/icons/favicon.ico">
 </head>
 
 <body class="home-page">
@@ -20,22 +22,21 @@
                 <span>SaludClick</span>
             </a>
             <nav id="menu" aria-label="Navegación principal">
-                <a href="#inicio">Inicio</a>
-                <a href="#servicios">Servicios</a>
-                <a href="#beneficios">Beneficios</a>
-                <a href="#contacto">Contacto</a>
+                <div class="home-nav-links">
+                    <a href="#inicio">Inicio</a>
+                    <a href="#servicios">Servicios</a>
+                    <a href="#beneficios">Beneficios</a>
+                    <a href="#contacto">Contacto</a>
+                </div>
+                <a href="/login.html" class="btn-primary home-login-link">Iniciar sesión</a>
             </nav>
-
-            <div class="botones-nav home-nav-actions">
-                <a href="login.html" class="btn-primary">Iniciar sesión</a>
-            </div>
             <button
                 class="menu-toggle home-menu-toggle"
                 id="menuToggle"
                 type="button"
                 aria-controls="menu"
                 aria-expanded="false"
-                aria-label="Menú de navegación"
+                aria-label="Abrir menú de navegación"
             >
                 <i class="fa-solid fa-bars" aria-hidden="true"></i>
             </button>
@@ -62,7 +63,7 @@
                 </div>
 
                 <div class="hero-botones">
-                    <a href="login.html" class="btn-primary btn-lg">Solicitar medicamentos</a>
+                    <a href="/login.html" class="btn-primary btn-lg">Solicitar medicamentos</a>
                     <a href="#servicios" class="btn-outline btn-lg">Conocer servicios</a>
                 </div>
             </div>
@@ -178,7 +179,7 @@
                 <p><i class="fa-solid fa-location-dot"></i> Medellín - Colombia</p>
                 <p>
                     <i class="fa-solid fa-envelope"></i> 
-                    <a href="mailto:juandavidmospa12@gmail.com" class="email-link">juandavidmospa12@gmail.com</a>
+                    <a href="/pages/chat.html" class="email-link">Atención directa desde VITALIX</a>
                 </p>
             </div>
 
@@ -205,8 +206,9 @@
         </div>
     </footer>
 
-    <script type="module" src="js/menu.js"></script>
-    <script type="module" src="js/main.js"></script>
+    <script is:inline type="module" src="/js/menu.js"></script>
+    <script is:inline type="module" src="/js/main.js"></script>
+    <VitalixWidget client:load />
 </body>
 
 </html>

@@ -1,6 +1,4 @@
 
-require("dotenv").config();
-
 const fs = require("node:fs");
 const path = require("node:path");
 let prisma;
@@ -8,44 +6,108 @@ let prisma;
 const CSV_PATH = path.resolve(__dirname, "../data/catalogo_invima.csv");
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-function parseCsvLine(line) {
-  const out = [];
+function parseCsv(raw) {
+  const records = [];
+  let record = [];
   let value = "";
-  let quoted = false;
+  let inQuotes = false;
 
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
 
-    if (ch === '"') {
-      if (quoted && line[i + 1] === '"') {
+    if (inQuotes) {
+      if (ch === '"' && raw[i + 1] === '"') {
         value += '"';
         i++;
+      } else if (ch === '"') {
+        inQuotes = false;
       } else {
-        quoted = !quoted;
+        value += ch;
       }
-    } else if (ch === "," && !quoted) {
-      out.push(value.trim());
-      value = "";
     } else {
-      value += ch;
+      if (ch === '"' && value.length === 0) {
+        inQuotes = true;
+      } else if (ch === ",") {
+        record.push(value.trim());
+        value = "";
+      } else if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && raw[i + 1] === "\n") i++;
+        record.push(value.trim());
+        if (record.some(field => field !== "")) records.push(record);
+        record = [];
+        value = "";
+      } else {
+        value += ch;
+      }
     }
   }
 
-  out.push(value.trim());
-  return out;
+  if (inQuotes) throw new Error("El catálogo contiene un campo CSV sin cerrar.");
+  record.push(value.trim());
+  if (record.some(field => field !== "")) records.push(record);
+  return records;
 }
 
 function readCsv(file) {
   const raw = fs.readFileSync(file, "utf8").replace(/^\uFEFF/, "");
-  const lines = raw.split(/\r?\n/).filter(line => line.trim());
-  const headers = parseCsvLine(lines[0]);
+  const records = parseCsv(raw);
+  if (!records.length) throw new Error("El catálogo CSV está vacío.");
+  const headers = records[0];
+  if (new Set(headers).size !== headers.length || headers.some(header => !header)) {
+    throw new Error("Los encabezados del catálogo CSV no son válidos.");
+  }
 
-  return lines.slice(1).map((line, index) => {
-    const values = parseCsvLine(line);
+  return records.slice(1).map((values, index) => {
+    if (values.length !== headers.length) {
+      throw new Error(`Número de columnas incorrecto en fila ${index + 2}.`);
+    }
     return {
-      ...Object.fromEntries(headers.map((h, i) => [h, values[i] || ""])),
+      ...Object.fromEntries(headers.map((h, i) => [h, values[i]])),
       __line: index + 2
     };
+  });
+}
+
+function validateCatalogRows(rows, expectedCount) {
+  if (!Array.isArray(rows) || !rows.length) {
+    throw new Error("El catálogo no contiene registros.");
+  }
+  if (expectedCount !== undefined && rows.length !== expectedCount) {
+    throw new Error(`Se esperaban ${expectedCount} registros; encontrados: ${rows.length}`);
+  }
+
+  const required = [
+    "cum", "consecutivo", "expediente", "producto",
+    "principio_activo", "registro_sanitario",
+    "estado_registro", "estado_cum", "muestra_medica",
+    "modalidad", "titular"
+  ];
+  for (const column of required) {
+    if (!(column in rows[0])) throw new Error(`Falta la columna ${column}`);
+  }
+
+  const seen = new Set();
+  return rows.map((row, index) => {
+    const cum = String(row.cum || "").trim();
+    const consecutivo = String(row.consecutivo || "").trim();
+    const sku = `INVIMA-CUM-${cum}-${consecutivo}`;
+    const line = row.__line || index + 2;
+
+    if (!cum || !consecutivo ||
+        !String(row.producto || "").trim() ||
+        !String(row.registro_sanitario || "").trim() ||
+        !String(row.estado_registro || "").trim()) {
+      throw new Error(`Datos incompletos en fila ${line}`);
+    }
+    if (String(row.estado_registro).trim().toLowerCase() !== "vigente" ||
+        String(row.estado_cum).trim().toLowerCase() !== "activo" ||
+        String(row.muestra_medica).trim().toLowerCase() !== "no") {
+      throw new Error(`Estado INVIMA no válido en fila ${line}`);
+    }
+    if (seen.has(sku)) throw new Error(`Código duplicado: ${sku}`);
+    seen.add(sku);
+
+    return { ...row, cum, consecutivo, codigo_fuente: sku };
   });
 }
 
@@ -96,85 +158,14 @@ async function retry(operation, label, attempts = 4) {
   }
 }
 
-async function main() {
-  if (!fs.existsSync(CSV_PATH)) {
-    throw new Error("No se encontró el catálogo CSV.");
-  }
-
-  const rows = readCsv(CSV_PATH);
-
-  if (rows.length !== 1000) {
-    throw new Error(`Se esperaban 1000 registros; encontrados: ${rows.length}`);
-  }
-
-  const required = [
-    "cum", "consecutivo", "expediente", "producto",
-    "principio_activo", "registro_sanitario",
-    "estado_registro", "estado_cum", "muestra_medica",
-    "modalidad", "titular"
-  ];
-
-  for (const column of required) {
-    if (!(column in rows[0])) {
-      throw new Error(`Falta la columna ${column}`);
-    }
-  }
-
-  const seen = new Set();
-
-  for (const r of rows) {
-    const sku = `INVIMA-CUM-${r.cum.trim()}-${r.consecutivo.trim()}`;
-
-    if (!r.cum || !r.consecutivo || !r.producto ||
-        !r.registro_sanitario || !r.estado_registro) {
-      throw new Error(`Datos incompletos en fila ${r.__line}`);
-    }
-
-    if (r.estado_registro.toLowerCase() !== "vigente" ||
-        r.estado_cum.toLowerCase() !== "activo" ||
-        r.muestra_medica.toLowerCase() !== "no") {
-      throw new Error(`Estado INVIMA no válido en fila ${r.__line}`);
-    }
-
-    if (seen.has(sku)) {
-      throw new Error(`Código duplicado: ${sku}`);
-    }
-
-    seen.add(sku);
-  }
-
-  console.log(`Catálogo validado: ${rows.length} registros.`);
-
-  // Permite verificar el entregable sin credenciales ni conexión a Neon.
-  if (process.argv.includes("--validar")) return;
-  prisma = require("../src/config/prisma");
-
-  const existing = await retry(
-    () => prisma.medicamento.findMany({
-      where: { codigo_fuente: { in: [...seen] } },
-      select: { codigo_fuente: true }
-    }),
-    "Consultar medicamentos existentes"
-  );
-
-  const existingCodes = new Set(existing.map(m => m.codigo_fuente));
-
-  console.log(`Ya registrados: ${existingCodes.size}`);
-  console.log(`Pendientes: ${rows.length - existingCodes.size}`);
-
+async function importCatalog(rows, prisma, expectedCount) {
+  const validatedRows = validateCatalogRows(rows, expectedCount);
   const categories = new Map();
-  let created = 0;
-  let skipped = 0;
+  const codes = validatedRows.map(row => row.codigo_fuente);
+  const products = [];
 
-  for (const r of rows) {
-    const sku = `INVIMA-CUM-${r.cum.trim()}-${r.consecutivo.trim()}`;
-
-    if (existingCodes.has(sku)) {
-      skipped++;
-      continue;
-    }
-
-    const categoryName = categoryFor(`${r.producto} ${r.principio_activo}`);
+  for (const row of validatedRows) {
+    const categoryName = categoryFor(`${row.producto} ${row.principio_activo}`);
 
     if (!categories.has(categoryName)) {
       const category = await retry(
@@ -192,79 +183,94 @@ async function main() {
       categories.set(categoryName, category.id);
     }
 
-    const data = {
-      nombre: r.producto.trim().slice(0, 150),
-      descripcion: r.producto.trim(),
+    products.push({
+      nombre: row.producto.trim().slice(0, 150),
+      descripcion: row.producto.trim(),
       categoria_id: categories.get(categoryName),
       precio: 0,
       stock: 0,
       imagen: null,
       estado: "INACTIVO",
-      codigo_fuente: sku,
-      expediente: r.expediente || null,
-      nombre_generico: (r.principio_activo || "").slice(0, 180) || null,
-      principio_activo: r.principio_activo || null,
-      concentracion: (r.concentracion || "").slice(0, 120) || null,
-      forma_farmaceutica: (r.forma_farmaceutica || "").slice(0, 120) || null,
-      presentacion: (r.presentacion || "").slice(0, 180) || null,
-      via_administracion: (r.via_administracion || "").slice(0, 120) || null,
-      titular_registro: (r.titular || "").slice(0, 220) || null,
-      registro_sanitario: r.registro_sanitario.trim().slice(0, 100),
-      estado_registro_invima: r.estado_registro.trim(),
-      modalidad_comercializacion: (r.modalidad || "").slice(0, 180) || null,
-      cum: r.cum || null,
-      ium: r.ium || null,
+      codigo_fuente: row.codigo_fuente,
+      expediente: row.expediente || null,
+      nombre_generico: (row.principio_activo || "").slice(0, 180) || null,
+      principio_activo: row.principio_activo || null,
+      concentracion: (row.concentracion || "").slice(0, 120) || null,
+      forma_farmaceutica: (row.forma_farmaceutica || "").slice(0, 120) || null,
+      presentacion: (row.presentacion || "").slice(0, 180) || null,
+      via_administracion: (row.via_administracion || "").slice(0, 120) || null,
+      titular_registro: (row.titular || "").slice(0, 220) || null,
+      registro_sanitario: row.registro_sanitario.trim().slice(0, 100),
+      estado_registro_invima: row.estado_registro.trim(),
+      modalidad_comercializacion: (row.modalidad || "").slice(0, 180) || null,
+      cum: row.cum || null,
+      ium: row.ium || null,
       requiere_formula: null,
       catalogo_verificado: false,
       precio_referencial: null,
       fuente_precio: null,
       fecha_precio: null
-    };
-
-    await retry(
-      () => prisma.medicamento.upsert({
-        where: { codigo_fuente: sku },
-        update: {},
-        create: data
-      }),
-      `Medicamento ${sku}`
-    );
-
-    created++;
-
-    if (created % 25 === 0) {
-      console.log(
-        `Progreso: ${created} nuevos | ${skipped} existentes omitidos`
-      );
-    }
+    });
   }
+
+  const inserted = await retry(
+    () => prisma.medicamento.createMany({
+      data: products,
+      skipDuplicates: true
+    }),
+    "Insertar medicamentos sin duplicar códigos INVIMA"
+  );
 
   const total = await retry(
     () => prisma.medicamento.count({
-      where: {
-        codigo_fuente: { in: [...seen] }
-      }
+      where: { codigo_fuente: { in: codes } }
     }),
     "Verificación final"
   );
 
-  console.log("\nIMPORTACIÓN FINALIZADA");
-  console.log(`Nuevos: ${created}`);
-  console.log(`Omitidos: ${skipped}`);
-  console.log(`Referencias del CSV en Neon: ${total}/1000`);
-
-  if (total !== 1000) {
+  if (total !== validatedRows.length) {
     throw new Error("La importación quedó incompleta.");
+  }
+
+  return {
+    created: inserted.count,
+    skipped: validatedRows.length - inserted.count,
+    total
+  };
+}
+
+async function main() {
+  if (!fs.existsSync(CSV_PATH)) throw new Error("No se encontró el catálogo CSV.");
+  const rows = readCsv(CSV_PATH);
+  validateCatalogRows(rows, 1000);
+  console.log(`Catálogo validado: ${rows.length} registros.`);
+  // Offline validation must never load credentials or open a database connection.
+  if (process.argv.includes('--validar')) return;
+  prisma = require("../src/config/prisma");
+
+  try {
+    const result = await importCatalog(rows, prisma, 1000);
+    console.log(`Catálogo validado: ${rows.length} registros.`);
+    console.log(`Nuevos: ${result.created}`);
+    console.log(`Omitidos por código existente: ${result.skipped}`);
+    console.log(`Referencias verificadas: ${result.total}/1000`);
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
-if (require.main === module) main()
-  .catch(error => {
+if (require.main === module) {
+  main().catch(error => {
     console.error("ERROR:", prisma ? `Falló la importación (${error.code || error.name}).` : error.message);
     process.exitCode = 1;
-  })
-  .finally(async () => {
-    if (prisma) await prisma.$disconnect();
   });
+}
 
-module.exports = { readCsv, parseCsvLine, categoryFor };
+module.exports = {
+  parseCsv,
+  parseCsvLine: line => parseCsv(line)[0] || [],
+  readCsv,
+  validateCatalogRows,
+  categoryFor,
+  importCatalog
+};

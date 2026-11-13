@@ -1,129 +1,244 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "../styles/chat.css";
+import { HISTORY_KEY, MAX_TURNS, interpretMessage, readHistory, safeUserText } from "../lib/vitalix-engine.mjs";
+import {useAdministrativeConversation} from '../hooks/useAdministrativeConversation.js';
 
-const apiBase = () => (window.SALUDCLICK_API_URL || "").replace(/\/+$/, "");
-const getToken = () => typeof window === "undefined" ? null : sessionStorage.getItem("saludclick_token") || localStorage.getItem("saludclick_token");
-const getCurrentUser = () => {
-  if (typeof window === 'undefined') return null;
-  try {
-    const value = sessionStorage.getItem('saludclick_user') || localStorage.getItem('saludclick_user');
-    return value ? JSON.parse(value) : null;
-  } catch { return null; }
+const OPCIONES = [
+  { id: "solicitar-cuenta", icon: "fa-user-plus", label: "Solicitar una cuenta" },
+  { id: "estado-solicitud", icon: "fa-clipboard-check", label: "Consultar estado de solicitud" },
+  { id: "problemas-login", icon: "fa-key", label: "Problemas para iniciar sesión" },
+  { id: "contactar-admin", icon: "fa-comments", label: "Contactar con Administración" },
+  { id: "faq-acceso", icon: "fa-circle-question", label: "Preguntas frecuentes sobre acceso" }
+];
+
+const HUMAN_REPLY = "¡Claro! Puedo comunicarte directamente con Administración de SaludClick. No necesitas iniciar sesión. Escribe aquí tu solicitud y podrás recibir la respuesta en este mismo chat.";
+const RESPUESTAS = {
+  saludo:{parrafos:["¡Hola! Soy VITALIX. Puedo orientarte sobre acceso y cuentas."]},
+  gracias:{parrafos:["Con gusto. Puedes continuar escribiendo aquí."]},
+  "aclarar-acceso":{parrafos:["¿Tienes una cuenta activa o esperas aprobación? No compartas tu clave."]},
+  privacidad:{parrafos:["No compartas claves, tokens, documentos ni información sensible. Reformula tu pregunta sin esos datos."]},
+  "fuera-alcance":{parrafos:["Para consultas médicas o farmacéuticas, contacta al profesional competente. Puedo orientarte sobre acceso y cuentas."]},
+  "no-entendido":{parrafos:["¿Necesitas solicitar una cuenta, ayuda con el acceso o hablar con Administración? Escribe tu consulta aquí."]},
+  "solicitar-cuenta":{titulo:"Solicitar una cuenta",parrafos:[HUMAN_REPLY,"El registro público sigue deshabilitado. Administración revisará tu solicitud desde este chat."]},
+  "estado-solicitud":{titulo:"Consultar tu solicitud",parrafos:["Para consultar tu solicitud, elige Contactar con Administración y escribe aquí. La respuesta llegará a este chat."]},
+  "problemas-login":{titulo:"Recuperar acceso",parrafos:["Revisa el correo de tu cuenta. Si olvidaste tu clave, utiliza la recuperación de acceso. Si necesitas ayuda de una persona, elige Contactar con Administración."],enlace:{texto:"Recuperar acceso",href:"/recuperar.html"}},
+  "contactar-admin":{titulo:"Atención directa",parrafos:[HUMAN_REPLY]},
+  "faq-acceso":{titulo:"Acceso y cuentas",parrafos:["El registro público está deshabilitado. Puedes solicitar una cuenta o atención humana escribiendo en este chat, sin iniciar sesión."]}
 };
-async function apiFetch(path, options = {}) {
-  const headers = new Headers(options.headers || {});
-  headers.set("Authorization", `Bearer ${getToken()}`);
-  if (options.body) headers.set("Content-Type", "application/json");
-  const response = await fetch(`${apiBase()}/api/${path}`, { ...options, headers });
-  const data = await response.json().catch(() => ({}));
-  if (response.status === 401) { window.location.href = "/login.html"; throw new Error("Tu sesión expiró. Inicia sesión nuevamente."); }
-  if (!response.ok || data.ok === false) throw new Error(data.mensaje || "No se pudo completar la operación.");
-  return data;
+
+function Hora({ at }) {
+  return <time className="vitalix-time" dateTime={at}>{new Date(at).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}</time>;
 }
-let socketScript;
-function loadSocketClient() {
-  if (window.io) return Promise.resolve(window.io);
-  if (!socketScript) socketScript = new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = `${apiBase()}/socket.io/socket.io.js`;
-    script.onload = () => resolve(window.io);
-    script.onerror = () => reject(new Error("No fue posible conectar el chat en tiempo real."));
-    document.head.appendChild(script);
-  });
-  return socketScript;
+
+function Respuesta({ respuesta, at }) {
+  return (
+    <article className="vitalix-message vitalix-message-assistant">
+      <span className="vitalix-message-avatar" aria-hidden="true">
+        <i className="fa-solid fa-heart-pulse" />
+      </span>
+      <div className="vitalix-message-content">
+        <strong className="vitalix-message-name">VITALIX</strong>
+        {respuesta.titulo && <h3>{respuesta.titulo}</h3>}
+        {respuesta.parrafos?.map((parrafo) => <p key={parrafo}>{parrafo}</p>)}
+        {respuesta.preguntas && (
+          <dl className="vitalix-faq">
+            {respuesta.preguntas.map(({ pregunta, respuesta: texto }) => (
+              <div key={pregunta}>
+                <dt>{pregunta}</dt>
+                <dd>{texto}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+        {respuesta.enlace && (
+          <a className="vitalix-action" href={respuesta.enlace.href}>
+            {respuesta.enlace.texto}
+            <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden="true" />
+          </a>
+        )}
+        {respuesta.enlaceSecundario && (
+          <a className="vitalix-action vitalix-action-secondary" href={respuesta.enlaceSecundario.href}>
+            {respuesta.enlaceSecundario.texto}
+            <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden="true" />
+          </a>
+        )}
+        {respuesta.aviso && <p className="vitalix-note">{respuesta.aviso}</p>}
+        <Hora at={at} />
+      </div>
+    </article>
+  );
 }
-const displayDate = (date) => new Intl.DateTimeFormat("es-CO", { dateStyle: "short", timeStyle: "short" }).format(new Date(date));
 
-function Chat() {
-  const user = getCurrentUser();
-  const role = Number(user?.rol_id ?? user?.rol);
-  const allowed = !!getToken() && [2, 3].includes(role);
-  const isStaff = Number(user?.rol ?? user?.rol_id) === 3;
-  const [conversations, setConversations] = useState([]);
-  const [active, setActive] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [text, setText] = useState("");
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [connected, setConnected] = useState(false);
-  const socketRef = useRef(null);
-  const endRef = useRef(null);
-
-  const loadConversations = useCallback(async () => {
-    if (!allowed) return;
-    try {
-      let result = await apiFetch("chat/conversaciones");
-      if (!isStaff && !result.conversaciones.length) {
-        const created = await apiFetch("chat/conversaciones", { method: "POST", body: JSON.stringify({}) });
-        result = { conversaciones: [created.conversacion] };
-      }
-      setConversations(result.conversaciones);
-      if (result.conversaciones[0]) setActive((current) => current || result.conversaciones[0]);
-    } catch (e) { setError(e.message); }
-  }, [isStaff, allowed]);
-
-  useEffect(() => { loadConversations(); }, []);
+function Chat({ embedded = false, visible = true }) {
+  const human=useAdministrativeConversation(visible);
+  const Container = embedded ? "div" : "main";
+  const [turns, setTurns] = useState([]);
+  const [draft, setDraft] = useState("");
+  const [typing, setTyping] = useState(false);
+  const [confirmed,setConfirmed]=useState(false);
+  const [ready, setReady] = useState(false);
+  const [storageUnavailable, setStorageUnavailable] = useState(false);
+  const timer = useRef(null);
+  const busy = useRef(false);
+  const log = useRef(null);
+  const input = useRef(null);
+  const opcionActiva = turns.at(-1)?.intent;
+  const canSend=ready&&!human.checking&&(!human.eligible||human.operational);
+  const nearBottom=useRef(true);
+  useEffect(()=>{if(human.enabled&&human.pendingContent)setDraft(old=>old||human.pendingContent);},[human.enabled,human.pendingContent]);
 
   useEffect(() => {
-    if (!allowed) window.location.replace(getToken() && role === 1 ? '/pages/admin.html' : getToken() && role === 4 ? '/pages/perfil.html' : '/login.html');
-  }, [allowed, role]);
+    try { setTurns(readHistory(window.sessionStorage, Object.keys(RESPUESTAS))); }
+    catch { setStorageUnavailable(true); }
+    setReady(true);
+    return () => clearTimeout(timer.current);
+  }, []);
 
   useEffect(() => {
-    if (!allowed) return;
-    let disposed = false;
-    loadSocketClient().then((io) => {
-      if (disposed) return;
-      const socket = io(apiBase() || window.location.origin, { auth: { token: getToken() }, transports: ["websocket", "polling"] });
-      socketRef.current = socket;
-      socket.on("connect", () => { setConnected(true); setError(""); });
-      socket.on("disconnect", () => setConnected(false));
-      socket.on("connect_error", (e) => setError(e.message || "No fue posible conectar el chat."));
-      socket.on("chat:notification", () => { setNotice("Tienes un mensaje nuevo."); window.setTimeout(() => setNotice(""), 4500); loadConversations(); });
-      socket.on("chat:message", (message) => setMessages((previous) => previous.some((m) => m.id === message.id) ? previous : [...previous, message]));
-      socket.on("chat:status", ({ estado }) => setMessages((previous) => previous.map((message) => message.remitente_id !== Number(user?.id) ? { ...message, estado } : message)));
-    }).catch((e) => setError(e.message));
-    return () => { disposed = true; socketRef.current?.disconnect(); };
-  }, [loadConversations, allowed]);
+    if (!ready) return;
+    try { window.sessionStorage.setItem(HISTORY_KEY, JSON.stringify(turns)); }
+    catch { setStorageUnavailable(true); }
+  }, [turns, ready]);
 
   useEffect(() => {
-    if (!active) return;
-    let cancelled = false;
-    apiFetch(`chat/conversaciones/${active.id}/mensajes`).then(({ messages: history, conversation }) => { if (!cancelled) { setMessages(history); if (isStaff && conversation) setActive((current) => current?.id === conversation.id && current?.agente?.id === conversation.agente?.id ? current : conversation); } }).catch((e) => setError(e.message));
-    const socket = socketRef.current;
-    if (socket?.connected) socket.emit("chat:join", active.id, (result) => {
-      if (result?.ok && !cancelled) setMessages((previous) => result.mensajes.length >= previous.length ? result.mensajes : previous);
-    });
-    return () => { cancelled = true; if (socket) socket.emit("chat:leave", active.id); };
-  }, [active]);
+    // Scroll only the transcript; never move keyboard focus or the surrounding page.
+    if(!human.enabled||nearBottom.current)log.current?.scrollTo({ top: log.current.scrollHeight, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+  }, [turns, typing,human.messages,human.enabled]);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-
-  function sendMessage(event) {
-    event.preventDefault();
-    const contenido = text.trim();
-    if (!contenido || !active || !socketRef.current?.connected) return;
-    socketRef.current.emit("chat:send", { conversationId: active.id, contenido }, (result) => {
-      if (!result?.ok) setError(result?.mensaje || "No se pudo enviar el mensaje.");
-      else { setText(""); setError(""); loadConversations(); }
-    });
+  async function send(text, quickIntent) {
+    const trimmed = text.trim();
+    if (!trimmed || busy.current || !canSend) return;
+    const intent = quickIntent || interpretMessage(trimmed, opcionActiva);
+    if(human.enabled||(human.eligible&&['contactar-admin','solicitar-cuenta'].includes(intent))){
+      busy.current=true;nearBottom.current=true;
+      // Include only the latest relevant user context when handing over, never the full bot history.
+      const previous=turns.at(-1);
+      const context=!human.enabled&&previous&&!['saludo','gracias','privacidad','fuera-alcance'].includes(previous.intent)?`\n\nContexto del usuario: ${previous.text}`:'';
+      const payload=(trimmed+context).slice(0,2000);
+      setConfirmed(false);
+      try{const sent=await human.send(payload);setConfirmed(sent);setDraft(old=>old.trim()===trimmed?(sent?'':payload):old);}finally{busy.current=false;input.current?.focus({preventScroll:true});}
+      return;
+    }
+    const at = new Date().toISOString();
+    const turn = { text: safeUserText(trimmed), intent, at, replyAt: new Date(Date.now() + 450).toISOString() };
+    busy.current = true;
+    setTurns(previous => [...previous, turn].slice(-MAX_TURNS));
+    setDraft("");
+    setTyping(true);
+    timer.current = setTimeout(() => { busy.current = false; setTyping(false); }, 450);
+    input.current?.focus({ preventScroll: true });
   }
 
-  const participantName = (conversation) => {
-    const person = isStaff ? conversation.cliente : conversation.agente;
-    return person ? `${person.nombre} ${person.apellido}` : (isStaff ? "Nueva conversación" : "Equipo de farmacia");
-  };
+  function clearHistory() {
+    clearTimeout(timer.current);
+    busy.current = false;
+    setTyping(false);
+    setTurns([]);
+    setDraft("");
+    input.current?.focus({ preventScroll: true });
+  }
 
-  return <main className="chat-page"><header className="chat-heading"><div><span className="chat-eyebrow">ATENCIÓN SALUDCLICK</span><h1>Chat con farmacia</h1><p>Resuelve tus dudas directamente con nuestro equipo.</p></div><span className={`chat-connection ${connected ? "online" : ""}`}><i />{connected ? "En línea" : "Conectando"}</span></header>
-    {notice && <div className="chat-notice" role="status"><i className="fa-solid fa-bell" />{notice}</div>}
-    {error && <div className="chat-error" role="alert">{error}</div>}
-    <section className="chat-shell">
-      {isStaff && <aside className="chat-list"><h2>Conversaciones asignadas</h2>{conversations.length ? conversations.map((conversation) => <button key={conversation.id} className={`chat-list-item ${active?.id === conversation.id ? "selected" : ""}`} onClick={() => { setActive(conversation); setMessages([]); }}><span className="chat-avatar"><i className="fa-solid fa-user" /></span><span className="chat-list-copy"><strong>{participantName(conversation)}</strong><small>{conversation.mensajes[0]?.contenido || "Iniciar conversación"}</small></span><i className="fa-solid fa-chevron-right" /></button>) : <p className="chat-empty-list">No hay conversaciones pendientes.</p>}</aside>}
-      <div className="chat-window"><div className="chat-window-header"><span className="chat-avatar"><i className="fa-solid fa-headset" /></span><div><strong>{active ? participantName(active) : "Equipo de farmacia"}</strong><small>{active?.agente ? "Personal de farmacia" : "Te atenderemos pronto"}</small></div></div>
-        <div className="chat-messages" aria-live="polite">{messages.length ? messages.map((message) => <article key={message.id} className={`chat-bubble ${message.remitente_id === Number(user?.id) ? "mine" : "theirs"}`}><p>{message.contenido}</p><footer><time dateTime={message.created_at}>{displayDate(message.created_at)}</time>{message.remitente_id === Number(user?.id) && <span title={message.estado}>{message.estado === "LEIDO" ? "✓✓" : message.estado === "ENTREGADO" ? "✓✓" : "✓"}</span>}</footer></article>) : <div className="chat-welcome"><span><i className="fa-solid fa-comments" /></span><h2>{active ? "Esta conversación está lista" : "Estamos aquí para ayudarte"}</h2><p>Escribe tu consulta y el equipo de farmacia te responderá.</p></div>}<div ref={endRef} /></div>
-        <form className="chat-composer" onSubmit={sendMessage}><label className="sr-only" htmlFor="chatMessage">Escribe tu mensaje</label><textarea id="chatMessage" value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} placeholder="Escribe tu mensaje..." rows={1} disabled={!active} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.currentTarget.form.requestSubmit(); } }} /><span className="chat-char-count">{text.length}/2000</span><button type="submit" disabled={!text.trim() || !connected || !active} aria-label="Enviar mensaje"><i className="fa-solid fa-paper-plane" /></button></form>
+  return (
+    <Container className="vitalix-page">
+      {!embedded && <section className="vitalix-heading" aria-labelledby="vitalixTitle">
+        <span className="vitalix-brand-icon" aria-hidden="true">
+          <i className="fa-solid fa-heart-pulse" />
+        </span>
+        <div>
+          <span className="vitalix-eyebrow">ASISTENTE DE ACCESO Y CUENTAS</span>
+          <h1 id="vitalixTitle">VITALIX</h1>
+          <p>Orientación clara y segura para acceder a tu cuenta de SaludClick.</p>
+        </div>
+        <span className="vitalix-status">
+          <i aria-hidden="true" />
+          {human.enabled?'Atención administrativa':'Asistente virtual'}
+        </span>
+      </section>}
+
+      <div className="vitalix-shell">
+        <details className="vitalix-shortcuts" open={embedded ? undefined : true}>
+          <summary>Accesos rápidos · 5 opciones</summary>
+        <nav className="vitalix-menu" aria-label="Opciones de ayuda de VITALIX">
+          <div className="vitalix-menu-heading">
+            <span className="vitalix-eyebrow">¿CÓMO PODEMOS AYUDARTE?</span>
+            <h2>Elige una opción</h2>
+          </div>
+          <div className="vitalix-menu-options">
+            {OPCIONES.map((opcion) => (
+              <button
+                className={`vitalix-option ${opcionActiva === opcion.id ? "is-active" : ""}`}
+                type="button"
+                key={opcion.id}
+                data-vitalix-option={opcion.id}
+                aria-pressed={opcionActiva === opcion.id}
+                disabled={!canSend||typing||human.sending}
+                onClick={() => send(opcion.label, opcion.id)}
+              >
+                <i className={`fa-solid ${opcion.icon}`} aria-hidden="true" />
+                <span>{opcion.label}</span>
+                <i className="fa-solid fa-chevron-right vitalix-option-arrow" aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+          <p className="vitalix-menu-footnote">
+            No compartas contraseñas, tokens, cédulas ni datos sensibles.
+          </p>
+        </nav>
+        </details>
+
+        <section
+          className="vitalix-conversation"
+          aria-label="Conversación de soporte con VITALIX"
+        >
+          <p className="vitalix-mode">{human.enabled?`Chat con Administración · ${human.connected?'En tiempo real':'Sincronización automática'}`:'Asistente de respuestas programadas · Acceso y cuentas'}</p>
+          <div className="vitalix-transcript" ref={log} role="log" aria-label="Mensajes de VITALIX" aria-live="polite" aria-relevant="additions text" tabIndex={0} onScroll={()=>{const node=log.current;nearBottom.current=node.scrollHeight-node.scrollTop-node.clientHeight<80;}}>
+          <div className="vitalix-welcome">
+            <span className="vitalix-welcome-icon" aria-hidden="true">
+              <i className="fa-solid fa-comments" />
+            </span>
+            <div>
+              <strong>Hola, soy VITALIX</strong>
+              <p>{human.enabled?HUMAN_REPLY:human.eligible?"Escribe tu pregunta o solicita una cuenta o atencion humana desde este chat.":"Escribe tu pregunta sobre acceso y cuentas."}</p>
+            </div>
+          </div>
+          {human.enabled&&human.hasOlder&&<button type="button" className="vitalix-action" onClick={async()=>{const height=log.current.scrollHeight,top=log.current.scrollTop;nearBottom.current=false;await human.loadOlder();requestAnimationFrame(()=>{if(log.current)log.current.scrollTop=top+log.current.scrollHeight-height;});}}>Ver mensajes anteriores</button>}
+
+          {turns.map((turn, index) => (
+            <div className="vitalix-turn" key={`${turn.at}-${index}`} role="group" aria-label="Intercambio de mensajes">
+              <div className="vitalix-message vitalix-message-user">
+                <span>{turn.text}</span>
+                <Hora at={turn.at} />
+              </div>
+              {!(typing && index === turns.length - 1) && <Respuesta respuesta={RESPUESTAS[turn.intent]} at={turn.replyAt} />}
+            </div>
+          ))}
+          {human.enabled&&human.messages.map(message=><article key={message.id} data-vitalix-message={message.id} className={`vitalix-message ${(human.visitor?message.remitente_id===null:Number(message.remitente_id)===human.userId)?'vitalix-message-user':'vitalix-message-assistant'}`}><div className="vitalix-message-content"><strong className="vitalix-message-name">{Number(message.rol_id)===1?'Administración':message.nombre||'Tú'}</strong><p>{message.contenido}</p><time className="vitalix-time" dateTime={message.created_at}>{new Date(message.created_at).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'})}</time></div></article>)}
+          {human.enabled?human.sending&&<p className="vitalix-typing" role="status">Enviando a Administración…</p>:typing&&<p className="vitalix-typing" role="status">VITALIX está escribiendo...</p>}
+          </div>
+          <form className="vitalix-composer" onSubmit={(event) => { event.preventDefault(); send(draft); }}>
+            <label className="vitalix-input-label" htmlFor={embedded ? "vitalix-widget-input" : "vitalix-page-input"}>{human.enabled?'Mensaje para Administración':'Mensaje para VITALIX'}</label>
+            <input ref={input} id={embedded ? "vitalix-widget-input" : "vitalix-page-input"}
+              type="text" placeholder="Escribe tu mensaje..." value={draft} maxLength={human.enabled?2000:1000}
+              autoComplete="off" disabled={!canSend} onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  if (!event.nativeEvent.isComposing) send(draft);
+                }
+              }} />
+            <button type="submit" aria-label="Enviar mensaje" disabled={!canSend||typing||human.sending || !draft.trim()}>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m3 3 18 9-18 9 4-9-4-9Z M7 12h14" /></svg>
+            </button>
+          </form>
+          {confirmed&&<p role="status" className="vitalix-note">Mensaje guardado y enviado a Administración.</p>}
+          <p className="vitalix-disclaimer">
+            {human.enabled?'Los mensajes confirmados se guardan en tu conversación con Administración.':storageUnavailable ? "El historial solo estará disponible mientras esta página siga abierta." : "Historial temporal en esta pestaña (hasta 40 intercambios). No se envía a servicios de IA."}
+          </p>
+          {human.enabled?<><p className="vitalix-note" role="alert">{human.error}</p><button type="button" className="vitalix-clear" onClick={()=>human.sync()}>Actualizar conversación</button></>:<><button type="button" className="vitalix-clear" onClick={clearHistory}>Borrar conversación</button></>}
+        </section>
       </div>
-    </section><p className="chat-privacy"><i className="fa-solid fa-lock" /> No compartas información sensible de salud en el chat.</p>
-  </main>;
+    </Container>
+  );
 }
 
 export default Chat;

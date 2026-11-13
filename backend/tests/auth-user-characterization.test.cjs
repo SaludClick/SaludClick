@@ -7,7 +7,9 @@ const jwt = require('jsonwebtoken');
 const originalLoad = Module._load;
 const previousEnv = {
     JWT_SECRET: process.env.JWT_SECRET,
-    FRONTEND_URL: process.env.FRONTEND_URL
+    FRONTEND_URL: process.env.FRONTEND_URL,
+    AUTHORIZED_FARMACIA_EMAIL: process.env.AUTHORIZED_FARMACIA_EMAIL,
+    AUTHORIZED_EPS_EMAIL: process.env.AUTHORIZED_EPS_EMAIL
 };
 const TEST_SECRET = 'saludclick-auth-characterization-secret';
 let users;
@@ -33,7 +35,7 @@ const repository = {
     login: async correo => findUser(correo),
     crearTokenRecuperacion: async (usuarioId, tokenHash, expiraEn) => { recovery = { usuarioId, tokenHash, expiraEn }; },
     buscarTokenRecuperacion: async tokenHash => recovery?.tokenHash === tokenHash
-        ? { token_id: 88, usuario_id: recovery.usuarioId, correo: findUser('ana@example.test')?.correo }
+        ? { token_id: 88, usuario_id: recovery.usuarioId, correo: findUser('ana@example.test')?.correo, password: users.find(u => u.id === recovery.usuarioId)?.password }
         : undefined,
     actualizarPassword: async (usuarioId, passwordHash, tokenId) => { resetCall = { usuarioId, passwordHash, tokenId }; },
     buscarPerfil: async id => {
@@ -55,7 +57,7 @@ const bcryptMock = {
     compare: async (password, hash) => hash === `hash:${password}`
 };
 const mailerMock = {
-    createTransport: () => ({ sendMail: async message => { mailMessages.push(message); } })
+    createTransport: () => ({ verify: async () => true, sendMail: async message => { mailMessages.push(message); return { accepted: [message.to], rejected: [] }; } })
 };
 class GoogleClientMock {
     async verifyIdToken(options) {
@@ -70,6 +72,8 @@ let userService;
 
 before(() => {
     process.env.JWT_SECRET = TEST_SECRET;
+    process.env.AUTHORIZED_FARMACIA_EMAIL = 'farmacia@example.com';
+    process.env.AUTHORIZED_EPS_EMAIL = 'eps@example.com';
     Module._load = function(request, parent, isMain) {
         if (request === '../repositories/auth.repository' && /(auth|user)\.service\.js$/.test(parent?.filename || '')) return repository;
         if (request === 'bcrypt' && /auth\.service\.js$/.test(parent?.filename || '')) return bcryptMock;
@@ -99,6 +103,9 @@ beforeEach(() => {
 
 after(() => {
     Module._load = originalLoad;
+    for(const key of ['AUTHORIZED_FARMACIA_EMAIL','AUTHORIZED_EPS_EMAIL']) {
+        if(previousEnv[key]===undefined) delete process.env[key]; else process.env[key]=previousEnv[key];
+    }
     if (previousEnv.JWT_SECRET === undefined) delete process.env.JWT_SECRET;
     else process.env.JWT_SECRET = previousEnv.JWT_SECRET;
     if (previousEnv.FRONTEND_URL === undefined) delete process.env.FRONTEND_URL;
@@ -211,6 +218,31 @@ test('restablecimiento conserva validación, hash y consumo del token', async t 
         await authService.restablecerPassword(rawToken, '123456');
         assert.deepEqual(resetCall, { usuarioId: 7, passwordHash: 'hash:123456', tokenId: 88 });
     });
+});
+
+test('activación reutiliza recuperación y exige contraseña segura sin activar antes de verificar', async () => {
+    users[0].password = '!ACTIVACION_PENDIENTE';
+    users[0].estado = 'INACTIVO';
+    process.env.FRONTEND_URL = 'https://saludclick.test';
+    await authService.solicitarRecuperacion(users[0].correo);
+    assert.equal(users[0].estado, 'INACTIVO');
+    assert.match(mailMessages[0].subject, /Activa/);
+    const enlace = mailMessages[0].text.match(/https:\/\/\S+/)[0];
+    const token = new URL(enlace).searchParams.get('token');
+    assert.equal(crypto.createHash('sha256').update(token).digest('hex'), recovery.tokenHash);
+    await assert.rejects(authService.restablecerPassword(token, '123456'), /12 caracteres/);
+    assert.equal(resetCall, undefined);
+    await authService.restablecerPassword(token, 'contraseña de prueba larga');
+    assert.equal(resetCall.usuarioId, users[0].id);
+});
+
+test('invitaciones rechazan duplicados, otros roles y URL local antes de crear cuentas', async () => {
+    await assert.rejects(authService.invitarCuenta({ correo: 'otro@example.test', rol_id: 3 }), /alcance autorizado/);
+    users.push({ correo: 'farmacia@example.com', rol_id: 2 });
+    await assert.rejects(authService.invitarCuenta({ correo: 'farmacia@example.com', rol_id: 3 }), /ya está registrado/);
+    process.env.FRONTEND_URL = 'http://localhost:3000';
+    await assert.rejects(authService.invitarCuenta({ correo: 'eps@example.com', rol_id: 4 }), /HTTPS pública/);
+    assert.equal(registrationCalls, 0);
 });
 
 test('servicio de perfil consulta usuario y reenvía los datos de actualización al repositorio', async t => {

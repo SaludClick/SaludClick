@@ -22,11 +22,13 @@ export function validarDestino(destino) {
     return null;
 }
 
-export function consumirDestinoPendiente() {
+export function consumirDestinoPendiente(destinoPorDefecto = "/pages/dashboard.html") {
     const destino = validarDestino(sessionStorage.getItem(DESTINO_KEY));
     sessionStorage.removeItem(DESTINO_KEY);
     const usuario = getCurrentUser();
-    return destino && puedeAcceder(destino, usuario) ? destino : paginaInicio(usuario);
+    if(destino && puedeAcceder(destino, usuario)) return destino;
+    const fallback=validarDestino(destinoPorDefecto);
+    return fallback && puedeAcceder(fallback,usuario) ? fallback : paginaInicio(usuario);
 }
 
 export function requerirSesion(destino) {

@@ -93,3 +93,20 @@ private_uploads/*
 !private_uploads/.gitkeep
 /backend/private_uploads/*
 !/backend/private_uploads/.gitkeep
+
+# Private operational diagnostics and local validation output.
+/auth-local-validation.txt
+/auth-manual-validation.txt
+/auth-targeted-output.txt
+/auth-validation-output.txt
+/diagnostico-pedidos.txt
+/backend/scripts/activacion-administrativa-resultado.json
+/docs/calidad/evidencias/EV-001-pruebas-backend.txt
+/docs/calidad/reportes/activacion-administrativa-preparacion.md
+/docs/calidad/reportes/cuentas-autorizadas-activacion.md
+/docs/calidad/reportes/afiliados-*.json
+/docs/calidad/reportes/afiliados-*.md
+/docs/calidad/reportes/errores-pruebas.txt
+
+# Accidental local path listing; preserve on disk, never publish.
+/SaludClick

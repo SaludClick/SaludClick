@@ -8,7 +8,7 @@ before(async () => {
     policy = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 });
 test('cada identidad tiene un inicio propio y los roles desconocidos vuelven al login', () => {
-    for (const [role, home] of [[1, '/pages/admin.html'], [2, '/pages/dashboard.html'], [3, '/pages/farmacia.html'], [4, '/pages/perfil.html']]) {
+    for (const [role, home] of [[1, '/pages/admin.html'], [2, '/pages/dashboard.html'], [3, '/pages/farmacia.html'], [4, '/pages/eps.html']]) {
         assert.equal(policy.paginaInicio({ rol: role }), home);
         assert.equal(policy.paginaInicio({ rol_id: String(role) }), home);
         assert.equal(policy.puedeAcceder(home, { rol: role }), true);
@@ -19,10 +19,13 @@ test('la matriz de pantallas impide cruces entre administrador, farmacia y pacie
     for (const [route, roles] of [
         ['/pages/admin.html', [1]], ['/pages/admin-cuentas.html?rol=3', [1]],
         ['/pages/farmacia.html', [3]], ['/pages/pedidos.html', [2]],
-        ['/pages/formulas.html', [2]], ['/pages/chat.html', [2, 3]],
+        ['/pages/formulas.html', [2]], ['/pages/chat-farmacia.html', [2, 3]],
+        ['/pages/eps.html', [4]], ['/pages/soporte.html', [2]],
         ['/pages/perfil.html', [1, 2, 3, 4]], ['/index.html?accion=domicilio', [2]]
+        ,['/pages/admin-afiliados.html', []], ['/pages/admin-pacientes.html', [1]]
     ]) for (const role of [1, 2, 3, 4, 99]) {
         assert.equal(policy.puedeAcceder(route, { rol: role }), roles.includes(role), `${route} rol ${role}`);
     }
     assert.equal(policy.puedeAcceder('/pages/pedidos.html', null), false);
+    assert.equal(policy.puedeAcceder('/pages/chat.html', null), true, 'VITALIX remains public; the human pharmacy channel is private');
 });

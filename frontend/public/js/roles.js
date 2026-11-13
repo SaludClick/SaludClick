@@ -4,7 +4,9 @@ const permisos = Object.freeze({
     '/pages/farmacia.html': [3],
     '/pages/dashboard.html': [2], '/pages/medicamentos.html': [2],
     '/pages/pedidos.html': [2], '/pages/historial.html': [2], '/pages/formulas.html': [2],
-    '/pages/chat.html': [2, 3], '/pages/perfil.html': [1, 2, 3, 4]
+    '/pages/chat-farmacia.html': [2, 3], '/pages/perfil.html': [1, 2, 3, 4],
+    '/pages/admin-pacientes.html': [1], '/pages/admin-afiliados.html': [],
+    '/pages/eps.html': [4], '/pages/soporte.html': [2]
 });
 export const PAGINAS_PRIVADAS = new Set(Object.keys(permisos));
 export function rolUsuario(usuario) {
@@ -12,7 +14,7 @@ export function rolUsuario(usuario) {
     return Object.values(ROLES).includes(role) ? role : null;
 }
 export function paginaInicio(usuario) {
-    return ({ 1: '/pages/admin.html', 2: '/pages/dashboard.html', 3: '/pages/farmacia.html', 4: '/pages/perfil.html' })[rolUsuario(usuario)] || '/login.html';
+    return ({ 1: '/pages/admin.html', 2: '/pages/dashboard.html', 3: '/pages/farmacia.html', 4: '/pages/eps.html' })[rolUsuario(usuario)] || '/login.html';
 }
 export function puedeAcceder(destino, usuario) {
     const url = new URL(destino, 'http://localhost');

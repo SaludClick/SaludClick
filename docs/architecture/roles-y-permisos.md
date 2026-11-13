@@ -1,25 +1,27 @@
 # Roles y permisos de SaludClick
 
-Actualizado el 11 de noviembre de 2026. Esta entrega conserva los IDs existentes:
+Actualizado durante la resolución del PR #3. Esta entrega conserva los IDs existentes:
 administrador 1, usuario/paciente 2, farmacia 3 y EPS 4. No cambia roles ni registros
-en Neon y no agrega migraciones.
+en PostgreSQL. La migración administrativa está preparada, sin ejecutarse.
 
 ## Matriz de acceso
 
 | Función | Usuario/paciente | Farmacia | Administrador | EPS |
 | --- | --- | --- | --- | --- |
-| Inicio tras login | Dashboard personal | Panel de farmacia | Administración | Perfil |
+| Inicio tras login | Dashboard personal | Panel de farmacia | Administración | Panel EPS |
 | Perfil propio | Sí | Sí | Sí | Sí |
 | Pedidos, checkout e historial personales | Solo propios | No | No | No |
 | Cargar y consultar fórmulas personales | Solo propias | No | No | No |
 | Cuentas de paciente, farmacia y EPS | No | No | Sí | No |
-| Indicadores y pedidos administrativos | No | No | Sí | No |
-| Revisión administrativa de fórmulas | No | No | Sí | No |
+| Dashboard y solicitudes administrativas | Solicitudes propias | No | Sí | No |
+| Revisión administrativa de fórmulas | No | No | No | No |
 | Pedidos operativos para preparación y entrega | No | Sí | No, usa su módulo administrativo | No |
-| Inventario paginado de farmacia | No | Consulta | No, conserva sus indicadores | No |
-| Chat | Conversaciones propias | Conversaciones autorizadas | No | No |
+| Inventario paginado de farmacia | No | Consulta | No | No |
+| Chat humano con farmacia | Conversaciones propias | Conversaciones autorizadas | No | No |
+| Mensajería administrativa | Conversaciones propias | No | Sí | No |
+| VITALIX público | Sí | Sí | Sí | Sí |
 
-El catálogo básico `/api/medicamentos` conserva la consulta autenticada existente.
+El catálogo básico `/api/medicamentos` conserva la consulta autenticada existente, con exclusión explícita del administrador.
 La pantalla de compra es del paciente; farmacia tiene su propia consulta de
 existencias. No se añadió edición de stock o precios.
 
@@ -28,8 +30,8 @@ existencias. No se añadió edición de stock o precios.
 - Las rutas personales de pedidos, fórmulas y dashboard requieren JWT y rol 2.
   Los repositorios conservan el filtro por propietario.
 - Administración mantiene su acceso exclusivo al rol 1 y farmacia al rol 3.
-  Un administrador no necesita usar una identidad de farmacia para gestionar
-  pedidos: mantiene su módulo administrativo existente.
+  El administrador no consulta ni modifica pedidos clínicos, medicamentos,
+  fórmulas ni inventario; atiende solicitudes exclusivamente administrativas.
 - Las nuevas rutas no reciben un rol, usuario propietario, precio o inventario
   desde el cliente como autorización.
 - Los filtros se validan; las listas devuelven 25 elementos por página, con orden
@@ -74,10 +76,14 @@ cancelar, retroceder, saltarse pasos, alterar precios ni modificar cuentas.
   de otro rol llevan a su inicio correspondiente. Esto acompaña la autorización
   del backend; los datos del almacenamiento del navegador no dan permisos en Express.
 - Guardar el perfil conserva el tipo de sesión: temporal o persistente.
-- Chat redirige sesiones ausentes a `/login.html` y no consulta ni inicia sockets
+- El chat humano `/pages/chat-farmacia.html` redirige sesiones ausentes a `/login.html` y no consulta ni inicia sockets
   para administrador, EPS o identidades desconocidas.
 
 ## Verificación de esta entrega
+
+La evidencia de la resolución y sus pruebas está en
+`docs/calidad/reportes/resolucion-pr3.md`. Los resultados siguientes documentan
+la entrega histórica de main previa a esa resolución.
 
 - Suite completa: **369 pruebas aprobadas, ninguna fallida ni omitida**.
 - Incluye recorridos Edge con API simulada: preparación y entrega, inventario,
@@ -96,10 +102,11 @@ cancelar, retroceder, saltarse pasos, alterar precios ni modificar cuentas.
 2. Los pedidos e inventario son compartidos por el sistema: no existe un modelo
    de sucursales o asignación de pedidos a una farmacia concreta. Diseñar esa
    separación antes de ofrecer una plataforma para varias farmacias independientes.
-3. El JWT mantiene las claims emitidas al iniciar sesión. Falta invalidación
-   inmediata ante cambios de rol/estado y gestión segura de sesiones.
-4. EPS conserva su rol y acceso al perfil; sus flujos específicos siguen pendientes.
-5. La revisión de fórmulas por farmacia no se habilitó: permanece en administración.
+3. Las rutas administrativas y de soporte comprueban estado y rol vigentes y
+   fecha de revocación. Extender esa comprobación a todas las rutas heredadas
+   sigue siendo trabajo compartido pendiente.
+4. EPS conserva su rol, su panel de acceso y perfil; sus flujos específicos siguen pendientes.
+5. La revisión de fórmulas por farmacia no se habilitó; tampoco corresponde al administrador.
    La asociación obligatoria de fórmula con pedido sigue pendiente.
 6. Confirmar reCAPTCHA v2 y dominio en la consola de Google y recorrer el login real.
 

@@ -14,6 +14,7 @@ const allowedOrigins = getAllowedOrigins();
 const io = new Server(httpServer, { cors: { origin(origin, callback) { callback(null, !origin || allowedOrigins.has(origin)); }, methods: ["GET", "POST"] } });
 
 attachChatSocket(io);
+require('./src/sockets/administrative.socket').attachAdministrativeSocket(io,app);
 
 async function startServer() {
     try {
@@ -38,6 +39,7 @@ async function startServer() {
 startServer();
 
 async function shutdown() {
+    await require("./src/config/eps-prisma").cerrarConexionEPS();
     await pool.end();
     await prisma.$disconnect();
     process.exit(0);

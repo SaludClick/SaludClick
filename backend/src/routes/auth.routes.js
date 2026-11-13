@@ -6,12 +6,13 @@ const { validarJWT } = require("../middlewares/auth.middleware");
 const { requireAdmin } = require("../middlewares/admin.middleware");
 
 const authController = require("../controllers/auth.controller");
+const {createController:createAdministrativeController}=require('../controllers/administrative.controller');
 const {
     verificarRecaptcha
 } = require("../middlewares/recaptcha.middleware");
 
 // El registro de cuentas queda disponible únicamente para administradores.
-router.post("/register", requireAdmin, authController.register);
+router.post("/register", requireAdmin, (req,res)=>createAdministrativeController().createUser(req,res));
 
 // Inicio de sesión
 router.post("/login", verificarRecaptcha, authController.login);

@@ -7,11 +7,7 @@ router.get('/pedidos', requireFarmacia, controller.pedidos);
 router.get('/inventario', requireFarmacia, controller.inventario);
 router.patch('/pedidos/:id/estado', requireFarmacia, controller.avanzarPedido);
 
-router.get("/verificar-acceso", requireFarmacia, (req, res) => {
-    res.json({
-        ok: true,
-        mensaje: "Acceso autorizado al panel de farmacia."
-    });
-});
+router.get("/verificar-acceso", requireFarmacia, controller.verificarAcceso);
+router.get("/dashboard", requireFarmacia, controller.dashboard);
 
 module.exports = router;
