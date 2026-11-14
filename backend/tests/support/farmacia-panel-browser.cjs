@@ -10,6 +10,8 @@ function createFixture() {
         fixture.failQueries = false;
         fixture.conflict = false;
         fixture.failAfterPatch = false;
+        fixture.holdPatch = false;
+        fixture.releasePatch = null;
         fixture.pedidos = Array.from({ length: 31 }, (_, i) => ({
             id: i + 1, estado: i < 26 ? 'APROBADA' : i < 29 ? 'PREPARANDO' : 'LISTA',
             fecha: '2026-11-13T10:00:00Z', tipo_entrega: 'RECOGER',
@@ -29,10 +31,14 @@ function createFixture() {
                 const id = Number(url.pathname.split('/')[4]);
                 const pedido = fixture.pedidos.find(p => p.id === id);
                 if (!pedido) throw new Error('Pedido ficticio inexistente');
-                pedido.estado = input.estado;
-                if (fixture.failAfterPatch) fixture.failQueries = true;
-                res.statusCode = fixture.conflict ? 409 : 200;
-                res.end(JSON.stringify(fixture.conflict ? { ok: false, mensaje: 'Otro operador avanzó el pedido' } : { ok: true, pedido }));
+                const finish = () => {
+                    fixture.releasePatch = null;
+                    pedido.estado = input.estado;
+                    if (fixture.failAfterPatch) fixture.failQueries = true;
+                    res.statusCode = fixture.conflict ? 409 : 200;
+                    res.end(JSON.stringify(fixture.conflict ? { ok: false, mensaje: 'Otro operador avanzó el pedido' } : { ok: true, pedido }));
+                };
+                if (fixture.holdPatch) fixture.releasePatch = finish; else finish();
             });
             return true;
         }
@@ -114,7 +120,7 @@ async function testTransitions({ t, fixture, evaluate, go, click, until }) {
             await until(() => evaluate('document.querySelector("#farmaciaOrders").getAttribute("aria-busy") === "false"'));
             await click('.farmacia-order button');
             await until(() => evaluate('document.querySelector("#farmaciaMessage").textContent.includes("Lista actualizada")'));
-            assert.match(await evaluate('document.querySelector(".farmacia-order h3").textContent'), /PREPARANDO/);
+            assert.equal(await evaluate('document.querySelector(".farmacia-order").dataset.status'), 'PREPARANDO');
             assert.match(await evaluate('document.querySelector("#ordersPage").textContent'), /1 de 2/);
             assert.equal(fixture.patches, 1);
         } finally { fixture.enabled = false; }
@@ -136,6 +142,20 @@ async function testTransitions({ t, fixture, evaluate, go, click, until }) {
             assert.equal(await evaluate('document.querySelector("#estadoFarmacia").value'), 'APROBADA');
         } finally { fixture.enabled = false; }
     });
+    await t.test('doble clic solo guarda una transicion y el refresco respeta el foco del operador', async () => {
+        fixture.reset(); fixture.holdPatch = true;
+        try {
+            await openApproved();
+            await evaluate(`const button=document.querySelector('.farmacia-order button');button.focus();button.click();button.click();`);
+            await until(() => fixture.patches === 1 && !!fixture.releasePatch);
+            assert.equal(await evaluate('document.querySelector(".farmacia-order button").disabled'), true);
+            await evaluate('document.querySelector("#buscarFarmacia").focus()');
+            fixture.releasePatch();
+            await until(countsReady);
+            assert.equal(fixture.patches, 1);
+            assert.equal(await evaluate('document.activeElement.id'), 'buscarFarmacia');
+        } finally { fixture.releasePatch?.(); fixture.enabled = false; }
+    });
 }
 async function capture(send, name) {
     if (!process.env.FARMACIA_SCREENSHOT_DIR) return;
@@ -150,6 +170,7 @@ async function testNavigation({ t, fixture, evaluate, go, click, until, send }) 
     await t.test('farmacia conserva filtro y pagina al recargar y navega con contexto en escritorio y movil', async () => {
         fixture.reset();
         try {
+            await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
             await go('/pages/farmacia.html?estado=APROBADA&pagina=2#pedidosFarmacia');
             await until(() => evaluate('document.querySelectorAll(".farmacia-order").length === 1'));
             assert.equal(await evaluate('document.querySelector("#estadoFarmacia").value'), 'APROBADA');

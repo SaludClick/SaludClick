@@ -4,8 +4,9 @@
       <form id="filtroPedidos" class="farmacia-filters">
         <label for="estadoFarmacia">Estado</label><select id="estadoFarmacia">
           <option value="">Activos</option><option value="APROBADA">Aprobados</option><option value="PREPARANDO">Preparando</option><option value="LISTA">Listos</option><option value="ENTREGADA">Entregados</option>
-        </select><button type="submit">Actualizar pedidos</button>
+        </select><button type="submit">Aplicar filtro</button>
       </form>
+      <p id="ordersAppliedFilter">Vista: pedidos activos · Más antiguos primero</p>
       <p id="ordersMessage" role="status" aria-live="polite"></p>
       <button id="retryFarmaciaOrders" type="button" hidden>Reintentar consulta de pedidos</button>
       <div id="farmaciaOrders" aria-live="polite" aria-busy="false"></div>

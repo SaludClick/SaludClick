@@ -483,7 +483,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         assert.match(await evaluate('document.querySelector("#farmaciaInventory").textContent'), /Acetaminofén/);
         for (const status of ['PREPARANDO', 'LISTA', 'ENTREGADA']) {
             await click('.farmacia-order button');
-            await until(() => evaluate(`document.querySelector('.farmacia-order h3')?.textContent.includes('${status}')`));
+            await until(() => evaluate(`document.querySelector('.farmacia-order')?.dataset.status.includes('${status}')`));
         }
         assert.equal(farmaciaUpdates, 3);
         assert.equal(await evaluate('document.querySelectorAll(".farmacia-order button").length'), 0);
@@ -613,7 +613,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         assert.match(await evaluate('document.querySelector("#farmaciaInventory").textContent'), /Acetaminofén/);
         for (const status of ['PREPARANDO', 'LISTA', 'ENTREGADA']) {
             await click('.farmacia-order button');
-            await until(() => evaluate(`document.querySelector('.farmacia-order h3')?.textContent.includes('${status}')`));
+            await until(() => evaluate(`document.querySelector('.farmacia-order')?.dataset.status.includes('${status}')`));
         }
         assert.equal(farmaciaUpdates, 3);
         assert.equal(await evaluate('document.querySelectorAll(".farmacia-order button").length'), 0);

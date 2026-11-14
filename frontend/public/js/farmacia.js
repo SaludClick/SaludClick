@@ -4,6 +4,7 @@ import { paginaInicio, rolUsuario, ROLES } from './roles.js';
 import { readFarmaciaContext, farmaciaContextUrl } from './farmacia-context.js';
 
 const nextStatus = { APROBADA: ['PREPARANDO', 'Iniciar preparación'], PREPARANDO: ['LISTA', 'Marcar listo'], LISTA: ['ENTREGADA', 'Confirmar entrega'] };
+const statusLabel = { APROBADA: 'Por preparar', PREPARANDO: 'En preparación', LISTA: 'Listo para entregar', ENTREGADA: 'Entregado' };
 const element = (tag, text) => { const node = document.createElement(tag); node.textContent = text; return node; };
 
 if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
@@ -111,7 +112,8 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
         loadOrders();
     }));
     function pagination(type, info, shown) {
-        document.getElementById(`${type}Page`).textContent = `${shown} de ${info.total} registros · Página ${info.pagina} de ${Math.max(1, info.paginas)}`;
+        const first = shown ? (info.pagina - 1) * info.tamano + 1 : 0;
+        document.getElementById(`${type}Page`).textContent = `Mostrando ${first}–${shown ? first + shown - 1 : 0} de ${info.total} · Página ${info.pagina} de ${Math.max(1, info.paginas)}`;
         document.getElementById(`${type}Previous`).disabled = info.pagina <= 1;
         document.getElementById(`${type}Next`).disabled = info.pagina >= info.paginas;
     }
@@ -141,11 +143,22 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
             state.orders.page = page;
             saveContext();
             target.replaceChildren();
+            document.getElementById('ordersAppliedFilter').textContent = `Vista: ${statusLabel[filter] || 'Pedidos activos'} · Más antiguos primero`;
             if (!result.pedidos.length) target.append(element('p', 'No hay pedidos para este filtro.'));
             for (const order of result.pedidos) {
                 const card = element('article', ''); card.className = 'farmacia-order';
-                card.append(element('h3', `Pedido #${order.id} · ${order.estado}`));
-                card.append(element('p', `${order.usuario.nombre} ${order.usuario.apellido} · ${order.tipo_entrega === 'DOMICILIO' ? 'Domicilio' : 'Recoger en farmacia'}`));
+                card.dataset.status = order.estado;
+                const heading = element('div', ''); heading.className = 'farmacia-order-heading';
+                heading.append(element('h3', `Pedido #${order.id}`));
+                const badge = element('span', statusLabel[order.estado] || order.estado); badge.className = 'farmacia-status';
+                heading.append(badge); card.append(heading);
+                const date = order.fecha ? new Date(order.fecha) : null;
+                if (date && !Number.isNaN(date.getTime())) {
+                    const time = element('time', `Creado: ${new Intl.DateTimeFormat('es-CO', {dateStyle:'medium',timeStyle:'short'}).format(date)}`);
+                    time.dateTime = date.toISOString(); card.append(time);
+                } else card.append(element('p', 'Fecha no registrada'));
+                card.append(element('p', `Paciente: ${order.usuario.nombre} ${order.usuario.apellido}`));
+                card.append(element('p', `Entrega: ${order.tipo_entrega === 'DOMICILIO' ? 'Domicilio' : 'Recoger en farmacia'}`));
                 if (order.tipo_entrega === 'DOMICILIO') card.append(element('p', order.direccion || 'Dirección no registrada'));
                 const items = element('ul', '');
                 for (const item of order.detalles) items.append(element('li', `${item.medicamento.nombre} · ${item.cantidad} unidades`));
@@ -154,9 +167,11 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
                 if (next) {
                     const button = element('button', next[1]); button.type = 'button';
                     button.dataset.orderId = String(order.id);
+                    button.setAttribute('aria-label', `${next[1]} del pedido #${order.id}`);
                     button.addEventListener('click', () => advanceOrder(order, next, button));
                     card.append(button);
                 }
+                else card.append(element('p', 'Entrega completada. No hay acciones pendientes.'));
                 target.append(card);
             }
             pagination('orders', result.paginacion, result.pedidos.length);
@@ -184,6 +199,7 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
     async function advanceOrder(order, next, button) {
         if (pending.has(order.id) || state.orders.stale) return;
         pending.add(order.id);
+        const hadFocus = document.activeElement === button;
         button.disabled = true;
         button.textContent = 'Guardando…';
         clearMessage();
@@ -204,7 +220,7 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
             pending.delete(order.id);
             button.textContent = next[1];
             syncOrderButtons();
-            if (!button.isConnected && !document.getElementById('pedidosFarmacia').contains(document.activeElement)) {
+            if (hadFocus && !button.isConnected && document.activeElement === document.body) {
                 document.getElementById('pedidosFarmacia').focus();
             }
         }
