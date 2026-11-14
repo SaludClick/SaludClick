@@ -18,35 +18,10 @@ const title = "Dashboard de Farmacia | SaludClick";
 
       <span class="admin-nav-caption">MENÚ PRINCIPAL</span>
       <nav class="admin-side-nav" aria-label="Secciones de farmacia">
-        <a class="admin-side-link active" href="/pages/farmacia.html" aria-current="page">
-          <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
-          <span>Dashboard</span>
-        </a>
-        <a class="admin-side-link" href="/pages/farmacia.html#medicamentos">
-          <i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i>
-          <span>Medicamentos</span>
-        </a>
-        <a class="admin-side-link" href="#pedidosFarmacia">
-          <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
-          <span>Solicitudes</span>
-
-        </a>
-        <span class="admin-side-link farmacia-nav-disabled" aria-disabled="true" title="Esta operación aún no está habilitada para Farmacia.">
-          <i class="fa-solid fa-file-medical" aria-hidden="true"></i>
-          <span>Fórmulas</span>
-          <small>No disponible</small>
-        </span>
-        <a class="admin-side-link" href="#pedidosFarmacia">
-          <i class="fa-solid fa-truck-medical" aria-hidden="true"></i>
-          <span>Entregas</span>
-
-        </a>
-        <a class="admin-side-link" href="/pages/perfil.html">
-          <i class="fa-solid fa-user" aria-hidden="true"></i>
-          <span>Perfil</span>
-        </a>
+        <a class="admin-side-link active" href="#pedidosFarmacia" aria-current="page"><span>Pedidos</span></a>
         <a class="admin-side-link" href="#inventarioFarmacia"><span>Inventario</span></a>
-        <a class="admin-side-link" href="/pages/chat-farmacia.html"><span>Chat con pacientes</span></a>
+        <a class="admin-side-link" href="/pages/chat-farmacia.html"><span>Chat</span></a>
+        <a class="admin-side-link" href="/pages/perfil.html"><span>Perfil</span></a>
       </nav>
 
       <div class="admin-sidebar-bottom">
@@ -83,51 +58,36 @@ const title = "Dashboard de Farmacia | SaludClick";
         </div>
       </header>
 
-      <main class="admin-content" id="farmaciaMain" hidden>
+      <main class="admin-content farmacia-main" id="farmaciaMain" hidden>
         <section class="admin-page-heading">
           <div>
             <span class="admin-eyebrow">OPERACIÓN DE FARMACIA</span>
-            <h1>Dashboard</h1>
-            <p>Consulta el catálogo, organiza los pedidos pagados y revisa las existencias.</p>
+            <h1>Panel de farmacia</h1>
+            <p>Organiza los pedidos y consulta las existencias. Solo se avanzan pedidos con pago aprobado.</p>
           </div>
           <button id="refreshFarmacia" class="btn-outline admin-refresh" type="button">
             <i class="fa-solid fa-rotate" aria-hidden="true"></i>
-            Actualizar datos
+            Actualizar panel
           </button>
         </section>
 
         <div id="farmaciaMessage" class="admin-message" role="status" aria-live="polite"></div>
 
-        <section class="admin-stats" id="farmaciaStats" aria-label="Estadísticas del catálogo" aria-busy="true">
-          <article class="admin-stat admin-stat-loading">
-            <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
-            <span>Cargando datos reales...</span>
-          </article>
-        </section>
-
-        <section class="card admin-dashboard-card farmacia-catalog-panel" id="medicamentos">
-          <div class="section-heading">
-            <div>
-              <span class="admin-eyebrow">CATÁLOGO</span>
-              <h2>Medicamentos</h2>
-              <p>Consulta de solo lectura con datos del backend.</p>
-            </div>
+        <section aria-label="Pedidos por estado">
+          <p>Totales del sistema por estado del pedido; no indican aprobación del pago.</p>
+          <div class="farmacia-stats" id="farmaciaStats">
+            {[
+              ["APROBADA", "Por preparar"],
+              ["PREPARANDO", "En preparación"],
+              ["LISTA", "Listos"]
+            ].map(([estado, label]) => (
+              <button type="button" class="farmacia-stat" data-order-status={estado} aria-busy="true">
+                <span>{label}</span><strong data-count>Cargando…</strong>
+                <small data-count-message>Consultando total</small>
+              </button>
+            ))}
           </div>
-          <div class="orders-table-wrapper">
-            <table class="orders-table farmacia-catalog-table">
-              <thead>
-                <tr>
-                  <th>Medicamento</th>
-                  <th>Categoría</th>
-                  <th>Descripción</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody id="farmaciaMedicamentos">
-                <tr><td colspan="4" class="admin-loading-text">Cargando catálogo...</td></tr>
-              </tbody>
-            </table>
-          </div>
+          <button id="retryFarmaciaStats" type="button" hidden>Reintentar indicadores</button>
         </section>
         <FarmaciaOperaciones />
       </main>
@@ -137,31 +97,3 @@ const title = "Dashboard de Farmacia | SaludClick";
   <script is:inline type="module" src="/js/menu.js"></script>
   <script is:inline type="module" src="/js/farmacia.js"></script>
 </Layout>
-
-<style>
-  .farmacia-nav-disabled {
-    cursor: not-allowed;
-    opacity: 0.62;
-  }
-
-  .farmacia-nav-disabled small {
-    margin-left: auto;
-    color: #a7c7b7;
-    font-size: 9px;
-    white-space: nowrap;
-  }
-
-  .farmacia-catalog-panel {
-    margin-top: 20px;
-  }
-
-  .farmacia-catalog-table {
-    min-width: 650px !important;
-  }
-
-  @media (max-width: 620px) {
-    .farmacia-nav-disabled small {
-      display: none;
-    }
-  }
-</style>

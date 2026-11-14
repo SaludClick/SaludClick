@@ -68,6 +68,8 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     let adminAccountCreates = 0;
     let adminDashboardRequests = 0;
     let farmaciaDashboardRequests = 0;
+    const farmaciaPanel = require('./support/farmacia-panel-browser.cjs');
+    const farmaciaPanelFixture = farmaciaPanel.createFixture();
     let epsAccessRequests = 0;
     let vitalixApiRequests = 0;
     let farmaciaStatus = 'APROBADA';
@@ -122,6 +124,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             res.end(JSON.stringify(pathname.endsWith('/mensajes')?{ok:true,messages:[],conversation}:{ok:true,conversaciones:[conversation]}));
             return;
         }
+        if (farmaciaPanelFixture.handle(req, res, new URL(req.url, 'http://localhost'))) return;
         if (pathname === '/api/farmacia/inventario' || pathname.startsWith('/api/farmacia/pedidos')) {
             farmaciaRequests++;
             res.setHeader('Content-Type', 'application/json');
@@ -622,21 +625,22 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     });
 
     await require('./support/administrative-browser.cjs').testWorkspace({t,evaluate,go,click,value,until,send,fixture:administrativeFixture});
-    await t.test('dashboard de farmacia muestra catálogo y restringe los demás roles', async () => {
+    await farmaciaPanel.testIndicators({t,fixture:farmaciaPanelFixture,evaluate,go,click,until});
+    await farmaciaPanel.testTransitions({t,fixture:farmaciaPanelFixture,evaluate,go,click,until});
+    await t.test('panel de farmacia prioriza pedidos e inventario', async () => {
         await evaluate(`for (const s of [localStorage,sessionStorage]) { s.setItem('saludclick_token','frontend-test-only'); s.setItem('saludclick_user',JSON.stringify({nombre:'Farmacia de prueba',rol:3})); }`);
         await go('/pages/farmacia.html');
-        await until(() => evaluate('document.querySelector("#farmaciaStats")?.getAttribute("aria-busy") === "false"'));
-
-        assert.equal(await evaluate('document.querySelector("#farmaciaMain h1")?.textContent.trim()'), 'Dashboard');
-        assert.match(await evaluate('document.querySelector("#farmaciaStats").textContent'), /5/);
-        assert.equal(await evaluate('document.querySelectorAll(".admin-side-link").length'), 8);
-        assert.deepEqual(await evaluate('[...document.querySelectorAll(".admin-side-link")].map(link => link.querySelector("span")?.textContent.trim())'), [
-            'Dashboard', 'Medicamentos', 'Solicitudes', 'Fórmulas', 'Entregas', 'Perfil', 'Inventario', 'Chat con pacientes'
-        ]);
-        assert.equal(await evaluate('document.querySelectorAll(".farmacia-nav-disabled[aria-disabled=true]").length'), 1);
-        assert.equal(await evaluate('document.querySelectorAll("#farmaciaMedicamentos tr").length'), 5);
-        assert.ok(farmaciaDashboardRequests > 0);
-
+        await until(() => evaluate('document.querySelector("#farmaciaMain")?.hidden === false'));
+        assert.equal(await evaluate('document.querySelector("#farmaciaMain h1").textContent'), 'Panel de farmacia');
+        assert.deepEqual(await evaluate('[...document.querySelectorAll(".admin-side-link span")].map(n=>n.textContent)'), ['Pedidos','Inventario','Chat','Perfil']);
+        assert.equal(await evaluate('document.querySelectorAll("#farmaciaMedicamentos").length'), 0);
+        assert.equal(farmaciaDashboardRequests, 0);
+        await send('Emulation.setDeviceMetricsOverride', {width:375,height:812,deviceScaleFactor:1,mobile:true});
+        await click('#menuToggle');
+        assert.equal(await evaluate('document.querySelector("#menuToggle").getAttribute("aria-expanded")'), 'true');
+        await click('a[href="#inventarioFarmacia"]');
+        assert.equal(await evaluate('document.querySelector("#menuToggle").getAttribute("aria-expanded")'), 'false');
+        await send('Emulation.clearDeviceMetricsOverride');
         await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Paciente',rol:2}))`);
         await send('Page.navigate', { url: base + '/pages/farmacia.html' });
         await until(() => evaluate('location.pathname === "/pages/dashboard.html"'));
