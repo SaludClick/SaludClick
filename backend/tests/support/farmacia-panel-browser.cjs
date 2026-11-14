@@ -137,4 +137,39 @@ async function testTransitions({ t, fixture, evaluate, go, click, until }) {
         } finally { fixture.enabled = false; }
     });
 }
-module.exports = { createFixture, testIndicators, testTransitions };
+async function capture(send, name) {
+    if (!process.env.FARMACIA_SCREENSHOT_DIR) return;
+    const fs = require('node:fs');
+    const path = require('node:path');
+    fs.mkdirSync(process.env.FARMACIA_SCREENSHOT_DIR, { recursive: true });
+    const image = await send('Page.captureScreenshot', { format: 'png' });
+    fs.writeFileSync(path.join(process.env.FARMACIA_SCREENSHOT_DIR, `${name}.png`), Buffer.from(image.data, 'base64'));
+}
+
+async function testNavigation({ t, fixture, evaluate, go, click, until, send }) {
+    await t.test('farmacia conserva filtro y pagina al recargar y navega con contexto en escritorio y movil', async () => {
+        fixture.reset();
+        try {
+            await go('/pages/farmacia.html?estado=APROBADA&pagina=2#pedidosFarmacia');
+            await until(() => evaluate('document.querySelectorAll(".farmacia-order").length === 1'));
+            assert.equal(await evaluate('document.querySelector("#estadoFarmacia").value'), 'APROBADA');
+            await click('a[href="#inventarioFarmacia"]');
+            await until(() => evaluate(`document.querySelector('a[href="#inventarioFarmacia"]').getAttribute('aria-current') === 'location'`));
+            assert.equal(await evaluate('new URLSearchParams(location.search).get("pagina")'), '2');
+            await go(await evaluate('location.pathname+location.search+location.hash'));
+            await until(() => evaluate('document.querySelectorAll(".farmacia-order").length === 1'));
+            await click('a[href="#panelFarmacia"]');
+            await evaluate('window.scrollTo(0,0)');
+            await capture(send, 'panel-escritorio');
+            await send('Emulation.setDeviceMetricsOverride', { width: 375, height: 812, deviceScaleFactor: 1, mobile: true });
+            await click('#menuToggle');
+            await click('a[href="#pedidosFarmacia"]');
+            assert.equal(await evaluate('document.querySelector("#menuToggle").getAttribute("aria-expanded")'), 'false');
+            assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true);
+            await evaluate('document.querySelector(".farmacia-order button").focus()');
+            assert.notEqual(await evaluate('getComputedStyle(document.activeElement).outlineStyle'), 'none');
+            await capture(send, 'pedidos-movil');
+        } finally { fixture.enabled = false; await send('Emulation.clearDeviceMetricsOverride'); }
+    });
+}
+module.exports = { createFixture, testIndicators, testTransitions, testNavigation, capture };

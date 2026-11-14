@@ -1,6 +1,7 @@
 import { checkAuthGuard, getCurrentUser, initAuth, logout } from './auth.js';
 import { apiFetch } from './api.js';
 import { paginaInicio, rolUsuario, ROLES } from './roles.js';
+import { readFarmaciaContext, farmaciaContextUrl } from './farmacia-context.js';
 
 const nextStatus = { APROBADA: ['PREPARANDO', 'Iniciar preparación'], PREPARANDO: ['LISTA', 'Marcar listo'], LISTA: ['ENTREGADA', 'Confirmar entrega'] };
 const element = (tag, text) => { const node = document.createElement(tag); node.textContent = text; return node; };
@@ -14,15 +15,29 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
     initAuth();
     document.getElementById('farmaciaUserName').textContent = user.nombre || 'Farmacia';
     document.getElementById('logout').addEventListener('click', logout);
+    const mobileMenu = window.matchMedia('(max-width: 900px)');
+    const syncMenuAccessibility = () => {
+        document.getElementById('menu').inert = mobileMenu.matches && !document.getElementById('menu').classList.contains('active');
+    };
     const closeMenu = () => {
         document.getElementById('menu').classList.remove('active');
         document.getElementById('menuToggle').setAttribute('aria-expanded', 'false');
+        syncMenuAccessibility();
     };
+    document.getElementById('menuToggle').addEventListener('click', () => queueMicrotask(syncMenuAccessibility));
+    mobileMenu.addEventListener('change', closeMenu);
+    syncMenuAccessibility();
+    const updateNavigation = () => {
+        const hash = location.hash || '#panelFarmacia';
+        document.querySelectorAll('#menu a').forEach(link => {
+            const active = link.hash === hash;
+            link.classList.toggle('active', active);
+            if (active) link.setAttribute('aria-current', 'location'); else link.removeAttribute('aria-current');
+        });
+    };
+    window.addEventListener('hashchange', updateNavigation);
     document.querySelectorAll('#menu a').forEach(link => link.addEventListener('click', () => {
         closeMenu();
-        document.querySelectorAll('#menu a').forEach(item => { item.removeAttribute('aria-current'); item.classList.remove('active'); });
-        link.setAttribute('aria-current', 'page');
-        link.classList.add('active');
         if (link.hash) document.querySelector(link.hash)?.focus();
     }));
     document.addEventListener('keydown', event => {
@@ -32,10 +47,23 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('farmaciaMain').hidden = false;
     const message = document.getElementById('farmaciaMessage');
+    const context = readFarmaciaContext(location.search);
     const state = {
-        orders: { page: 1, sequence: 0, filter: '', stale: true },
-        inventory: { page: 1, sequence: 0, search: '' }
+        orders: { page: context.page, sequence: 0, filter: context.filter, stale: true },
+        inventory: { page: context.inventoryPage, sequence: 0, search: context.search }
     };
+    document.getElementById('estadoFarmacia').value = context.filter;
+    document.getElementById('buscarFarmacia').value = context.search;
+    const saveContext = () => {
+        const url = farmaciaContextUrl({ filter: state.orders.filter, page: state.orders.page,
+            search: state.inventory.search, inventoryPage: state.inventory.page }, location.hash);
+        history.replaceState(null, '', url);
+        document.querySelector('#menu a[href^="/pages/chat-farmacia.html"]').href = `/pages/chat-farmacia.html?volver=${encodeURIComponent(url)}`;
+        document.querySelectorAll('[data-order-status]').forEach(card => card.setAttribute('aria-pressed', String(card.dataset.orderStatus === state.orders.filter)));
+        updateNavigation();
+    };
+    window.addEventListener('hashchange', saveContext);
+    saveContext();
     const pending = new Set();
     const syncOrderButtons = () => document.querySelectorAll('[data-order-id]').forEach(button => {
         button.disabled = state.orders.stale || pending.has(Number(button.dataset.orderId));
@@ -77,6 +105,8 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('estadoFarmacia').value = card.dataset.orderStatus;
         state.orders.filter = card.dataset.orderStatus;
         state.orders.page = 1;
+        location.hash = 'pedidosFarmacia';
+        saveContext();
         document.getElementById('pedidosFarmacia').focus();
         loadOrders();
     }));
@@ -109,6 +139,7 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
                 if (attempt === 2) throw new Error('Los pedidos cambiaron durante la consulta. Reintenta.');
             }
             state.orders.page = page;
+            saveContext();
             target.replaceChildren();
             if (!result.pedidos.length) target.append(element('p', 'No hay pedidos para este filtro.'));
             for (const order of result.pedidos) {
@@ -199,6 +230,7 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
                 if (attempt === 2) throw new Error('El inventario cambió. Reintenta.');
             }
             state.inventory.page = page;
+            saveContext();
             target.replaceChildren();
             for (const medication of result.medicamentos) {
                 const row = element('tr', '');
@@ -222,11 +254,13 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filtroPedidos').addEventListener('submit', event => {
         event.preventDefault(); state.orders.page = 1;
         state.orders.filter = document.getElementById('estadoFarmacia').value;
+        saveContext();
         loadOrders();
     });
     document.getElementById('buscarInventario').addEventListener('submit', event => {
         event.preventDefault(); state.inventory.page = 1;
         state.inventory.search = document.getElementById('buscarFarmacia').value.trim();
+        saveContext();
         loadInventory();
     });
     document.getElementById('retryFarmaciaOrders').addEventListener('click', async () => {

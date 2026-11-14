@@ -18,7 +18,8 @@ const title = "Dashboard de Farmacia | SaludClick";
 
       <span class="admin-nav-caption">MENÚ PRINCIPAL</span>
       <nav class="admin-side-nav" aria-label="Secciones de farmacia">
-        <a class="admin-side-link active" href="#pedidosFarmacia" aria-current="page"><span>Pedidos</span></a>
+        <a class="admin-side-link active" href="#panelFarmacia" aria-current="page"><span>Panel</span></a>
+        <a class="admin-side-link" href="#pedidosFarmacia"><span>Pedidos</span></a>
         <a class="admin-side-link" href="#inventarioFarmacia"><span>Inventario</span></a>
         <a class="admin-side-link" href="/pages/chat-farmacia.html"><span>Chat</span></a>
         <a class="admin-side-link" href="/pages/perfil.html"><span>Perfil</span></a>
@@ -73,15 +74,16 @@ const title = "Dashboard de Farmacia | SaludClick";
 
         <div id="farmaciaMessage" class="admin-message" role="status" aria-live="polite"></div>
 
-        <section aria-label="Pedidos por estado">
-          <p>Totales del sistema por estado del pedido; no indican aprobación del pago.</p>
+        <section id="panelFarmacia" tabindex="-1" aria-label="Pedidos por estado">
+          <h2>Pedidos que requieren atención</h2>
+          <p>Selecciona un estado para atender sus pedidos. Son totales del sistema; el pago se verifica al avanzar.</p>
           <div class="farmacia-stats" id="farmaciaStats">
             {[
               ["APROBADA", "Por preparar"],
               ["PREPARANDO", "En preparación"],
               ["LISTA", "Listos"]
             ].map(([estado, label]) => (
-              <button type="button" class="farmacia-stat" data-order-status={estado} aria-busy="true">
+              <button type="button" class="farmacia-stat" data-order-status={estado} aria-busy="true" aria-pressed="false">
                 <span>{label}</span><strong data-count>Cargando…</strong>
                 <small data-count-message>Consultando total</small>
               </button>
