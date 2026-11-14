@@ -9,11 +9,12 @@ router.get('/notificaciones/no-leidas/count', requireFarmaciaNotificaciones, not
 router.patch('/notificaciones/leer-todas', requireFarmaciaNotificaciones, notifications.leerTodas);
 router.patch('/notificaciones/:id/leida', requireFarmaciaNotificaciones, notifications.leer);
 
-router.get('/pedidos', requireFarmacia, controller.pedidos);
+router.get('/pedidos', requireFarmacia, requireFarmaciaVigente, controller.pedidos);
+router.get('/pedidos/:id', requireFarmacia, requireFarmaciaVigente, controller.detallePedido);
 router.get('/inventario', requireFarmacia, controller.inventario);
-router.patch('/pedidos/:id/estado', requireFarmacia, controller.avanzarPedido);
+router.patch('/pedidos/:id/estado', requireFarmacia, requireFarmaciaVigente, controller.avanzarPedido);
 
 router.get("/verificar-acceso", requireFarmacia, controller.verificarAcceso);
-router.get("/dashboard", requireFarmacia, controller.dashboard);
+router.get("/dashboard", requireFarmacia, requireFarmaciaVigente, controller.dashboard);
 
 module.exports = router;
