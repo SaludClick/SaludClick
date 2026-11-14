@@ -118,6 +118,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             return;
         }
         if (pathname.startsWith('/api/chat/') || pathname.startsWith('/socket.io/')) chatRequests++;
+        if(pathname.startsWith('/api/chat/') && farmaciaPanelFixture.handle(req,res,new URL(req.url,'http://localhost')))return;
         if(pathname.startsWith('/api/chat/')) {
             const conversation={id:1,estado:'ABIERTA',cliente:{id:20,nombre:'Cliente',apellido:'Prueba'},agente:{id:30,nombre:'Farmacia',apellido:'Prueba'},mensajes:[]};
             res.writeHead(200,{'Content-Type':'application/json'});
@@ -629,6 +630,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     await farmaciaPanel.testTransitions({t,fixture:farmaciaPanelFixture,evaluate,go,click,until});
     await farmaciaPanel.testNavigation({t,fixture:farmaciaPanelFixture,evaluate,go,click,until,send});
     await farmaciaPanel.testInventory({t,fixture:farmaciaPanelFixture,evaluate,go,click,until,send});
+    await farmaciaPanel.testChat({t,fixture:farmaciaPanelFixture,evaluate,go,click,until,send});
     await t.test('panel de farmacia prioriza pedidos e inventario', async () => {
         await evaluate(`for (const s of [localStorage,sessionStorage]) { s.setItem('saludclick_token','frontend-test-only'); s.setItem('saludclick_user',JSON.stringify({nombre:'Farmacia de prueba',rol:3})); }`);
         await go('/pages/farmacia.html');
