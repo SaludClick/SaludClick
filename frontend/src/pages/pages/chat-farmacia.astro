@@ -2,16 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import FarmaciaChat from '../../components/FarmaciaChat.jsx';
 ---
-<Layout title="Chat con farmacia | SaludClick">
-  <header class="navbar"><div class="container nav-container">
-    <a href="/" class="logo">SaludClick</a>
-    <nav aria-label="Chat con farmacia">
-      <a href="/pages/dashboard.html">Mi panel</a>
-      <a href="/pages/perfil.html">Mi perfil</a>
-      <a href="/pages/chat.html">VITALIX</a>
-      <button type="button" id="btnLogout">Cerrar sesión</button>
-    </nav>
-  </div></header>
+<Layout title="Chat con farmacia | SaludClick" bodyClass="farmacia-chat-body">
   <FarmaciaChat client:only="react" />
   <script is:inline type="module">
     import {checkAuthGuard,initAuth} from '/js/auth.js';

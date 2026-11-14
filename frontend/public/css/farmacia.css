@@ -1,4 +1,11 @@
 .farmacia-main { max-width: 1100px; padding-top: 2rem; padding-bottom: 3rem; }
+.farmacia-main, .farmacia-main section, .farmacia-main form { min-width: 0; }
+.farmacia-main h2 { margin: 0 0 .5rem; color: var(--admin-ink, #173c31); }
+.farmacia-main p { line-height: 1.6; }
+.farmacia-main :is(button, input, select) { min-height: 44px; font: inherit; }
+.farmacia-main :is(a, section):focus-visible { outline: 3px solid #1456a0; outline-offset: 3px; }
+.farmacia-main .farmacia-stat[aria-pressed=true] { outline: 3px solid #1456a0; outline-offset: 3px; }
+.farmacia-main .farmacia-stat[aria-pressed=true] span::after { content: ' · Seleccionado'; }
 .farmacia-main section { margin-top: 2rem; padding: 1.25rem; border: 1px solid #d6e2dd; border-radius: 12px; background: #fff; scroll-margin-top: 6rem; }
 .farmacia-filters, .farmacia-pagination { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; margin: 1rem 0; }
 .farmacia-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
@@ -11,10 +18,21 @@
 .farmacia-main button:disabled { background: #e1e7e3; color: #42564b; cursor: default; }
 .farmacia-main :is(input, select) { padding: .65rem; border: 1px solid #71877b; border-radius: 6px; max-width: 100%; }
 .farmacia-main :is(button, input, select):focus-visible { outline: 3px solid #1456a0; outline-offset: 3px; }
-.farmacia-order { border-bottom: 1px solid #d6e2dd; padding: 1rem 0; }
+.farmacia-order { border: 1px solid #d6e2dd; border-left: 5px solid #71877b; border-radius: 10px; padding: 1rem; margin: 1rem 0; min-width: 0; }
+.farmacia-order[data-status=APROBADA] { border-left-color: #a35b00; }
+.farmacia-order[data-status=PREPARANDO] { border-left-color: #1456a0; }
+.farmacia-order[data-status=LISTA] { border-left-color: #146c43; }
+.farmacia-order-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; }
+.farmacia-order-heading h3 { margin: 0; }
+.farmacia-status { background: #eef4f0; color: #173c31; border: 1px solid #71877b; border-radius: 20px; padding: .35rem .65rem; font-weight: 700; }
+.farmacia-order time { display: block; margin-top: .75rem; color: #42564b; font-size: .9rem; }
+.farmacia-order button { margin-top: .5rem; max-width: 100%; white-space: normal; }
 .farmacia-order p { overflow-wrap: anywhere; }
 .farmacia-order ul { padding-left: 1.5rem; margin: .75rem 0; }
 .farmacia-table { overflow-x: auto; }
+.farmacia-table:focus-visible { outline: 3px solid #1456a0; outline-offset: 3px; }
+.farmacia-table td { overflow-wrap: anywhere; }
+.farmacia-table td > span { min-width: 0; }
 .farmacia-table table { width: 100%; border-collapse: collapse; }
 .farmacia-table :is(th, td) { text-align: left; padding: .75rem; border-bottom: 1px solid #d6e2dd; }
 .farmacia-table caption { text-align: left; font-weight: 600; margin-bottom: .5rem; }
@@ -23,3 +41,11 @@
 .farmacia-main [role=status], .farmacia-main [role=alert] { overflow-wrap: anywhere; }
 [hidden] { display: none !important; }
 @media (max-width: 480px) { .farmacia-main section { padding: .75rem; } .farmacia-filters { align-items: stretch; flex-direction: column; } }
+@media (max-width: 620px) {
+    .farmacia-table table, .farmacia-table tbody { display: block; width: 100%; }
+    .farmacia-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    .farmacia-table tr { display: block; border: 1px solid #d6e2dd; border-radius: 8px; margin: .75rem 0; }
+    .farmacia-table td { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: .75rem; padding: .65rem; }
+    .farmacia-table td::before { content: attr(data-label); font-weight: 700; }
+    .farmacia-table caption { display: block; }
+}
