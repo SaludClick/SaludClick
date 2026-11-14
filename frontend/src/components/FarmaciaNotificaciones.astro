@@ -1,0 +1,20 @@
+<section id="notificacionesFarmacia" class="farmacia-notifications" aria-labelledby="farmaciaNotificationsTitle">
+  <div class="farmacia-notifications-heading">
+    <div><h2 id="farmaciaNotificationsTitle" tabindex="-1">Notificaciones</h2><p>Avisos de tu operación en farmacia.</p></div>
+    <button type="button" id="farmaciaReadAll" disabled>Marcar todas como leídas</button>
+  </div>
+  <form id="farmaciaNotificationsFilter" class="farmacia-notifications-filters">
+    <label for="farmaciaNotificationsState">Mostrar</label>
+    <select id="farmaciaNotificationsState" name="estado">
+      <option value="todas">Todas</option><option value="no-leidas">No leídas</option><option value="leidas">Leídas</option>
+    </select>
+    <button type="submit" id="farmaciaNotificationsRefresh">Actualizar notificaciones</button>
+  </form>
+  <p id="farmaciaNotificationsStatus" role="status" aria-live="polite">Cargando notificaciones…</p>
+  <ul id="farmaciaNotificationsList" class="farmacia-notifications-list" aria-label="Listado de notificaciones" aria-busy="true"></ul>
+  <nav class="farmacia-notifications-pagination" aria-label="Páginas de notificaciones">
+    <button type="button" id="farmaciaNotificationsPrevious" disabled>Anterior</button>
+    <span id="farmaciaNotificationsPage"></span>
+    <button type="button" id="farmaciaNotificationsNext" disabled>Siguiente</button>
+  </nav>
+</section>
