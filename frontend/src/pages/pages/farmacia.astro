@@ -63,7 +63,7 @@ const title = "Dashboard de Farmacia | SaludClick";
           <div>
             <span class="admin-eyebrow">OPERACIÓN DE FARMACIA</span>
             <h1>Panel de farmacia</h1>
-            <p>Consulta el catálogo, organiza los pedidos pagados y revisa las existencias.</p>
+            <p>Organiza los pedidos y consulta las existencias. Solo se avanzan pedidos con pago aprobado.</p>
           </div>
           <button id="refreshFarmacia" class="btn-outline admin-refresh" type="button">
             <i class="fa-solid fa-rotate" aria-hidden="true"></i>
@@ -73,6 +73,22 @@ const title = "Dashboard de Farmacia | SaludClick";
 
         <div id="farmaciaMessage" class="admin-message" role="status" aria-live="polite"></div>
 
+        <section aria-label="Pedidos por estado">
+          <p>Totales del sistema por estado del pedido; no indican aprobación del pago.</p>
+          <div class="farmacia-stats" id="farmaciaStats">
+            {[
+              ["APROBADA", "Por preparar"],
+              ["PREPARANDO", "En preparación"],
+              ["LISTA", "Listos"]
+            ].map(([estado, label]) => (
+              <button type="button" class="farmacia-stat" data-order-status={estado} aria-busy="true">
+                <span>{label}</span><strong data-count>Cargando…</strong>
+                <small data-count-message>Consultando total</small>
+              </button>
+            ))}
+          </div>
+          <button id="retryFarmaciaStats" type="button" hidden>Reintentar indicadores</button>
+        </section>
         <FarmaciaOperaciones />
       </main>
     </div>

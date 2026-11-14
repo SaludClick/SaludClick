@@ -34,6 +34,41 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
     const state = { orders: { page: 1, sequence: 0 }, inventory: { page: 1, sequence: 0 } };
     const showError = error => { message.textContent = error.message || 'No se pudo completar la operación.'; message.setAttribute('role', 'alert'); };
     const clearMessage = () => { message.textContent = ''; message.setAttribute('role', 'status'); };
+    let statsSequence = 0;
+    async function loadStats() {
+        const sequence = ++statsSequence;
+        const cards = [...document.querySelectorAll('[data-order-status]')];
+        cards.forEach(card => {
+            card.setAttribute('aria-busy', 'true');
+            card.querySelector('[data-count-message]').textContent = 'Actualizando…';
+        });
+        const results = await Promise.allSettled(cards.map(async card => {
+            const result = await apiFetch(`/api/farmacia/pedidos?pagina=1&estado=${card.dataset.orderStatus}`);
+            if (sequence !== statsSequence) return;
+            card.querySelector('[data-count]').textContent = String(result.paginacion.total);
+            card.dataset.loaded = 'true';
+            card.querySelector('[data-count-message]').textContent = result.paginacion.total === 0 ? 'Sin pedidos en este estado' : 'Total en todas las páginas';
+        }));
+        if (sequence !== statsSequence) return false;
+        results.forEach((result, index) => {
+            const card = cards[index];
+            card.setAttribute('aria-busy', 'false');
+            if (result.status === 'rejected') {
+                if (!card.dataset.loaded) card.querySelector('[data-count]').textContent = 'No disponible';
+                card.querySelector('[data-count-message]').textContent = 'Sin actualizar. Reintenta la consulta.';
+            }
+        });
+        const ok = results.every(result => result.status === 'fulfilled');
+        document.getElementById('retryFarmaciaStats').hidden = ok;
+        return ok;
+    }
+    document.getElementById('retryFarmaciaStats').addEventListener('click', loadStats);
+    document.querySelectorAll('[data-order-status]').forEach(card => card.addEventListener('click', () => {
+        document.getElementById('estadoFarmacia').value = card.dataset.orderStatus;
+        state.orders.page = 1;
+        document.getElementById('pedidosFarmacia').focus();
+        loadOrders();
+    }));
     function pagination(type, info) {
         document.getElementById(`${type}Page`).textContent = `${info.total} registros · Página ${info.pagina} de ${Math.max(1, info.paginas)}`;
         document.getElementById(`${type}Previous`).disabled = info.pagina <= 1;
@@ -108,8 +143,8 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
     }
     document.getElementById('refreshFarmacia').addEventListener('click', async () => {
         document.getElementById('refreshFarmacia').disabled = true;
-        await Promise.allSettled([loadOrders(), loadInventory()]);
+        await Promise.allSettled([loadOrders(), loadInventory(), loadStats()]);
         document.getElementById('refreshFarmacia').disabled = false;
     });
-    loadOrders(); loadInventory();
+    loadOrders(); loadInventory(); loadStats();
 });

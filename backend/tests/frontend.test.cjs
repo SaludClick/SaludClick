@@ -68,6 +68,8 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     let adminAccountCreates = 0;
     let adminDashboardRequests = 0;
     let farmaciaDashboardRequests = 0;
+    const farmaciaPanel = require('./support/farmacia-panel-browser.cjs');
+    const farmaciaPanelFixture = farmaciaPanel.createFixture();
     let epsAccessRequests = 0;
     let vitalixApiRequests = 0;
     let farmaciaStatus = 'APROBADA';
@@ -122,6 +124,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             res.end(JSON.stringify(pathname.endsWith('/mensajes')?{ok:true,messages:[],conversation}:{ok:true,conversaciones:[conversation]}));
             return;
         }
+        if (farmaciaPanelFixture.handle(req, res, new URL(req.url, 'http://localhost'))) return;
         if (pathname === '/api/farmacia/inventario' || pathname.startsWith('/api/farmacia/pedidos')) {
             farmaciaRequests++;
             res.setHeader('Content-Type', 'application/json');
@@ -622,6 +625,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     });
 
     await require('./support/administrative-browser.cjs').testWorkspace({t,evaluate,go,click,value,until,send,fixture:administrativeFixture});
+    await farmaciaPanel.testIndicators({t,fixture:farmaciaPanelFixture,evaluate,go,click,until});
     await t.test('panel de farmacia prioriza pedidos e inventario', async () => {
         await evaluate(`for (const s of [localStorage,sessionStorage]) { s.setItem('saludclick_token','frontend-test-only'); s.setItem('saludclick_user',JSON.stringify({nombre:'Farmacia de prueba',rol:3})); }`);
         await go('/pages/farmacia.html');
