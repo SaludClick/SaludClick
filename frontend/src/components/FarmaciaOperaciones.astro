@@ -1,24 +1,41 @@
-    <section id="pedidosFarmacia" aria-labelledby="pedidosTitle" tabindex="-1">
-      <h2 id="pedidosTitle">Pedidos para atender</h2>
-      <p>Los pedidos avanzan de aprobado a preparando, listo y entregado. Solo se actualizan pedidos con pago aprobado.</p>
-      <form id="filtroPedidos" class="farmacia-filters">
-        <label for="estadoFarmacia">Estado</label><select id="estadoFarmacia">
-          <option value="">Activos</option><option value="APROBADA">Aprobados</option><option value="PREPARANDO">Preparando</option><option value="LISTA">Listos</option><option value="ENTREGADA">Entregados</option>
-        </select><button type="submit">Aplicar filtro</button>
-      </form>
-      <p id="ordersAppliedFilter">Vista: pedidos activos · Más antiguos primero</p>
-      <p id="ordersMessage" role="status" aria-live="polite"></p>
-      <button id="retryFarmaciaOrders" type="button" hidden>Reintentar consulta de pedidos</button>
-      <div id="farmaciaOrders" aria-live="polite" aria-busy="false"></div>
-      <div class="farmacia-pagination"><button type="button" id="ordersPrevious" disabled>Anterior</button><span id="ordersPage"></span><button type="button" id="ordersNext" disabled>Siguiente</button></div>
-    </section>
-    <section id="inventarioFarmacia" aria-labelledby="inventarioTitle" tabindex="-1">
-      <h2 id="inventarioTitle">Consulta de inventario</h2><p>Solo consulta. El estado del registro y las unidades en stock son datos distintos.</p>
-      <form id="buscarInventario" class="farmacia-filters"><label for="buscarFarmacia">Medicamento</label><input id="buscarFarmacia" type="search" maxlength="150" placeholder="Buscar por nombre"><button type="submit">Buscar</button><button type="button" id="clearFarmaciaInventory">Limpiar búsqueda</button></form>
-      <p id="inventoryAppliedSearch">Todos los medicamentos</p>
-      <div class="farmacia-table" tabindex="0" role="region" aria-label="Resultados del inventario"><table><caption>Existencias de medicamentos</caption><thead><tr><th scope="col">Medicamento</th><th scope="col">Categoría</th><th scope="col">Unidades en stock</th><th scope="col">Estado del registro</th></tr></thead><tbody id="farmaciaInventory"></tbody></table></div>
-      <p id="inventoryEmpty" role="status"></p>
-      <p id="inventoryMessage" role="status" aria-live="polite"></p>
-      <button id="retryFarmaciaInventory" type="button" hidden>Reintentar inventario</button>
-      <div class="farmacia-pagination"><button type="button" id="inventoryPrevious" disabled>Anterior</button><span id="inventoryPage"></span><button type="button" id="inventoryNext" disabled>Siguiente</button></div>
-    </section>
+---
+import FarmaciaExistencias from "./FarmaciaExistencias.astro";
+---
+<section id="pedidosFarmacia" class="farmacia-orders-panel" aria-labelledby="pedidosTitle" tabindex="-1">
+  <h2 id="pedidosTitle">Solicitudes de Farmacia</h2>
+  <p>Consulta la cola operativa y sus medicamentos. Los avances exigen pago real aprobado. Los medicamentos que requieren fórmula o tienen ese requisito sin determinar permanecen bloqueados.</p>
+  <div class="farmacia-orders-stats" aria-label="Indicadores de solicitudes">
+    <article><strong data-order-count="pendientes">—</strong><span>Pendientes de preparar</span></article>
+    <article><strong data-order-count="preparando">—</strong><span>En preparación</span></article>
+    <article><strong data-order-count="listas">—</strong><span>Listas</span></article>
+    <article><strong data-order-count="entregadas">—</strong><span>Entregadas</span></article>
+  </div>
+  <p class="farmacia-orders-note">Totales de la cola, independientes de los filtros. Pendientes de preparar corresponde a solicitudes aprobadas; no incluye solicitudes pendientes de aprobación.</p>
+  <form id="filtroPedidos" class="farmacia-filters">
+    <label for="buscarSolicitudFarmacia">Identificador de solicitud</label>
+    <input id="buscarSolicitudFarmacia" name="id" type="text" inputmode="numeric" pattern="[1-9][0-9]{0,9}" maxlength="10" placeholder="Ej.: 123" />
+    <label for="estadoFarmacia">Estado</label>
+    <select id="estadoFarmacia" name="estado">
+      <option value="">Activas</option><option value="todas">Todas las operativas</option>
+      <option value="APROBADA">Aprobadas</option><option value="PREPARANDO">En preparación</option><option value="LISTA">Listas</option><option value="ENTREGADA">Entregadas</option>
+    </select>
+    <button type="submit" id="farmaciaOrdersRefresh">Buscar / actualizar</button>
+    <button type="button" id="farmaciaOrdersClear">Limpiar filtros</button>
+  </form>
+  <p id="ordersAppliedFilter"></p>
+  <button id="retryFarmaciaOrders" type="button" hidden>Reintentar consulta de pedidos</button>
+  <p id="farmaciaOrdersStatus" role="status" aria-live="polite"></p>
+  <div id="farmaciaOrders" aria-live="polite" aria-busy="false"></div>
+  <nav class="farmacia-pagination" aria-label="Páginas de solicitudes"><button type="button" id="ordersPrevious" disabled>Anterior</button><span id="ordersPage"></span><button type="button" id="ordersNext" disabled>Siguiente</button></nav>
+  <dialog id="farmaciaSolicitudDetalle" class="farmacia-orders-dialog" aria-labelledby="farmaciaSolicitudDetalleTitle">
+    <div class="farmacia-orders-dialog-heading"><h2 id="farmaciaSolicitudDetalleTitle">Detalle de solicitud</h2><button id="farmaciaSolicitudCerrar" type="button">Cerrar detalle</button></div>
+    <div id="farmaciaSolicitudDetalleContent" aria-busy="false"></div>
+  </dialog>
+  <dialog id="farmaciaSolicitudConfirmacion" class="farmacia-orders-dialog" aria-labelledby="farmaciaSolicitudConfirmacionTitle">
+    <h2 id="farmaciaSolicitudConfirmacionTitle">Confirmar cambio de estado</h2>
+    <p id="farmaciaSolicitudConfirmacionText"></p>
+    <p>El servidor volver? a comprobar el estado, el pago y las condiciones de los medicamentos.</p>
+    <div class="farmacia-order-actions"><button id="farmaciaSolicitudCancelar" type="button">Cancelar</button><button id="farmaciaSolicitudConfirmar" type="button">Confirmar cambio</button></div>
+  </dialog>
+</section>
+<FarmaciaExistencias tipo="inventario" />

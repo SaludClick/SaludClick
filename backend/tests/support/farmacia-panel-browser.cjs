@@ -1,4 +1,6 @@
 const assert = require('node:assert/strict');
+const summary = pedidos => ({ pendientes: pedidos.filter(p=>p.estado==='APROBADA').length, preparando: pedidos.filter(p=>p.estado==='PREPARANDO').length, listas: pedidos.filter(p=>p.estado==='LISTA').length, entregadas: pedidos.filter(p=>p.estado==='ENTREGADA').length });
+const operation = pedido => ({ ...pedido, operacion: { siguienteEstado: {APROBADA:'PREPARANDO',PREPARANDO:'LISTA',LISTA:'ENTREGADA'}[pedido.estado] || null, bloqueos: [] } });
 
 // HTTP fixture only: never imports application repositories or database config.
 function createFixture() {
@@ -16,7 +18,7 @@ function createFixture() {
         fixture.failInventory = false;
         fixture.chatEnabled = false; fixture.chatHold = false; fixture.chatEmpty = false;
         fixture.chatFailList = false; fixture.chatFailHistory = false; fixture.chatReleases = [];
-        fixture.inventory = Array.from({ length: 27 }, (_, i) => ({ nombre: `Medicamento ficticio ${String(i + 1).padStart(2, '0')}`, stock: i, estado: 'DISPONIBLE', categoria: { nombre: 'Categoría ficticia' } }));
+        fixture.inventory = Array.from({ length: 27 }, (_, i) => ({ id: i + 1, disponibilidad: i ? 'DISPONIBLE' : 'AGOTADO', requisitoFormula: 'DESCONOCIDO', presentacion: null, nombre: `Medicamento ficticio ${String(i + 1).padStart(2, '0')}`, stock: i, estado: 'DISPONIBLE', categoria: { nombre: 'Categoría ficticia' } }));
         fixture.pedidos = Array.from({ length: 31 }, (_, i) => ({
             id: i + 1, estado: i < 26 ? 'APROBADA' : i < 29 ? 'PREPARANDO' : 'LISTA',
             fecha: '2026-11-13T10:00:00Z', tipo_entrega: 'RECOGER',
@@ -46,7 +48,7 @@ function createFixture() {
             const buscar = (url.searchParams.get('buscar') || '').toLocaleLowerCase();
             const items = fixture.inventory.filter(m => m.nombre.toLocaleLowerCase().includes(buscar));
             const pagina = Number(url.searchParams.get('pagina') || 1);
-            res.end(JSON.stringify({ok:true,medicamentos:items.slice((pagina-1)*25,pagina*25),paginacion:{pagina,tamano:25,total:items.length,paginas:Math.ceil(items.length/25)}}));
+            res.end(JSON.stringify({ok:true,resumen:{total:fixture.inventory.length,disponibles:26,agotados:1,inactivos:0,inconsistentes:0,desconocidos:0},medicamentos:items.slice((pagina-1)*25,pagina*25),paginacion:{pagina,tamano:25,total:items.length,paginas:Math.ceil(items.length/25)}}));
             return true;
         }
         if (!fixture.enabled || !url.pathname.startsWith('/api/farmacia/pedidos')) return false;
@@ -77,14 +79,14 @@ function createFixture() {
             return true;
         }
         const estado = url.searchParams.get('estado');
-        if (fixture.failStats && estado === 'PREPARANDO') {
+        if (fixture.failStats) {
             res.statusCode = 503;
             res.end(JSON.stringify({ ok: false, mensaje: 'Fallo ficticio de indicador' }));
             return true;
         }
         const filtered = fixture.pedidos.filter(p => estado ? p.estado === estado : p.estado !== 'ENTREGADA');
         const pagina = Number(url.searchParams.get('pagina') || 1);
-        res.end(JSON.stringify({ ok: true, pedidos: filtered.slice((pagina - 1) * 25, pagina * 25),
+        res.end(JSON.stringify({ ok: true, resumen: summary(fixture.pedidos), pedidos: filtered.slice((pagina - 1) * 25, pagina * 25).map(operation),
             paginacion: { pagina, tamano: 25, total: filtered.length, paginas: Math.ceil(filtered.length / 25) } }));
         return true;
     };
@@ -134,6 +136,7 @@ async function testTransitions({ t, fixture, evaluate, go, click, until }) {
             await click('#ordersNext');
             await until(() => evaluate('document.querySelectorAll(".farmacia-order").length === 1'));
             await click('.farmacia-order button');
+            await click('#farmaciaSolicitudConfirmar');
             await until(countsReady);
             await until(() => evaluate('document.querySelectorAll(".farmacia-order").length === 25 && document.querySelector("#ordersPage").textContent.includes("1 de 1")'));
             assert.equal(await evaluate('document.querySelector("#estadoFarmacia").value'), 'APROBADA');
@@ -148,6 +151,7 @@ async function testTransitions({ t, fixture, evaluate, go, click, until }) {
             await evaluate(`document.querySelector('#estadoFarmacia').value=''; document.querySelector('#filtroPedidos').requestSubmit();`);
             await until(() => evaluate('document.querySelector("#farmaciaOrders").getAttribute("aria-busy") === "false"'));
             await click('.farmacia-order button');
+            await click('#farmaciaSolicitudConfirmar');
             await until(() => evaluate('document.querySelector("#farmaciaMessage").textContent.includes("Lista actualizada")'));
             assert.equal(await evaluate('document.querySelector(".farmacia-order").dataset.status'), 'PREPARANDO');
             assert.match(await evaluate('document.querySelector("#ordersPage").textContent'), /1 de 2/);
@@ -159,6 +163,7 @@ async function testTransitions({ t, fixture, evaluate, go, click, until }) {
         try {
             await openApproved();
             await click('.farmacia-order button');
+            await click('#farmaciaSolicitudConfirmar');
             await until(() => evaluate('document.querySelector("#retryFarmaciaOrders").hidden === false'));
             await until(() => evaluate('document.querySelector("#farmaciaMessage").textContent.includes("se actualiz")'));
             assert.equal(await evaluate('document.querySelector(".farmacia-order button").disabled'), true);
@@ -166,7 +171,7 @@ async function testTransitions({ t, fixture, evaluate, go, click, until }) {
             fixture.failQueries = false;
             await click('#retryFarmaciaOrders');
             await until(countsReady);
-            await until(() => evaluate('document.querySelector("#ordersMessage").textContent === ""'));
+            await until(() => evaluate('document.querySelector("#farmaciaOrdersStatus").textContent === "Solicitudes actualizadas."'));
             assert.equal(fixture.patches, 1);
             assert.equal(await evaluate('document.querySelector("#estadoFarmacia").value'), 'APROBADA');
         } finally { fixture.enabled = false; }
@@ -175,7 +180,7 @@ async function testTransitions({ t, fixture, evaluate, go, click, until }) {
         fixture.reset(); fixture.holdPatch = true;
         try {
             await openApproved();
-            await evaluate(`const button=document.querySelector('.farmacia-order button');button.focus();button.click();button.click();`);
+            await evaluate(`const button=document.querySelector('.farmacia-order button');button.focus();button.click();button.click();document.querySelector('#farmaciaSolicitudConfirmar').click();document.querySelector('#farmaciaSolicitudConfirmar').click();`);
             await until(() => fixture.patches === 1 && !!fixture.releasePatch);
             assert.equal(await evaluate('document.querySelector(".farmacia-order button").disabled'), true);
             await evaluate('document.querySelector("#buscarFarmacia").focus()');
@@ -232,24 +237,24 @@ async function testInventory({ t, fixture, evaluate, go, click, until, send }) {
             await send('Emulation.setDeviceMetricsOverride', {width:1440,height:1000,deviceScaleFactor:1,mobile:false});
             await go('/pages/farmacia.html#inventarioFarmacia');
             await until(() => evaluate('document.querySelectorAll("#farmaciaInventory tr").length === 25'));
-            assert.match(await evaluate('document.querySelector("#inventoryPage").textContent'), /de 27/);
-            assert.match(await evaluate('document.querySelector("#farmaciaInventory tr").textContent'), /0 unidades.*Sin existencias.*DISPONIBLE/);
+            assert.match(await evaluate('document.querySelector("#inventoryPage").textContent'), /27 registros/);
+            assert.match(await evaluate('document.querySelector("#farmaciaInventory tr").textContent'), /0.*Agotado/);
             await capture(send,'inventario-escritorio');
             await click('#inventoryNext');
             await until(() => evaluate('document.querySelectorAll("#farmaciaInventory tr").length === 2'));
             await evaluate(`document.querySelector('#buscarFarmacia').value='27';document.querySelector('#buscarInventario').requestSubmit();`);
-            await until(() => evaluate('document.querySelectorAll("#farmaciaInventory tr").length === 1 && document.querySelector("#inventoryPage").textContent.includes("de 1" )'));
+            await until(() => evaluate('document.querySelectorAll("#farmaciaInventory tr").length === 1 && document.querySelector("#inventoryPage").textContent.includes("1 registros" )'));
             assert.match(await evaluate('document.querySelector("#farmaciaInventory").textContent'), /27/);
             fixture.failInventory = true;
             await click('#refreshFarmacia');
-            await until(() => evaluate('document.querySelector("#retryFarmaciaInventory").hidden === false'));
+            await until(() => evaluate('document.querySelector("#inventoryEmpty").getAttribute("role") === "alert"'));
             assert.equal(await evaluate('document.querySelector("#buscarFarmacia").value'), '27');
             fixture.failInventory = false;
-            await click('#retryFarmaciaInventory');
-            await until(() => evaluate('document.querySelector("#inventoryMessage").textContent === ""'));
+            await evaluate("document.querySelector('#buscarInventario').requestSubmit()");
+            await until(() => evaluate('document.querySelector("#inventoryEmpty").textContent === "Información actualizada."'));
             await evaluate(`document.querySelector('#buscarFarmacia').value='sin coincidencias';document.querySelector('#buscarInventario').requestSubmit();`);
             await until(() => evaluate('document.querySelector("#inventoryEmpty").textContent.includes("No se encontraron")'));
-            await click('#clearFarmaciaInventory');
+            await click('[data-existencias="inventario"] [data-existencias-part="limpiar"]');
             await until(() => evaluate('document.querySelectorAll("#farmaciaInventory tr").length === 25'));
             fixture.inventory[0].nombre = 'NombreLargo'.repeat(40);
             await send('Emulation.setDeviceMetricsOverride', {width:320,height:812,deviceScaleFactor:1,mobile:true});

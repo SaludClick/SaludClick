@@ -1,5 +1,5 @@
-const states = new Set(['', 'APROBADA', 'PREPARANDO', 'LISTA', 'ENTREGADA']);
-const sections = new Set(['#panelFarmacia', '#pedidosFarmacia', '#inventarioFarmacia']);
+const states = new Set(['', 'todas', 'APROBADA', 'PREPARANDO', 'LISTA', 'ENTREGADA']);
+const sections = new Set(['#panelFarmacia', '#pedidosFarmacia', '#inventarioFarmacia', '#medicamentos', '#notificacionesFarmacia']);
 const page = value => /^[1-9]\d{0,5}$/.test(value || '') ? Number(value) : 1;
 
 export function readFarmaciaContext(search) {

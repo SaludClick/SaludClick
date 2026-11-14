@@ -1,6 +1,8 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import FarmaciaOperaciones from "../../components/FarmaciaOperaciones.astro";
+import FarmaciaNotificaciones from "../../components/FarmaciaNotificaciones.astro";
+import FarmaciaExistencias from "../../components/FarmaciaExistencias.astro";
 
 const title = "Dashboard de Farmacia | SaludClick";
 ---
@@ -20,8 +22,11 @@ const title = "Dashboard de Farmacia | SaludClick";
       <nav class="admin-side-nav" aria-label="Secciones de farmacia">
         <a class="admin-side-link active" href="#panelFarmacia" aria-current="page"><span>Panel</span></a>
         <a class="admin-side-link" href="#pedidosFarmacia"><span>Pedidos</span></a>
+        <a class="admin-side-link" href="#medicamentos"><span>Medicamentos</span></a>
+        <span class="farmacia-nav-disabled" aria-disabled="true">Fórmulas · Pendiente de autorización</span>
         <a class="admin-side-link" href="#inventarioFarmacia"><span>Inventario</span></a>
-        <a class="admin-side-link" href="/pages/chat-farmacia.html"><span>Chat</span></a>
+        <a class="admin-side-link" href="#notificacionesFarmacia"><i class="fa-solid fa-bell" aria-hidden="true"></i><span>Notificaciones</span></a>
+        <a class="admin-side-link" href="/pages/chat-farmacia.html"><span>Chat con pacientes</span></a>
         <a class="admin-side-link" href="/pages/perfil.html"><span>Perfil</span></a>
       </nav>
 
@@ -53,6 +58,10 @@ const title = "Dashboard de Farmacia | SaludClick";
           <span>SaludClick</span>
           <strong>Panel de farmacia</strong>
         </div>
+        <a class="farmacia-notifications-bell" id="farmaciaNotificationsBell" href="#notificacionesFarmacia" aria-label="Notificaciones de farmacia. Contador no disponible.">
+          <i class="fa-solid fa-bell" aria-hidden="true"></i>
+          <span id="farmaciaNotificationsBadge" aria-hidden="true">—</span>
+        </a>
         <div class="admin-topbar-status">
           <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
           Acceso de farmacia
@@ -92,10 +101,14 @@ const title = "Dashboard de Farmacia | SaludClick";
           <button id="retryFarmaciaStats" type="button" hidden>Reintentar indicadores</button>
         </section>
         <FarmaciaOperaciones />
+        <section id="farmaciaCatalogStats" class="admin-stats" aria-label="Estadísticas del catálogo" aria-busy="true"></section>
+        <FarmaciaExistencias tipo="catalogo" />
+        <FarmaciaNotificaciones />
       </main>
     </div>
   </div>
 
   <script is:inline type="module" src="/js/menu.js"></script>
   <script is:inline type="module" src="/js/farmacia.js"></script>
+  <script is:inline type="module" src="/js/farmacia-notificaciones.js"></script>
 </Layout>
