@@ -19,5 +19,7 @@
 .farmacia-table :is(th, td) { text-align: left; padding: .75rem; border-bottom: 1px solid #d6e2dd; }
 .farmacia-table caption { text-align: left; font-weight: 600; margin-bottom: .5rem; }
 #farmaciaMessage[role=alert] { color: #a01818; }
+.farmacia-main [role=alert] { color: #a01818; }
+.farmacia-main [role=status], .farmacia-main [role=alert] { overflow-wrap: anywhere; }
 [hidden] { display: none !important; }
 @media (max-width: 480px) { .farmacia-main section { padding: .75rem; } .farmacia-filters { align-items: stretch; flex-direction: column; } }
