@@ -30,6 +30,9 @@
 .farmacia-order p { overflow-wrap: anywhere; }
 .farmacia-order ul { padding-left: 1.5rem; margin: .75rem 0; }
 .farmacia-table { overflow-x: auto; }
+.farmacia-table:focus-visible { outline: 3px solid #1456a0; outline-offset: 3px; }
+.farmacia-table td { overflow-wrap: anywhere; }
+.farmacia-table td > span { min-width: 0; }
 .farmacia-table table { width: 100%; border-collapse: collapse; }
 .farmacia-table :is(th, td) { text-align: left; padding: .75rem; border-bottom: 1px solid #d6e2dd; }
 .farmacia-table caption { text-align: left; font-weight: 600; margin-bottom: .5rem; }
@@ -38,3 +41,11 @@
 .farmacia-main [role=status], .farmacia-main [role=alert] { overflow-wrap: anywhere; }
 [hidden] { display: none !important; }
 @media (max-width: 480px) { .farmacia-main section { padding: .75rem; } .farmacia-filters { align-items: stretch; flex-direction: column; } }
+@media (max-width: 620px) {
+    .farmacia-table table, .farmacia-table tbody { display: block; width: 100%; }
+    .farmacia-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    .farmacia-table tr { display: block; border: 1px solid #d6e2dd; border-radius: 8px; margin: .75rem 0; }
+    .farmacia-table td { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: .75rem; padding: .65rem; }
+    .farmacia-table td::before { content: attr(data-label); font-weight: 700; }
+    .farmacia-table caption { display: block; }
+}

@@ -250,9 +250,18 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
             target.replaceChildren();
             for (const medication of result.medicamentos) {
                 const row = element('tr', '');
-                for (const value of [medication.nombre, medication.categoria.nombre, medication.stock, medication.estado]) row.append(element('td', String(value)));
+                const cells = [
+                    ['Medicamento', medication.nombre], ['Categoría', medication.categoria.nombre],
+                    ['Unidades en stock', `${medication.stock} unidades${Number(medication.stock) === 0 ? ' · Sin existencias' : ''}`],
+                    ['Estado del registro', medication.estado]
+                ];
+                for (const [label, value] of cells) {
+                    const cell = element('td', ''); cell.dataset.label = label;
+                    cell.append(element('span', String(value))); row.append(cell);
+                }
                 target.append(row);
             }
+            document.getElementById('inventoryAppliedSearch').textContent = state.inventory.search ? `Coincidencias para: ${state.inventory.search}` : 'Todos los medicamentos';
             document.getElementById('inventoryEmpty').textContent = result.medicamentos.length ? '' : 'No se encontraron medicamentos.';
             pagination('inventory', result.paginacion, result.medicamentos.length);
             status.textContent = '';
@@ -283,6 +292,11 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
         if (await refreshOrders()) { clearMessage(); message.textContent = 'Datos de pedidos actualizados.'; }
     });
     document.getElementById('retryFarmaciaInventory').addEventListener('click', loadInventory);
+    document.getElementById('clearFarmaciaInventory').addEventListener('click', () => {
+        document.getElementById('buscarFarmacia').value = '';
+        state.inventory.search = ''; state.inventory.page = 1;
+        saveContext(); loadInventory(); document.getElementById('buscarFarmacia').focus();
+    });
     for (const [type, load] of [['orders', loadOrders], ['inventory', loadInventory]]) {
         for (const [direction, delta] of [['Previous', -1], ['Next', 1]]) document.getElementById(`${type}${direction}`).addEventListener('click', () => {
             state[type].page = Math.max(1, state[type].page + delta); load();

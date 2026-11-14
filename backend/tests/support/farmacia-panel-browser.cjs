@@ -12,6 +12,9 @@ function createFixture() {
         fixture.failAfterPatch = false;
         fixture.holdPatch = false;
         fixture.releasePatch = null;
+        fixture.inventoryEnabled = false;
+        fixture.failInventory = false;
+        fixture.inventory = Array.from({ length: 27 }, (_, i) => ({ nombre: `Medicamento ficticio ${String(i + 1).padStart(2, '0')}`, stock: i, estado: 'DISPONIBLE', categoria: { nombre: 'Categoría ficticia' } }));
         fixture.pedidos = Array.from({ length: 31 }, (_, i) => ({
             id: i + 1, estado: i < 26 ? 'APROBADA' : i < 29 ? 'PREPARANDO' : 'LISTA',
             fecha: '2026-11-13T10:00:00Z', tipo_entrega: 'RECOGER',
@@ -20,6 +23,17 @@ function createFixture() {
         }));
     };
     fixture.handle = (req, res, url) => {
+        if (fixture.enabled && fixture.inventoryEnabled && url.pathname === '/api/farmacia/inventario') {
+            res.setHeader('Content-Type', 'application/json');
+            if (fixture.failInventory) {
+                res.statusCode = 503; res.end(JSON.stringify({ok:false,mensaje:'Fallo ficticio de inventario'})); return true;
+            }
+            const buscar = (url.searchParams.get('buscar') || '').toLocaleLowerCase();
+            const items = fixture.inventory.filter(m => m.nombre.toLocaleLowerCase().includes(buscar));
+            const pagina = Number(url.searchParams.get('pagina') || 1);
+            res.end(JSON.stringify({ok:true,medicamentos:items.slice((pagina-1)*25,pagina*25),paginacion:{pagina,tamano:25,total:items.length,paginas:Math.ceil(items.length/25)}}));
+            return true;
+        }
         if (!fixture.enabled || !url.pathname.startsWith('/api/farmacia/pedidos')) return false;
         res.setHeader('Content-Type', 'application/json');
         if (req.method === 'PATCH') {
@@ -193,4 +207,38 @@ async function testNavigation({ t, fixture, evaluate, go, click, until, send }) 
         } finally { fixture.enabled = false; await send('Emulation.clearDeviceMetricsOverride'); }
     });
 }
-module.exports = { createFixture, testIndicators, testTransitions, testNavigation, capture };
+async function testInventory({ t, fixture, evaluate, go, click, until, send }) {
+    await t.test('inventario busca en todas las paginas, distingue stock de estado y recupera vacios y errores en movil', async () => {
+        fixture.reset(); fixture.inventoryEnabled = true;
+        try {
+            await go('/pages/farmacia.html#inventarioFarmacia');
+            await until(() => evaluate('document.querySelectorAll("#farmaciaInventory tr").length === 25'));
+            assert.match(await evaluate('document.querySelector("#inventoryPage").textContent'), /de 27/);
+            assert.match(await evaluate('document.querySelector("#farmaciaInventory tr").textContent'), /0 unidades.*Sin existencias.*DISPONIBLE/);
+            await click('#inventoryNext');
+            await until(() => evaluate('document.querySelectorAll("#farmaciaInventory tr").length === 2'));
+            await evaluate(`document.querySelector('#buscarFarmacia').value='27';document.querySelector('#buscarInventario').requestSubmit();`);
+            await until(() => evaluate('document.querySelectorAll("#farmaciaInventory tr").length === 1 && document.querySelector("#inventoryPage").textContent.includes("de 1" )'));
+            assert.match(await evaluate('document.querySelector("#farmaciaInventory").textContent'), /27/);
+            fixture.failInventory = true;
+            await click('#refreshFarmacia');
+            await until(() => evaluate('document.querySelector("#retryFarmaciaInventory").hidden === false'));
+            assert.equal(await evaluate('document.querySelector("#buscarFarmacia").value'), '27');
+            fixture.failInventory = false;
+            await click('#retryFarmaciaInventory');
+            await until(() => evaluate('document.querySelector("#inventoryMessage").textContent === ""'));
+            await evaluate(`document.querySelector('#buscarFarmacia').value='sin coincidencias';document.querySelector('#buscarInventario').requestSubmit();`);
+            await until(() => evaluate('document.querySelector("#inventoryEmpty").textContent.includes("No se encontraron")'));
+            await click('#clearFarmaciaInventory');
+            await until(() => evaluate('document.querySelectorAll("#farmaciaInventory tr").length === 25'));
+            fixture.inventory[0].nombre = 'NombreLargo'.repeat(40);
+            await send('Emulation.setDeviceMetricsOverride', {width:320,height:812,deviceScaleFactor:1,mobile:true});
+            await click('#refreshFarmacia');
+            await until(() => evaluate('document.querySelector("#farmaciaInventory tr").textContent.includes("NombreLargo")'));
+            assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true);
+            await evaluate('document.querySelector("#inventarioFarmacia").scrollIntoView()');
+            await capture(send, 'inventario-movil');
+        } finally { fixture.enabled = false; await send('Emulation.clearDeviceMetricsOverride'); }
+    });
+}
+module.exports = { createFixture, testIndicators, testTransitions, testNavigation, testInventory, capture };

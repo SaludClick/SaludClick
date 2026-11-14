@@ -628,6 +628,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     await farmaciaPanel.testIndicators({t,fixture:farmaciaPanelFixture,evaluate,go,click,until});
     await farmaciaPanel.testTransitions({t,fixture:farmaciaPanelFixture,evaluate,go,click,until});
     await farmaciaPanel.testNavigation({t,fixture:farmaciaPanelFixture,evaluate,go,click,until,send});
+    await farmaciaPanel.testInventory({t,fixture:farmaciaPanelFixture,evaluate,go,click,until,send});
     await t.test('panel de farmacia prioriza pedidos e inventario', async () => {
         await evaluate(`for (const s of [localStorage,sessionStorage]) { s.setItem('saludclick_token','frontend-test-only'); s.setItem('saludclick_user',JSON.stringify({nombre:'Farmacia de prueba',rol:3})); }`);
         await go('/pages/farmacia.html');
