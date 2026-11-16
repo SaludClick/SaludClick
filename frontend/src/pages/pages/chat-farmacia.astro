@@ -1,6 +1,8 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import FarmaciaChat from '../../components/FarmaciaChat.jsx';
+// Include the stylesheet in the page build as well as the client-only island.
+import '../../styles/farmacia-chat.css';
 ---
 <Layout title="Chat con farmacia | SaludClick" bodyClass="farmacia-chat-body">
   <FarmaciaChat client:only="react" />

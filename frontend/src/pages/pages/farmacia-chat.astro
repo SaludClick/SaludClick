@@ -1,0 +1,6 @@
+---
+import FarmaciaLayout from '../../layouts/FarmaciaLayout.astro';
+import FarmaciaChat from '../../components/FarmaciaChat.jsx';
+import '../../styles/farmacia-chat.css';
+---
+<FarmaciaLayout modulo="chat" titulo="Chat" descripcion="Conversaciones autorizadas con pacientes."><a id="farmaciaChatReturn" href="/pages/farmacia.html">Volver a la pantalla anterior</a><FarmaciaChat embedded client:only="react" /></FarmaciaLayout>

@@ -85,6 +85,10 @@ test("esStaff exige rol de agente activo y maneja usuario ausente", async () => 
     assert.equal(await repository.esStaff(20), true);
     userResult = { rol_id: 3, estado: "INACTIVO" };
     assert.equal(await repository.esStaff(20), false);
+    for (const estado of [null, 'BLOQUEADO', undefined]) {
+        userResult = { rol_id: 3, estado };
+        assert.equal(await repository.esStaff(20), false);
+    }
     userResult = { rol_id: 2, estado: "ACTIVO" };
     assert.equal(await repository.esStaff(20), false);
     userResult = null;

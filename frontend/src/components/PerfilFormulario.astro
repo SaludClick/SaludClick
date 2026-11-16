@@ -1,0 +1,67 @@
+<form>
+                    <div class="perfil-grid">
+
+                        <div class="campo">
+                            <label for="nombre">Nombre Completo</label>
+                            <div class="input-icon-wrapper">
+                                <i class="fa-solid fa-user input-icon"></i>
+                                <input id="nombre" type="text" placeholder="Tu nombre completo" required>
+                            </div>
+                        </div>
+
+                        <div class="campo">
+                            <label for="email">Correo Electrónico</label>
+                            <div class="input-icon-wrapper">
+                                <i class="fa-solid fa-envelope input-icon"></i>
+                                <input id="email" type="email" placeholder="ejemplo@correo.com" required readonly aria-describedby="correoSoloLectura">
+                                <small id="correoSoloLectura">El correo de la cuenta no se modifica desde el perfil.</small>
+                            </div>
+                        </div>
+
+                        <div class="campo">
+                            <label for="tipoDocumento">Tipo Documento</label>
+                            <div class="input-icon-wrapper">
+                                <i class="fa-solid fa-address-card input-icon"></i>
+                                <input id="tipoDocumento" type="text" placeholder="Ej. Cédula de Ciudadanía">
+                            </div>
+                        </div>
+
+                        <div class="campo">
+                            <label for="numeroDocumento">Número Documento</label>
+                            <div class="input-icon-wrapper">
+                                <i class="fa-solid fa-hashtag input-icon"></i>
+                                <input id="numeroDocumento" type="text" placeholder="Ej. 1020304050">
+                            </div>
+                        </div>
+
+                        <div class="campo">
+                            <label for="telefono">Teléfono</label>
+                            <div class="input-icon-wrapper">
+                                <i class="fa-solid fa-phone input-icon"></i>
+                                <input id="telefono" type="text" placeholder="Ej. 3001234567">
+                            </div>
+                        </div>
+
+                        <div class="campo">
+                            <label for="ciudad">Ciudad</label>
+                            <div class="input-icon-wrapper">
+                                <i class="fa-solid fa-city input-icon"></i>
+                                <input id="ciudad" type="text" placeholder="Ej. Medellín">
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Botones y Mensaje -->
+                    <div class="profile-actions-wrapper">
+                        <button id="guardarPerfil" type="submit" class="btn-guardar">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Cambios
+                        </button>
+
+                        <button id="cancelarPerfil" type="button" class="btn-outline">
+                            Cancelar
+                        </button>
+                    </div>
+
+                    <p id="mensajePerfil" role="status" aria-live="polite" class="mensaje-estado"></p>
+                </form>

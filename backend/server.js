@@ -15,6 +15,7 @@ const io = new Server(httpServer, { cors: { origin(origin, callback) { callback(
 
 attachChatSocket(io);
 require('./src/sockets/administrative.socket').attachAdministrativeSocket(io,app);
+require('./src/sockets/farmacia-notificaciones.socket').attachFarmaciaNotifications(io, app);
 
 async function startServer() {
     try {

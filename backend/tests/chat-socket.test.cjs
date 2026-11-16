@@ -12,8 +12,12 @@ const repositoryOriginals = { ...repository };
 function setup(token) {
   const emitted = [];
   const io = { middleware: null, connection: null, use(fn) { this.middleware = fn; }, on(name, fn) { if (name === "connection") this.connection = fn; }, to(room) { return { emit: (event, data) => emitted.push({ room, event, data }) }; } };
-  const socket = { handshake: { auth: { token } }, data: {}, handlers: {}, rooms: [], on(name, fn) { this.handlers[name] = fn; }, join(room) { this.rooms.push(room); }, leave() {} };
-  attachChatSocket(io);
+  const rooms = []; rooms.has = room => rooms.includes(room);
+  const socket = { id: 'test-socket', handshake: { auth: { token } }, data: {}, handlers: {}, rooms, on(name, fn) { this.handlers[name] = fn; }, join(room) { this.rooms.push(room); }, leave() {}, disconnect() { this.handlers.disconnect?.(); } };
+  attachChatSocket(io, { authenticateFarmacia: async token => {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    return { id: payload.id, rol_id: 3, exp: payload.exp };
+  } });
   return { io, socket, emitted };
 }
 
@@ -70,7 +74,7 @@ test("socket: une agentes, marca mensajes entregados y notifica al participante"
   };
   repository.obtenerParticipantes = async () => ({ cliente_id: 10, agente_id: 20 });
   service.enviar = async () => ({ id: 91, conversacion_id: 7 });
-  const { io, socket, emitted } = setup(jwt.sign({ id: 20, rol: 3 }, process.env.JWT_SECRET));
+  const { io, socket, emitted } = setup(jwt.sign({ id: 20, rol: 3 }, process.env.JWT_SECRET, { expiresIn: '1h' }));
   await new Promise((resolve, reject) => io.middleware(socket, (error) => error ? reject(error) : resolve()));
   io.connection(socket);
 

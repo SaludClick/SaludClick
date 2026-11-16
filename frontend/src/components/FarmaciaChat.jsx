@@ -38,10 +38,19 @@ const displayDate = value => {
   return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('es-CO', { dateStyle: 'short', timeStyle: 'short' }).format(date);
 };
 
-export default function FarmaciaChat() {
+export default function FarmaciaChat({ embedded = false }) {
   const user = getCurrentUser();
   const role = Number(user?.rol_id ?? user?.rol);
-  const allowed = !!getToken() && [2, 3].includes(role);
+  const [verified, setVerified] = useState(() => !embedded || document.getElementById('farmaciaApp')?.dataset.authorized === 'true');
+  useEffect(() => {
+    if (!embedded) return;
+    const ready = () => setVerified(true);
+    if (document.getElementById('farmaciaApp')?.dataset.authorized === 'true') ready();
+    document.addEventListener('farmacia:ready', ready);
+    return () => document.removeEventListener('farmacia:ready', ready);
+  }, [embedded]);
+  const legacyStaff = !embedded && role === 3 && window.location.pathname === '/pages/chat-farmacia.html';
+  const allowed = verified && !legacyStaff && !!getToken() && [2, 3].includes(role);
   const isStaff = role === 3;
   const [conversations, setConversations] = useState([]);
   const [active, setActive] = useState(null);
@@ -91,8 +100,9 @@ export default function FarmaciaChat() {
 
   useEffect(() => { loadConversations(); return () => { listSequence.current++; }; }, [loadConversations]);
   useEffect(() => {
-    if (!allowed) window.location.replace(getToken() && role === 1 ? '/pages/admin.html' : getToken() && role === 4 ? '/pages/eps.html' : '/login.html');
-  }, [allowed, role]);
+    if (legacyStaff) { window.location.replace('/pages/farmacia-chat.html' + window.location.search); return; }
+    if (verified && !allowed) window.location.replace(getToken() && role === 1 ? '/pages/admin.html' : getToken() && role === 4 ? '/pages/eps.html' : '/login.html');
+  }, [allowed, role, verified, legacyStaff]);
   useEffect(() => {
     if (!allowed) return;
     let disposed = false;
@@ -177,16 +187,18 @@ export default function FarmaciaChat() {
     return person ? `${person.nombre} ${person.apellido}` : 'Equipo de farmacia';
   };
   if (!allowed) return <p role="status">Verificando acceso al chat…</p>;
-  return <div className="farmacia-chat-module">
-    <nav className="farmacia-chat-nav" aria-label={isStaff ? 'Secciones de farmacia' : 'Navegación del chat'}>
+  const Container = embedded ? 'section' : 'main';
+  const Heading = embedded ? 'h2' : 'h1';
+  return <div className={`farmacia-chat-module${embedded ? ' farmacia-embedded-chat' : ''}`}>
+    {!embedded && <nav className="farmacia-chat-nav" aria-label={isStaff ? 'Secciones de farmacia' : 'Navegación del chat'}>
       <a className="farmacia-chat-brand" href={isStaff ? returnTo : '/pages/dashboard.html'}>SaludClick · {isStaff ? 'Farmacia' : 'Mi cuenta'}</a>
       {isStaff ? <><a href={farmaciaReturnUrl(returnTo, '#panelFarmacia')}>Panel</a><a href={farmaciaReturnUrl(returnTo, '#pedidosFarmacia')}>Pedidos</a><a href={farmaciaReturnUrl(returnTo, '#inventarioFarmacia')}>Inventario</a></> : <a href="/pages/dashboard.html">Mi panel</a>}
       <a href={window.location.pathname + window.location.search} aria-current="page">Chat</a>
       <a href="/pages/perfil.html">Perfil</a>
       <button type="button" onClick={logout}>Cerrar sesión</button>
-    </nav>
-    <main className="chat-page">
-      <header className="chat-heading"><div><p className="chat-eyebrow">ATENCIÓN SALUDCLICK</p><h1>{isStaff ? 'Chat con pacientes' : 'Chat con farmacia'}</h1><p>{isStaff ? 'Atiende conversaciones autorizadas y conserva el contexto de tu operación.' : 'Consulta al equipo de farmacia.'}</p></div>
+    </nav>}
+    <Container className="chat-page">
+      <header className="chat-heading"><div><p className="chat-eyebrow">ATENCIÓN SALUDCLICK</p><Heading>{isStaff ? 'Chat con pacientes' : 'Chat con farmacia'}</Heading><p>{isStaff ? 'Atiende conversaciones autorizadas y conserva el contexto de tu operación.' : 'Consulta al equipo de farmacia.'}</p></div>
         <span role="status" className={`chat-connection ${connection}`}>{connection === 'online' ? 'En línea' : connection === 'offline' ? 'Sin conexión' : 'Conectando…'}</span>
       </header>
       {connection !== 'online' && <div className="chat-notice" role="status">{connectionError || 'Los mensajes se enviarán cuando haya conexión.'} <button type="button" onClick={() => setSocketAttempt(n => n + 1)}>Reconectar</button></div>}
@@ -220,6 +232,6 @@ export default function FarmaciaChat() {
         </div>
       </section>
       <p className="chat-privacy">No compartas información sensible de salud en el chat.</p>
-    </main>
+    </Container>
   </div>;
 }
