@@ -243,7 +243,7 @@ test('navegador: filtros, lectura persistida al recargar, eventos reales y respo
     };
     try {
         await send('Page.addScriptToEvaluateOnNewDocument', { source: seed });
-        await send('Page.navigate', { url: `${origin}/pages/farmacia.html` });
+        await send('Page.navigate', { url: `${origin}/pages/farmacia-notificaciones.html` });
         try { await until(() => evaluate(`document.querySelector('#farmaciaNotificationsBadge')?.textContent === '43'`)); }
         catch (error) {
             const diagnostics = await evaluate(`({path:location.pathname,ready:document.readyState,mainHidden:document.querySelector('#farmaciaMain')?.hidden,status:document.querySelector('#farmaciaNotificationsStatus')?.textContent,badge:document.querySelector('#farmaciaNotificationsBadge')?.textContent,resources:performance.getEntriesByType('resource').map(r=>({path:new URL(r.name).pathname,status:r.responseStatus}))})`);

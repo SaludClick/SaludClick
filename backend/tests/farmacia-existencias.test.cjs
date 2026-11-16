@@ -11,6 +11,7 @@ function matches(row, where = {}) {
         if (key === 'OR') return value.some(condition => matches(row, condition));
         if (value && typeof value === 'object') {
             if ('in' in value) return value.in.includes(row[key]);
+            if ('lte' in value) return row[key] > value.gt && row[key] <= value.lte;
             if ('gt' in value) return row[key] > value.gt;
             if ('gte' in value) return row[key] >= value.gte;
             if ('lt' in value) return row[key] < value.lt;
@@ -81,7 +82,7 @@ test('paginación estable y resumen global: disponibles requieren stock positivo
     for (const path of ['/inventario','/medicamentos']) {
         const first = await request(path), second = await request(`${path}?pagina=2`);
         assert.equal(first.status,200); assert.equal(first.cache,'no-store'); assert.equal(first.data.medicamentos.length,25);
-        assert.deepEqual(first.data.resumen,{total:61,disponibles:55,agotados:2,inactivos:1,inconsistentes:2,desconocidos:1});
+        assert.deepEqual(first.data.resumen,{total:61,disponibles:55,agotados:2,inactivos:1,inconsistentes:2,desconocidos:1,bajos:0});
         assert.equal(first.data.medicamentos.some(a=>second.data.medicamentos.some(b=>a.id===b.id)),false);
         assert.equal((await request(`${path}?tamano=50`)).data.medicamentos.length,50);
         assert.deepEqual((await request(`${path}?pagina=100`)).data.medicamentos,[]);
@@ -147,9 +148,18 @@ test('navegador: búsquedas, filtros, paginación, detalle, requisitos, recarga,
     };
     try{
         await send('Page.addScriptToEvaluateOnNewDocument',{source:`window.SALUDCLICK_API_URL=location.origin;sessionStorage.setItem('saludclick_token',${JSON.stringify(token())});sessionStorage.setItem('saludclick_user',JSON.stringify({id:30,rol:3,nombre:'Prueba aislada'}));`});
-        await send('Page.navigate',{url:`${origin}/pages/farmacia.html`});
-        await until(()=>evaluate(`document.querySelectorAll('#farmaciaInventory tr').length===25&&document.querySelectorAll('#farmaciaMedicamentos tr').length===25`));
+        await send('Page.navigate',{url:`${origin}/pages/farmacia-inventario.html`});
+        await until(()=>evaluate(`document.querySelectorAll('#farmaciaInventory tr').length===25`));
         assert.equal(await evaluate(`document.querySelectorAll('.farmacia-existencias img').length`),0);
+        records[1].stock = 1; records[2].stock = 5;
+        await filter('inventario','disponibilidad','bajos');
+        await until(()=>evaluate(`document.querySelectorAll('#farmaciaInventory tr').length===2`));
+        assert.ok(await evaluate(`document.querySelector('[data-existencias-part="alerta-bajo"]').textContent.includes('2 medicamentos')`));
+        assert.ok(await evaluate(`document.querySelector('#farmaciaInventory').textContent.includes('Stock bajo')`));
+        await send('Page.reload');
+        await until(()=>evaluate(`document.querySelector('[data-existencias-part="disponibilidad"]').value==='bajos' && document.querySelectorAll('#farmaciaInventory tr').length===2`));
+        await click(sel('inventario')+' [data-existencias-part="limpiar"]');
+        await until(()=>evaluate(`document.querySelectorAll('#farmaciaInventory tr').length===25`));
         await click(sel('inventario')+' [data-existencias-part="siguiente"]');
         await until(()=>evaluate(`document.querySelector('#inventoryPage').textContent.includes('Página 2')`));
         await filter('inventario','disponibilidad','agotados');
@@ -157,6 +167,8 @@ test('navegador: búsquedas, filtros, paginación, detalle, requisitos, recarga,
         await click(sel('inventario')+' [data-medication-id="56"]');
         await until(()=>evaluate(`document.querySelector(${JSON.stringify(sel('inventario')+' [data-existencias-part="contenido"]')}).textContent.includes('Registro sanitario')`));
         await click(sel('inventario')+' [data-existencias-part="cerrar"]');
+        await send('Page.navigate',{url:`${origin}/pages/farmacia-medicamentos.html`});
+        await until(()=>evaluate(`document.querySelectorAll('#farmaciaMedicamentos tr').length===25`));
         await filter('catalogo','formula','desconocido');
         assert.ok(await evaluate(`document.querySelector('#farmaciaMedicamentos').textContent.includes('Requisito desconocido')`));
         await click(sel('catalogo')+' [data-existencias-part="limpiar"]');
@@ -166,6 +178,8 @@ test('navegador: búsquedas, filtros, paginación, detalle, requisitos, recarga,
             await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<600});
             assert.ok(await evaluate(`Array.from(document.querySelectorAll('.farmacia-existencias')).every(p=>p.getBoundingClientRect().right<=innerWidth+1&&p.scrollWidth<=p.clientWidth+1)`));
         }
+        await send('Page.navigate',{url:`${origin}/pages/farmacia-inventario.html`});
+        await until(()=>evaluate(`document.querySelectorAll('#farmaciaInventory tr').length===25`));
         await filter('inventario','buscar','SIN_COINCIDENCIA');
         await until(()=>evaluate(`document.querySelector('#inventoryEmpty').textContent.includes('No se encontraron')`));
         failure=new Error('private isolated error');await click(sel('inventario')+' [data-existencias-part="actualizar"]');
@@ -177,4 +191,24 @@ test('navegador: búsquedas, filtros, paginación, detalle, requisitos, recarga,
         await until(()=>evaluate(`document.querySelectorAll('#farmaciaInventory tr').length===25`));
         assert.deepEqual(browser.errores,[]);
     }finally{await browser.cerrar();}
+});
+
+ test('stock bajo: límites, filtros, resumen global y aviso sin modificar saldos', async () => {
+    records = [medication(1,{stock:0}), medication(2,{stock:1}), medication(3,{stock:5}),
+        medication(4,{stock:6}), medication(5,{stock:-1}), medication(6,{stock:2,estado:'INACTIVO'}),
+        medication(7,{stock:2,estado:null}), medication(8,{stock:2,estado:'AGOTADO'})];
+    const before = structuredClone(records);
+    const result = await request('/inventario?disponibilidad=bajos');
+    assert.equal(result.status,200);
+    assert.deepEqual(result.data.medicamentos.map(m=>m.id),[2,3]);
+    assert.ok(result.data.medicamentos.every(m=>m.stockBajo));
+    assert.equal(result.data.resumen.bajos,2);
+    assert.equal(result.data.alcance.titularidadVerificada,false);
+    assert.equal(result.data.alcance.movimientosHabilitados,false);
+    assert.equal(result.data.alcance.umbralOrientativo,5);
+    for (const id of [1,4,5,6,7,8]) assert.equal((await request('/inventario/'+id)).data.medicamento.stockBajo,false);
+    assert.equal((await request('/inventario?disponibilidad=bajos&buscar=003')).data.paginacion.total,1);
+    for (const query of ['?umbral=10','?farmacia_id=4','?disponibilidad=bajos&disponibilidad=todas'])
+        assert.equal((await request('/inventario'+query)).status,400);
+    assert.deepEqual(records,before);
 });

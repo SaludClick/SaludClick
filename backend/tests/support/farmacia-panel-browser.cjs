@@ -94,41 +94,39 @@ function createFixture() {
 }
 
 async function testIndicators({ t, fixture, evaluate, go, click, until }) {
-    await t.test('indicadores cuentan 26 pedidos, filtran y muestran errores sin inventar ceros', async () => {
+    await t.test('indicadores globales abren solicitudes independientes y recuperan errores sin inventar ceros', async () => {
         fixture.reset();
         try {
             await evaluate(`for (const s of [localStorage,sessionStorage]) { s.setItem('saludclick_token','frontend-test-only'); s.setItem('saludclick_user',JSON.stringify({nombre:'Farmacia ficticia',rol:3})); }`);
             await go('/pages/farmacia.html');
-            const count = state => evaluate(`document.querySelector('[data-order-status="${state}"] [data-count]').textContent`);
-            await until(async () => await count('APROBADA') === '26');
-            assert.equal(await count('PREPARANDO'), '3');
-            assert.equal(await count('LISTA'), '2');
-            await click('[data-order-status="APROBADA"]');
+            await until(() => evaluate('document.querySelector(\'[data-dashboard-state="APROBADA"] [data-count]\')?.textContent === "26"'));
+            assert.equal(await evaluate('document.querySelector(\'[data-dashboard-state="PREPARANDO"] [data-count]\').textContent'), '3');
+            assert.equal(await evaluate('document.querySelector(\'[data-dashboard-state="LISTA"] [data-count]\').textContent'), '2');
+            await click('[data-dashboard-state="APROBADA"]');
             await until(() => evaluate('document.querySelectorAll(".farmacia-order").length === 25 && document.querySelector("#ordersPage").textContent.includes("26")'));
             await click('#ordersNext');
             await until(() => evaluate('document.querySelectorAll(".farmacia-order").length === 1'));
-            await click('[data-order-status="LISTA"]');
+            await evaluate(`document.querySelector('#estadoFarmacia').value='LISTA';document.querySelector('#filtroPedidos').requestSubmit();`);
             await until(() => evaluate('document.querySelectorAll(".farmacia-order").length === 2'));
             assert.match(await evaluate('document.querySelector("#ordersPage").textContent'), /1 de 1/);
-            fixture.failStats = true;
-            await click('#refreshFarmacia');
+            fixture.failStats = true; await click('#refreshFarmacia');
             await until(() => evaluate('document.querySelector("#retryFarmaciaStats").hidden === false'));
-            assert.equal(await count('PREPARANDO'), '3');
+            assert.equal(await evaluate('document.querySelector(\'[data-order-count="preparando"]\').textContent'), '—');
+            assert.equal(await evaluate('document.querySelectorAll(".farmacia-order").length'), 0);
             fixture.failStats = false;
             fixture.pedidos = fixture.pedidos.filter(p => p.estado !== 'PREPARANDO');
             await click('#retryFarmaciaStats');
-            await until(async () => await count('PREPARANDO') === '0');
+            await until(() => evaluate('document.querySelector(\'[data-order-count="preparando"]\').textContent === "0"'));
         } finally { fixture.enabled = false; }
     });
 }
 async function testTransitions({ t, fixture, evaluate, go, click, until }) {
     const openApproved = async () => {
-        await go('/pages/farmacia.html');
+        await go('/pages/farmacia-solicitudes.html?estado=APROBADA');
         await until(() => evaluate('document.querySelectorAll(".farmacia-order").length === 25'));
-        await click('[data-order-status="APROBADA"]');
         await until(() => evaluate('document.querySelector("#farmaciaOrders").getAttribute("aria-busy") === "false"'));
     };
-    const countsReady = () => evaluate(`document.querySelector('[data-order-status="APROBADA"] [data-count]').textContent === '25' && document.querySelector('[data-order-status="PREPARANDO"] [data-count]').textContent === '4'`);
+    const countsReady = () => evaluate(`document.querySelector('[data-order-count="pendientes"]').textContent === '25' && document.querySelector('[data-order-count="preparando"]').textContent === '4'`);
     await t.test('avanzar el unico pedido de pagina 2 conserva filtro y carga la ultima pagina valida', async () => {
         fixture.reset();
         try {
@@ -166,7 +164,7 @@ async function testTransitions({ t, fixture, evaluate, go, click, until }) {
             await click('#farmaciaSolicitudConfirmar');
             await until(() => evaluate('document.querySelector("#retryFarmaciaOrders").hidden === false'));
             await until(() => evaluate('document.querySelector("#farmaciaMessage").textContent.includes("se actualiz")'));
-            assert.equal(await evaluate('document.querySelector(".farmacia-order button").disabled'), true);
+            assert.equal(await evaluate('document.querySelectorAll(".farmacia-order button").length'), 0);
             assert.equal(fixture.patches, 1);
             fixture.failQueries = false;
             await click('#retryFarmaciaOrders');
@@ -183,11 +181,11 @@ async function testTransitions({ t, fixture, evaluate, go, click, until }) {
             await evaluate(`const button=document.querySelector('.farmacia-order button');button.focus();button.click();button.click();document.querySelector('#farmaciaSolicitudConfirmar').click();document.querySelector('#farmaciaSolicitudConfirmar').click();`);
             await until(() => fixture.patches === 1 && !!fixture.releasePatch);
             assert.equal(await evaluate('document.querySelector(".farmacia-order button").disabled'), true);
-            await evaluate('document.querySelector("#buscarFarmacia").focus()');
+            await evaluate('document.querySelector("#refreshFarmacia").focus()');
             fixture.releasePatch();
             await until(countsReady);
             assert.equal(fixture.patches, 1);
-            assert.equal(await evaluate('document.activeElement.id'), 'buscarFarmacia');
+            assert.equal(await evaluate('document.activeElement.id'), 'refreshFarmacia');
         } finally { fixture.releasePatch?.(); fixture.enabled = false; }
     });
 }
@@ -201,27 +199,27 @@ async function capture(send, name) {
 }
 
 async function testNavigation({ t, fixture, evaluate, go, click, until, send }) {
-    await t.test('farmacia conserva filtro y pagina al recargar y navega con contexto en escritorio y movil', async () => {
+    await t.test('farmacia conserva rutas antiguas y filtros al recargar y navega entre pantallas en escritorio y movil', async () => {
         fixture.reset();
         try {
             await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
-            await go('/pages/farmacia.html?estado=APROBADA&pagina=2#pedidosFarmacia');
-            await until(() => evaluate('document.querySelectorAll(".farmacia-order").length === 1'));
+            await send('Page.navigate', { url: await evaluate('location.origin') + '/pages/farmacia.html?estado=APROBADA&pagina=2#pedidosFarmacia' });
+            await until(() => evaluate('location.pathname === "/pages/farmacia-solicitudes.html" && document.querySelectorAll(".farmacia-order").length === 1'));
             assert.equal(await evaluate('document.querySelector("#estadoFarmacia").value'), 'APROBADA');
-            await click('a[href="#inventarioFarmacia"]');
-            await until(() => evaluate(`document.querySelector('a[href="#inventarioFarmacia"]').getAttribute('aria-current') === 'location'`));
-            assert.equal(await evaluate('new URLSearchParams(location.search).get("pagina")'), '2');
-            await go(await evaluate('location.pathname+location.search+location.hash'));
+            await go(await evaluate('location.pathname+location.search'));
             await until(() => evaluate('document.querySelectorAll(".farmacia-order").length === 1'));
-            await click('a[href="#panelFarmacia"]');
-            await evaluate('window.scrollTo(0,0)');
+            assert.equal(await evaluate('new URLSearchParams(location.search).get("pagina")'), '2');
+            await click('[data-farmacia-link="inventario"]');
+            await until(() => evaluate('document.querySelector(\'[data-farmacia-link="inventario"]\')?.getAttribute("aria-current") === "page" && document.querySelector("#farmaciaMain").hidden === false'));
+            assert.equal(await evaluate('document.querySelector("#farmaciaOrders")'), null);
+            await click('[data-farmacia-link="dashboard"]');
+            await until(() => evaluate('document.querySelector("#panelFarmacia") && document.querySelector("#farmaciaMain").hidden === false'));
             await capture(send, 'panel-escritorio');
             await send('Emulation.setDeviceMetricsOverride', { width: 375, height: 812, deviceScaleFactor: 1, mobile: true });
-            await click('#menuToggle');
-            await click('a[href="#panelFarmacia"]');
             await capture(send, 'panel-movil');
             await click('#menuToggle');
-            await click('a[href="#pedidosFarmacia"]');
+            await click('[data-farmacia-link="solicitudes"]');
+            await until(() => evaluate('document.querySelectorAll(".farmacia-order").length === 25'));
             assert.equal(await evaluate('document.querySelector("#menuToggle").getAttribute("aria-expanded")'), 'false');
             assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true);
             await evaluate('document.querySelector(".farmacia-order button").focus()');
@@ -235,7 +233,7 @@ async function testInventory({ t, fixture, evaluate, go, click, until, send }) {
         fixture.reset(); fixture.inventoryEnabled = true;
         try {
             await send('Emulation.setDeviceMetricsOverride', {width:1440,height:1000,deviceScaleFactor:1,mobile:false});
-            await go('/pages/farmacia.html#inventarioFarmacia');
+            await go('/pages/farmacia-inventario.html');
             await until(() => evaluate('document.querySelectorAll("#farmaciaInventory tr").length === 25'));
             assert.match(await evaluate('document.querySelector("#inventoryPage").textContent'), /27 registros/);
             assert.match(await evaluate('document.querySelector("#farmaciaInventory tr").textContent'), /0.*Agotado/);
@@ -278,9 +276,9 @@ async function testChat({t,fixture,evaluate,go,click,until,send}) {
     try {
         await t.test('chat carga, distingue desconexion y conserva contexto sin mezclar conversaciones en escritorio y movil',async()=>{
             fixture.reset();fixture.chatEnabled=true;fixture.chatHold=true;
-            const returnTo='/pages/farmacia.html?estado=APROBADA&pagina=2#pedidosFarmacia';
+            const returnTo='/pages/farmacia-solicitudes.html?estado=APROBADA&pagina=2';
             await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
-            await go('/pages/chat-farmacia.html?volver='+encodeURIComponent(returnTo));
+            await go('/pages/farmacia-chat.html?volver='+encodeURIComponent(returnTo));
             await until(()=>evaluate('document.querySelector(".chat-list")?.getAttribute("aria-busy")==="true"'));
             assert.match(await evaluate('document.querySelector(".chat-list").textContent'),/Cargando conversaciones/);
             fixture.chatHold=false;fixture.chatReleases.splice(0).forEach(reply=>reply());
@@ -308,17 +306,17 @@ async function testChat({t,fixture,evaluate,go,click,until,send}) {
             await until(()=>evaluate('document.querySelector(".chat-messages").getAttribute("aria-busy")==="false" && !document.querySelector(".chat-error")'));
             await send('Emulation.setDeviceMetricsOverride',{width:375,height:812,deviceScaleFactor:1,mobile:true});
             assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true);
-            assert.equal(await evaluate('getComputedStyle(document.querySelector(".farmacia-chat-nav")).position'),'static');
-            assert.ok(await evaluate('document.querySelector(".farmacia-chat-nav").getBoundingClientRect().height < 240'));
+            assert.equal(await evaluate('document.querySelectorAll(".admin-side-nav").length'),1);
+            assert.equal(await evaluate('document.querySelector(".farmacia-chat-nav")'),null);
             await evaluate('window.scrollTo(0,0)');await capture(send,'chat-movil');
-            await evaluate(`[...document.querySelectorAll('.farmacia-chat-nav a')].find(a=>a.textContent==='Pedidos').click()`);
-            await until(()=>evaluate('location.pathname==="/pages/farmacia.html" && document.querySelectorAll(".farmacia-order").length===1'));
+            await click('#farmaciaChatReturn');
+            await until(()=>evaluate('location.pathname==="/pages/farmacia-solicitudes.html" && document.querySelectorAll(".farmacia-order").length===1'));
             assert.equal(await evaluate('document.querySelector("#estadoFarmacia").value'),'APROBADA');
             assert.match(await evaluate('document.querySelector("#ordersPage").textContent'),/2 de 2/);
         });
         await t.test('chat distingue lista vacia y error con reintento sin habilitar envio',async()=>{
             fixture.reset();fixture.chatEnabled=true;fixture.chatEmpty=true;
-            await go('/pages/chat-farmacia.html');
+            await go('/pages/farmacia-chat.html');
             await until(()=>evaluate('document.querySelector(".chat-empty-list")?.textContent.includes("No hay conversaciones")'));
             assert.equal(await evaluate('document.querySelector("#chatMessage").disabled'),true);
             fixture.chatFailList=true;await click('.chat-list > button');

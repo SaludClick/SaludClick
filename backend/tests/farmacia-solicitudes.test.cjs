@@ -43,7 +43,18 @@ const db = {
 require.cache[require.resolve('../src/config/prisma')].exports = db;
 require.cache[require.resolve('../src/config/database')].exports = { query: async () => ({ rows: [] }) };
 const origins = new Set(); require('../src/config/cors').getAllowedOrigins = () => origins;
-const app = require('../src/app');
+// Contratos históricos preparados: fixture sin el cierre estructural de rutas.
+// NO certifican disponibilidad en producción; farmacia-entregas prueba el app real.
+const app = require('express')();
+app.use(require('express').json());
+const { requireFarmacia } = require('../src/middlewares/farmacia.middleware');
+const { requireFarmaciaVigente } = require('../src/middlewares/farmacia-notificaciones.middleware');
+const controller = require('../src/controllers/farmacia.controller');
+app.use('/api/farmacia/pedidos', requireFarmacia, requireFarmaciaVigente);
+app.get('/api/farmacia/pedidos', controller.pedidos);
+app.get('/api/farmacia/pedidos/:id', controller.detallePedido);
+app.patch('/api/farmacia/pedidos/:id/estado', controller.avanzarPedido);
+app.use(require('../src/app'));
 let server, origin;
 const secretBefore = process.env.JWT_SECRET, enabledBefore = process.env.FARMACIA_NOTIFICACIONES_ENABLED;
 before(async () => {
@@ -77,6 +88,21 @@ async function request(path = '', { id = 30, role = 3, body, auth } = {}) {
     return { status: response.status, data: await response.json(), cache: response.headers.get('cache-control') };
 }
 const advance = (id = 1, actual = 'APROBADA', estado = 'PREPARANDO') => request(`/${id}/estado`, { body: { estadoActual: actual, estado } });
+
+test('entregar y reintentar una solicitud no vuelve a descontar el stock reservado al crearla', async () => {
+    const stockYaDescontado = 7;
+    orders = [order(1, 'LISTA')];
+    let saldo = stockYaDescontado;
+    const previous = db.medicamento;
+    // Cualquier intento de acceso al saldo desde la entrega hace fallar la prueba.
+    db.medicamento = new Proxy({}, { get() { saldo--; assert.fail('La entrega intentó acceder al inventario.'); } });
+    try {
+        const results = await Promise.all([advance(1,'LISTA','ENTREGADA'), advance(1,'LISTA','ENTREGADA')]);
+        assert.deepEqual(results.map(r=>r.status).sort(), [200,409]);
+        assert.equal(orders[0].estado,'ENTREGADA'); assert.equal(saldo,stockYaDescontado);
+        assert.equal((await advance(1,'LISTA','ENTREGADA')).status,409);
+    } finally { db.medicamento = previous; }
+});
 
 test('JWT, cuenta activa y rol actual 3 en listado, detalle y avance', async () => {
     for (const [path, body] of [['', undefined], ['/1', undefined], ['/1/estado', { estadoActual: 'APROBADA', estado: 'PREPARANDO' }]]) {
@@ -167,7 +193,7 @@ test('navegador: búsqueda, detalle, confirmación/cancelación, bloqueos, error
     };
     try {
         await send('Page.addScriptToEvaluateOnNewDocument', { source: `window.SALUDCLICK_API_URL=location.origin;sessionStorage.setItem('saludclick_token',${JSON.stringify(token())});sessionStorage.setItem('saludclick_user',JSON.stringify({id:30,rol:3,nombre:'Prueba aislada'}));` });
-        await send('Page.navigate', { url: `${origin}/pages/farmacia.html` });
+        await send('Page.navigate', { url: `${origin}/pages/farmacia-solicitudes.html` });
         await until(() => evaluate(`document.querySelectorAll('.farmacia-order').length===25`));
         await search(1);
         assert.equal(await evaluate(`document.querySelectorAll('#farmaciaOrders img').length`), 0);
@@ -184,7 +210,7 @@ test('navegador: búsqueda, detalle, confirmación/cancelación, bloqueos, error
         await until(() => orders[0].estado === 'PREPARANDO');
         await until(() => evaluate(`document.querySelector('.farmacia-order h3')?.textContent.includes('En preparación')`));
         await send('Page.reload');
-        await until(() => evaluate(`document.querySelectorAll('.farmacia-order').length===25`));
+        await until(() => evaluate(`document.querySelectorAll('.farmacia-order').length===1 && document.querySelector('#buscarSolicitudFarmacia').value==='1'`));
         await search(62);
         assert.equal(await evaluate(`document.querySelectorAll('.farmacia-order button').length`), 1);
         assert.ok(await evaluate(`document.querySelector('.farmacia-order').textContent.includes('validación farmacéutica')`));
@@ -195,11 +221,12 @@ test('navegador: búsqueda, detalle, confirmación/cancelación, bloqueos, error
         }
         await evaluate(`document.querySelector('#buscarSolicitudFarmacia').value='999';document.querySelector('#filtroPedidos').requestSubmit();`);
         await until(() => evaluate(`document.querySelector('#farmaciaOrdersStatus').textContent==='No hay solicitudes para estos filtros.'`));
-        const previousCount = await evaluate(`document.querySelector('[data-order-count]').textContent`);
+        assert.match(await evaluate(`document.querySelector('[data-order-count]').textContent`), /^\d+$/);
         failure = new Error('private test failure'); await click('#farmaciaOrdersRefresh');
         await until(() => evaluate(`document.querySelector('#farmaciaOrdersStatus').getAttribute('role')==='alert'`));
-        assert.equal(await evaluate(`document.querySelector('[data-order-count]').textContent`), previousCount);
-        assert.ok(await evaluate(`document.querySelector('[data-count-message]').textContent.includes('Sin actualizar')`));
+        assert.equal(await evaluate(`document.querySelector('[data-order-count]').textContent`), '—');
+        assert.ok(await evaluate(`document.querySelector('#farmaciaOrdersSummaryStatus').textContent.includes('no disponibles')`));
+        assert.equal(await evaluate(`document.querySelectorAll('.farmacia-order').length`), 0);
         assert.deepEqual(browser.errores, []);
     } finally { await browser.cerrar(); }
 });

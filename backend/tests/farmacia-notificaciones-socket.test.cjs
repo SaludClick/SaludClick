@@ -69,7 +69,10 @@ test('Socket.IO real: invalidación solo a destinatario y sin contenido clínico
 });
 
 test('Socket.IO real: expirar el token desconecta el canal y evita eventos posteriores', async () => {
-    const client = await connect(tokenFor(30, 3, 1));
+    // JWT redondea iat a segundos: 1 s podía dejar solo milisegundos para
+    // autenticar y rechazar la conexión antes de poder probar la expiración.
+    // Conservar expiración real y dejar al menos 2 s para el handshake.
+    const client = await connect(tokenFor(30, 3, 3));
     await until(client.disconnected);
     await app.get('farmaciaNotificationEvents')([30]); assert.deepEqual(client.events, []);
     client.ws.close();

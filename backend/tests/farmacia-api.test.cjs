@@ -18,7 +18,18 @@ fakePrisma.$transaction = operation => operation(fakePrisma);
 fakePrisma.solicitud.groupBy = async () => [];
 fakePrisma.solicitud.findFirst = async () => ({ id: 9, estado: storedState, pagos: [{ estado: 'APROBADO', simulacion: false }], detalles: [{ cantidad: 1, medicamento: { requiere_formula: false } }] });
 fakePrisma.solicitud.updateMany = async options => { calls.push({ operation: 'update', options }); if (updateCount) storedState = options.data.estado; return { count: updateCount }; };
-const app = require('../src/app');
+// Fixture del contrato histórico preparado, sin habilitarlo en producción.
+// El cierre real por titularidad se verifica en farmacia-entregas.test.cjs.
+const app = require('express')();
+app.use(require('express').json());
+const { requireFarmacia } = require('../src/middlewares/farmacia.middleware');
+const { requireFarmaciaVigente } = require('../src/middlewares/farmacia-notificaciones.middleware');
+const controller = require('../src/controllers/farmacia.controller');
+app.use('/api/farmacia/pedidos', requireFarmacia, requireFarmaciaVigente);
+app.get('/api/farmacia/pedidos', controller.pedidos);
+app.get('/api/farmacia/pedidos/:id', controller.detallePedido);
+app.patch('/api/farmacia/pedidos/:id/estado', controller.avanzarPedido);
+app.use(require('../src/app'));
 const secretBefore = process.env.JWT_SECRET;
 let server, base;
 before(async () => {
