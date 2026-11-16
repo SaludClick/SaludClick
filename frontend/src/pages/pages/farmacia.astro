@@ -1,114 +1,22 @@
 ---
-import Layout from "../../layouts/Layout.astro";
-import FarmaciaOperaciones from "../../components/FarmaciaOperaciones.astro";
-import FarmaciaNotificaciones from "../../components/FarmaciaNotificaciones.astro";
-import FarmaciaExistencias from "../../components/FarmaciaExistencias.astro";
-
-const title = "Dashboard de Farmacia | SaludClick";
+import FarmaciaLayout from '../../layouts/FarmaciaLayout.astro';
 ---
-
-<Layout title={title} bodyClass="admin-console">
-  <Fragment slot="head"><link rel="stylesheet" href="/css/farmacia.css" /></Fragment>
-  <div class="admin-app">
-    <aside class="admin-sidebar" id="menu" aria-label="Navegación de farmacia">
-      <a href="/pages/farmacia.html" class="admin-brand" aria-label="SaludClick, dashboard de farmacia">
-        <span class="admin-brand-mark">
-          <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
-        </span>
-        <span>SaludClick<small>FARMACIA</small></span>
-      </a>
-
-      <span class="admin-nav-caption">MENÚ PRINCIPAL</span>
-      <nav class="admin-side-nav" aria-label="Secciones de farmacia">
-        <a class="admin-side-link active" href="#panelFarmacia" aria-current="page"><span>Panel</span></a>
-        <a class="admin-side-link" href="#pedidosFarmacia"><span>Pedidos</span></a>
-        <a class="admin-side-link" href="#medicamentos"><span>Medicamentos</span></a>
-        <span class="farmacia-nav-disabled" aria-disabled="true">Fórmulas · Pendiente de autorización</span>
-        <a class="admin-side-link" href="#inventarioFarmacia"><span>Inventario</span></a>
-        <a class="admin-side-link" href="#notificacionesFarmacia"><i class="fa-solid fa-bell" aria-hidden="true"></i><span>Notificaciones</span></a>
-        <a class="admin-side-link" href="/pages/chat-farmacia.html"><span>Chat con pacientes</span></a>
-        <a class="admin-side-link" href="/pages/perfil.html"><span>Perfil</span></a>
-      </nav>
-
-      <div class="admin-sidebar-bottom">
-        <div class="admin-sidebar-user">
-          <span class="admin-avatar"><i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i></span>
-          <span><strong id="farmaciaUserName">Farmacia</strong><small>Personal de farmacia</small></span>
-        </div>
-        <button class="admin-logout" id="logout" type="button">
-          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-          <span>Cerrar sesión</span>
-        </button>
-      </div>
-    </aside>
-
-    <div class="admin-main">
-      <header class="admin-topbar">
-        <button
-          class="admin-menu-toggle"
-          id="menuToggle"
-          type="button"
-          aria-label="Abrir menú de farmacia"
-          aria-expanded="false"
-          aria-controls="menu"
-        >
-          <span aria-hidden="true">☰</span>
-        </button>
-        <div class="admin-topbar-copy">
-          <span>SaludClick</span>
-          <strong>Panel de farmacia</strong>
-        </div>
-        <a class="farmacia-notifications-bell" id="farmaciaNotificationsBell" href="#notificacionesFarmacia" aria-label="Notificaciones de farmacia. Contador no disponible.">
-          <i class="fa-solid fa-bell" aria-hidden="true"></i>
-          <span id="farmaciaNotificationsBadge" aria-hidden="true">—</span>
-        </a>
-        <div class="admin-topbar-status">
-          <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-          Acceso de farmacia
-        </div>
-      </header>
-
-      <main class="admin-content farmacia-main" id="farmaciaMain" hidden>
-        <section class="admin-page-heading">
-          <div>
-            <span class="admin-eyebrow">OPERACIÓN DE FARMACIA</span>
-            <h1>Panel de farmacia</h1>
-            <p>Organiza los pedidos y consulta las existencias. Solo se avanzan pedidos con pago aprobado.</p>
-          </div>
-          <button id="refreshFarmacia" class="btn-outline admin-refresh" type="button">
-            <i class="fa-solid fa-rotate" aria-hidden="true"></i>
-            Actualizar panel
-          </button>
-        </section>
-
-        <div id="farmaciaMessage" class="admin-message" role="status" aria-live="polite"></div>
-
-        <section id="panelFarmacia" tabindex="-1" aria-label="Pedidos por estado">
-          <h2>Pedidos que requieren atención</h2>
-          <p>Selecciona un estado para atender sus pedidos. Son totales del sistema; el pago se verifica al avanzar.</p>
-          <div class="farmacia-stats" id="farmaciaStats">
-            {[
-              ["APROBADA", "Por preparar"],
-              ["PREPARANDO", "En preparación"],
-              ["LISTA", "Listos"]
-            ].map(([estado, label]) => (
-              <button type="button" class="farmacia-stat" data-order-status={estado} aria-busy="true" aria-pressed="false">
-                <span>{label}</span><strong data-count>Cargando…</strong>
-                <small data-count-message>Consultando total</small>
-              </button>
-            ))}
-          </div>
-          <button id="retryFarmaciaStats" type="button" hidden>Reintentar indicadores</button>
-        </section>
-        <FarmaciaOperaciones />
-        <section id="farmaciaCatalogStats" class="admin-stats" aria-label="Estadísticas del catálogo" aria-busy="true"></section>
-        <FarmaciaExistencias tipo="catalogo" />
-        <FarmaciaNotificaciones />
-      </main>
+<FarmaciaLayout modulo="dashboard" titulo="Dashboard" descripcion="Resumen de solicitudes y existencias. Los indicadores no autorizan una dispensación.">
+  <section id="panelFarmacia" aria-labelledby="farmaciaResumenTitle">
+    <h2 id="farmaciaResumenTitle">Solicitudes por estado</h2><p>Totales de la cola operativa. Selecciona un indicador para abrir su pantalla.</p>
+    <div class="farmacia-stats">
+      {[
+        ['APROBADA', 'Por preparar', 'solicitudes'], ['PREPARANDO', 'En preparación', 'solicitudes'],
+        ['LISTA', 'Listas', 'entregas'], ['ENTREGADA', 'Entregadas', 'entregas']
+      ].map(([estado, texto, pantalla]) => <a class="farmacia-stat" href={`/pages/farmacia-${pantalla}.html?estado=${estado}`} data-dashboard-state={estado} aria-busy="true"><span>{texto}</span><strong data-count>—</strong><small data-count-message>Consultando total</small></a>)}
     </div>
-  </div>
-
-  <script is:inline type="module" src="/js/menu.js"></script>
-  <script is:inline type="module" src="/js/farmacia.js"></script>
-  <script is:inline type="module" src="/js/farmacia-notificaciones.js"></script>
-</Layout>
+    <p id="farmaciaDashboardOrdersStatus" role="status" aria-live="polite"></p><button id="retryFarmaciaStats" type="button" hidden>Reintentar indicadores</button>
+  </section>
+  <section aria-labelledby="farmaciaCatalogStatsTitle"><h2 id="farmaciaCatalogStatsTitle">Existencias</h2>
+    <div class="farmacia-existencias-stats" id="farmaciaCatalogStats" aria-busy="true">
+      {[['total', 'Medicamentos registrados'], ['disponibles', 'Con existencias disponibles'], ['agotados', 'Agotados']].map(([clave, texto]) => <article><strong data-dashboard-stock={clave}>—</strong><span>{texto}</span></article>)}
+    </div>
+    <p>Disponible significa estado disponible y stock positivo.</p><p id="farmaciaDashboardStockStatus" role="status" aria-live="polite"></p>
+    <a href="/pages/farmacia-inventario.html">Consultar inventario</a>
+  </section>
+</FarmaciaLayout>

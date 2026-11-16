@@ -1,4 +1,12 @@
 .farmacia-main { max-width: 1100px; padding-top: 2rem; padding-bottom: 3rem; }
+.farmacia-main a.farmacia-stat { color: #173c31; padding: 1rem; background: #edf6f0; border: 1px solid #d6e2dd; border-radius: 10px; text-decoration: none; }
+.farmacia-main a.farmacia-stat:hover { background: #deeee4; }
+.farmacia-embedded-chat { min-height: 0; background: transparent; margin-top: 1rem; }
+.farmacia-embedded-chat .chat-page { padding: 0; }
+.farmacia-embedded-chat .chat-heading h1 { font-size: 1.4rem; }
+#farmaciaApp .admin-sidebar { overflow-y: auto; }
+#farmaciaApp .admin-page-heading { margin-top: 0; }
+#farmaciaUsuarios .farmacia-pagination { position: static; inset: auto; width: auto; display: flex; flex-direction: row; padding: 0; box-shadow: none; background: transparent; }
 .farmacia-main, .farmacia-main section, .farmacia-main form { min-width: 0; }
 .farmacia-main h2 { margin: 0 0 .5rem; color: var(--admin-ink, #173c31); }
 .farmacia-main p { line-height: 1.6; }

@@ -16,6 +16,7 @@ export function initFarmaciaSolicitudes({ root = document, request = apiFetch, i
     const confirm = get('farmaciaSolicitudConfirmacion');
     let page = initialContext.page || 1, pages = 0, sequence = 0, detailSequence = 0, busy = false, stale = true, writing = false, selected = null, detailId = null;
     get('estadoFarmacia').value = initialContext.filter || '';
+    get('buscarSolicitudFarmacia').value = initialContext.id || '';
     const node = (tag, text, className) => { const el = root.createElement(tag); el.textContent = text; if (className) el.className = className; return el; };
     const say = (text, error = false) => { status.textContent = text; status.setAttribute('role', error ? 'alert' : 'status'); };
     const date = value => value ? new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' }).format(new Date(value)) : 'Fecha no registrada';
@@ -83,7 +84,7 @@ export function initFarmaciaSolicitudes({ root = document, request = apiFetch, i
             if (current !== sequence) return;
             pages = result.paginacion.paginas;
             if (page > Math.max(1, pages)) { page = Math.max(1, pages); return await load(); }
-            onContextChange({ page, filter: get('estadoFarmacia').value });
+            onContextChange({ page, filter: get('estadoFarmacia').value, id: get('buscarSolicitudFarmacia').value.trim() });
             target.replaceChildren();
             for (const order of result.pedidos) {
                 const card = node('article', '', 'farmacia-order');
@@ -104,6 +105,7 @@ export function initFarmaciaSolicitudes({ root = document, request = apiFetch, i
                 card.setAttribute('aria-busy', 'false');
             }
             get('retryFarmaciaStats').hidden = true;
+            if (get('farmaciaOrdersSummaryStatus')) get('farmaciaOrdersSummaryStatus').textContent = 'Indicadores actualizados.';
             get('retryFarmaciaOrders').hidden = true;
             get('ordersAppliedFilter').textContent = `Vista: ${labels[get('estadoFarmacia').value] || (get('estadoFarmacia').value === 'todas' ? 'Todas las operativas' : 'Solicitudes activas')} · Más antiguos primero`;
             get('ordersPage').textContent = `${result.paginacion.total} solicitudes · Página ${page} de ${Math.max(1, pages)}`;
@@ -113,11 +115,20 @@ export function initFarmaciaSolicitudes({ root = document, request = apiFetch, i
         } catch (error) {
             if (current === sequence) {
                 pages = 0;
+                target.replaceChildren();
+                detailSequence++; detailId = null; content.replaceChildren();
+                if (detail.open) detail.close();
+                if (confirm.open) confirm.close();
+                selected = null;
+                get('ordersPage').textContent = 'Consulta no disponible';
+                for (const el of root.querySelectorAll('[data-order-count]')) el.textContent = '—';
                 for (const card of root.querySelectorAll('[data-order-status]')) {
                     card.setAttribute('aria-busy', 'false');
+                    card.querySelector('[data-count]').textContent = '—';
                     card.querySelector('[data-count-message]').textContent = 'Sin actualizar. Reintenta la consulta.';
                 }
                 get('retryFarmaciaStats').hidden = false;
+                if (get('farmaciaOrdersSummaryStatus')) get('farmaciaOrdersSummaryStatus').textContent = 'Indicadores no disponibles. Reintenta la consulta.';
                 get('retryFarmaciaOrders').hidden = false;
                 say(error.message || 'No se pudieron cargar las solicitudes.', true);
             }
@@ -131,7 +142,7 @@ export function initFarmaciaSolicitudes({ root = document, request = apiFetch, i
         location.hash = 'pedidosFarmacia'; get('pedidosFarmacia').focus(); void load();
     });
     for (const id of ['retryFarmaciaStats', 'retryFarmaciaOrders']) get(id).addEventListener('click', () => { if (!writing) void load(); });
-    get('farmaciaOrdersClear').addEventListener('click', () => { get('buscarSolicitudFarmacia').value = ''; get('estadoFarmacia').value = ''; page = 1; void load(); });
+    get('farmaciaOrdersClear').addEventListener('click', () => { get('buscarSolicitudFarmacia').value = ''; get('estadoFarmacia').selectedIndex = 0; page = 1; void load(); });
     for (const [id, delta] of [['ordersPrevious', -1], ['ordersNext', 1]]) get(id).addEventListener('click', () => { page = Math.max(1, page + delta); void load(); });
     get('farmaciaSolicitudCerrar').addEventListener('click', () => detail.close());
     detail.addEventListener('close', () => { if (!detail.open) { detailSequence++; detailId = null; content.replaceChildren(); } });

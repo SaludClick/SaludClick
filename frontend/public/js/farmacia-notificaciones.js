@@ -130,7 +130,7 @@ export function initFarmaciaNotifications({ root = document, request = apiFetch,
     listen(previous, 'click', () => { if (page > 1) { page--; void load(); } });
     listen(next, 'click', () => { if (page < pages) { page++; void load(); } });
     listen(readAll, 'click', () => mark('/api/farmacia/notificaciones/leer-todas'));
-    listen(bell, 'click', () => { byId('farmaciaNotificationsTitle').focus(); schedule(); });
+    listen(bell, 'click', event => { event.preventDefault(); byId('farmaciaNotificationsTitle').focus(); schedule(); });
     // Only the pharmacy menu is touched; shared navigation scripts remain intact.
     for (const link of root.querySelectorAll('a[href="#notificacionesFarmacia"]')) listen(link, 'click', () => {
         byId('menu')?.classList.remove('active');
@@ -150,5 +150,5 @@ export function initFarmaciaNotifications({ root = document, request = apiFetch,
 }
 
 if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', () => {
-    if (checkAuthGuard() && rolUsuario(getCurrentUser()) === ROLES.FARMACIA) initFarmaciaNotifications();
+    if (!document.getElementById('farmaciaApp') && checkAuthGuard() && rolUsuario(getCurrentUser()) === ROLES.FARMACIA) initFarmaciaNotifications();
 });

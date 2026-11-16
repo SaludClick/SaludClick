@@ -11,8 +11,10 @@ export function initFarmaciaExistencias(tipo, { root = document, request = apiFe
     const part = key => section.querySelector(`[data-existencias-part="${key}"]`);
     const catalogo = tipo === 'catalogo', endpoint = `/api/farmacia/${catalogo ? 'medicamentos' : 'inventario'}`;
     const list = part('lista'), status = part('estado'), dialog = part('detalle'), content = part('contenido');
-    let page = catalogo ? 1 : initialContext.inventoryPage || 1, pages = 0, sequence = 0, detailSequence = 0, busy = false;
-    if (!catalogo) part('buscar').value = initialContext.search || '';
+    let page = initialContext.inventoryPage || 1, pages = 0, sequence = 0, detailSequence = 0, busy = false;
+    part('buscar').value = initialContext.search || '';
+    part('disponibilidad').value = initialContext.availability || 'todas';
+    part('formula').value = initialContext.formula || 'todas';
     const node = (tag, text) => { const el = root.createElement(tag); el.textContent = text; return el; };
     const say = (text, error = false) => { status.textContent = text; status.setAttribute('role', error ? 'alert' : 'status'); };
     function controls() {
@@ -20,6 +22,8 @@ export function initFarmaciaExistencias(tipo, { root = document, request = apiFe
         part('siguiente').disabled = busy || page >= pages;
     }
     function summary(info) {
+        const aviso = part('alerta-bajo');
+        if (aviso) aviso.textContent = info && Number.isInteger(info.bajos) ? `${info.bajos} medicamentos con stock bajo (1-5 unidades). Aviso orientativo del catálogo global, independiente de los filtros.` : 'Alerta de stock bajo no disponible.';
         for (const el of section.querySelectorAll('[data-existencias-count]')) el.textContent = info ? String(info[el.dataset.existenciasCount]) : '—';
         part('integridad').textContent = info && (info.inconsistentes || info.desconocidos) ? `${info.inconsistentes} registros con inconsistencias y ${info.desconocidos} con estado desconocido requieren revisión. Las consultas no corrigen existencias.` : '';
         if (catalogo) {
@@ -46,7 +50,7 @@ export function initFarmaciaExistencias(tipo, { root = document, request = apiFe
                 ['Identificador', med.id], ['Categoría', med.categoria?.nombre], ['Presentación', med.presentacion],
                 ['Descripción', med.descripcion], ['Nombre genérico', med.nombre_generico], ['Principio activo', med.principio_activo],
                 ['Concentración', med.concentracion], ['Forma farmacéutica', med.forma_farmaceutica], ['Vía de administración', med.via_administracion],
-                ['Stock registrado', stockText(med.stock)], ['Disponibilidad de existencias', availability[med.disponibilidad]], ['Estado de catálogo', med.estado],
+                ['Stock registrado', stockText(med.stock)], ['Disponibilidad de existencias', (med.stockBajo ? 'Stock bajo (1-5) - Disponible' : availability[med.disponibilidad])], ['Estado de catálogo', med.estado],
                 ['Fórmula', formula[med.requisitoFormula]], ['Registro sanitario', med.registro_sanitario], ['Estado registro INVIMA', med.estado_registro_invima],
                 ['Catálogo verificado', med.catalogo_verificado ? 'Sí' : 'No'], ['CUM', med.cum], ['IUM', med.ium],
                 ['Titular del registro', med.titular_registro], ['Modalidad de comercialización', med.modalidad_comercializacion]
@@ -67,12 +71,12 @@ export function initFarmaciaExistencias(tipo, { root = document, request = apiFe
             if (current !== sequence) return;
             pages = result.paginacion.paginas;
             if (page > Math.max(1, pages)) { page = Math.max(1, pages); return await load(); }
-            if (!catalogo) onContextChange({ inventoryPage: page, search: part('buscar').value.trim() });
+            onContextChange({ inventoryPage: page, search: part('buscar').value.trim(), availability: part('disponibilidad').value, formula: part('formula').value });
             list.replaceChildren();
             for (const med of result.medicamentos) {
                 const row = node('tr', '');
-                const values = catalogo ? [med.nombre, missing(med.presentacion), missing(med.principio_activo), availability[med.disponibilidad], formula[med.requisitoFormula]]
-                    : [med.nombre, missing(med.presentacion), missing(med.categoria?.nombre), stockText(med.stock), availability[med.disponibilidad]];
+                const values = catalogo ? [med.nombre, missing(med.presentacion), missing(med.principio_activo), (med.stockBajo ? 'Stock bajo (1-5) - Disponible' : availability[med.disponibilidad]), formula[med.requisitoFormula]]
+                    : [med.nombre, missing(med.presentacion), missing(med.categoria?.nombre), stockText(med.stock), (med.stockBajo ? 'Stock bajo (1-5) - Disponible' : availability[med.disponibilidad])];
                 const headings = [...section.querySelectorAll('thead th')];
                 for (const [index, value] of values.entries()) { const cell = node('td', value); cell.dataset.label = headings[index].textContent; row.append(cell); }
                 const cell = node('td', ''), button = node('button', 'Ver detalle'); button.type = 'button'; button.dataset.medicationId = String(med.id);

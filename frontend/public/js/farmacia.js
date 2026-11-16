@@ -1,58 +1,66 @@
 import { initFarmaciaSolicitudes } from './farmacia-solicitudes.js';
 import { initFarmaciaExistencias } from './farmacia-existencias.js';
+import { initFarmaciaNotifications } from './farmacia-notificaciones.js';
+import { initPerfil } from './perfil.js';
 import { checkAuthGuard, getCurrentUser, initAuth, logout } from './auth.js';
+import { apiFetch } from './api.js';
 import { paginaInicio, rolUsuario, ROLES } from './roles.js';
-import { readFarmaciaContext, farmaciaContextUrl } from './farmacia-context.js';
+import { readFarmaciaContext, farmaciaContextUrl, farmaciaReturnUrl } from './farmacia-context.js';
+import { initFarmaciaDashboard } from './farmacia-dashboard.js';
+import { consultarEPS, initFarmaciaUsuarios } from './farmacia-usuarios.js';
 
-if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
+if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', async () => {
+    const app = document.getElementById('farmaciaApp');
+    if (!app) return;
     const user = getCurrentUser();
     if (rolUsuario(user) !== ROLES.FARMACIA) { window.location.replace(paginaInicio(user)); return; }
+    const context = readFarmaciaContext(location.search);
+    const legacy = farmaciaReturnUrl(location.pathname + location.search + location.hash);
+    if (location.pathname === '/pages/farmacia.html' && legacy.split('?')[0] !== location.pathname) { location.replace(legacy); return; }
     initAuth();
     document.getElementById('farmaciaUserName').textContent = user.nombre || 'Farmacia';
     document.getElementById('logout').addEventListener('click', logout);
-    const mobileMenu = window.matchMedia('(max-width: 900px)');
-    const syncMenuAccessibility = () => {
-        document.getElementById('menu').inert = mobileMenu.matches && !document.getElementById('menu').classList.contains('active');
-    };
-    const closeMenu = () => {
-        document.getElementById('menu').classList.remove('active');
-        document.getElementById('menuToggle').setAttribute('aria-expanded', 'false');
-        syncMenuAccessibility();
-    };
-    document.getElementById('menuToggle').addEventListener('click', () => queueMicrotask(syncMenuAccessibility));
-    mobileMenu.addEventListener('change', closeMenu);
-    syncMenuAccessibility();
-    const updateNavigation = () => {
-        const hash = location.hash || '#panelFarmacia';
-        document.querySelectorAll('#menu a').forEach(link => {
-            const active = link.hash === hash;
-            link.classList.toggle('active', active);
-            if (active) link.setAttribute('aria-current', 'location'); else link.removeAttribute('aria-current');
-        });
-    };
-    window.addEventListener('hashchange', updateNavigation);
-    document.querySelectorAll('#menu a').forEach(link => link.addEventListener('click', () => {
-        closeMenu();
-        if (link.hash) document.querySelector(link.hash)?.focus();
-    }));
-    document.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && document.getElementById('menu').classList.contains('active')) {
-            closeMenu(); document.getElementById('menuToggle').focus();
-        }
-    });
+    const menu = document.getElementById('menu'), toggle = document.getElementById('menuToggle');
+    const mobile = window.matchMedia('(max-width: 900px)');
+    const sync = () => { menu.inert = mobile.matches && !menu.classList.contains('active'); };
+    const close = () => { menu.classList.remove('active'); toggle.setAttribute('aria-expanded', 'false'); sync(); };
+    toggle.addEventListener('click', () => queueMicrotask(sync));
+    mobile.addEventListener('change', close); sync();
+    menu.querySelectorAll('a').forEach(link => link.addEventListener('click', close));
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && menu.classList.contains('active')) { close(); toggle.focus(); } });
+    const access = document.getElementById('farmaciaAccessStatus');
+    try { await apiFetch('/api/farmacia/verificar-acceso'); }
+    catch (error) {
+        access.textContent = error.message || 'No se pudo verificar el acceso a Farmacia.';
+        access.setAttribute('role', 'alert');
+        const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Reintentar acceso';
+        retry.addEventListener('click', () => location.reload()); access.append(' ', retry);
+        return;
+    }
+    access.hidden = true;
     document.getElementById('farmaciaMain').hidden = false;
-    const context = readFarmaciaContext(location.search);
+    app.dataset.authorized = 'true';
+    const module = app.dataset.farmaciaModule;
     const saveContext = changes => {
         Object.assign(context, changes);
-        const url = farmaciaContextUrl(context, location.hash);
+        const url = farmaciaContextUrl(context, location.pathname);
         history.replaceState(null, '', url);
-        document.querySelector('#menu a[href^="/pages/chat-farmacia.html"]').href = '/pages/chat-farmacia.html?volver=' + encodeURIComponent(url);
-        document.querySelectorAll('[data-order-status]').forEach(card => card.setAttribute('aria-pressed', String(card.dataset.orderStatus === context.filter)));
-        updateNavigation();
+        if (module !== 'chat') app.querySelector('[data-farmacia-link="chat"]').href = '/pages/farmacia-chat.html?volver=' + encodeURIComponent(url);
     };
-    window.addEventListener('hashchange', () => saveContext({}));
-    initFarmaciaSolicitudes({ initialContext: context, onContextChange: saveContext });
-    initFarmaciaExistencias('inventario', { initialContext: context, onContextChange: saveContext });
-    initFarmaciaExistencias('catalogo');
-    saveContext({});
+    if (module !== 'chat') saveContext({});
+    if (module === 'usuarios') initFarmaciaUsuarios({ initialContext: context, onContextChange: saveContext });
+    else void consultarEPS();
+    if (module === 'dashboard') initFarmaciaDashboard();
+    if (module === 'solicitudes' || module === 'entregas') {
+        if (module === 'entregas' && !['LISTA','ENTREGADA'].includes(context.filter)) context.filter = 'LISTA';
+        initFarmaciaSolicitudes({ initialContext: context, onContextChange: saveContext });
+    }
+    if (module === 'inventario' || module === 'medicamentos') initFarmaciaExistencias(module === 'inventario' ? 'inventario' : 'catalogo', { initialContext: context, onContextChange: saveContext });
+    if (module === 'notificaciones') {
+        const notifications = initFarmaciaNotifications();
+        document.getElementById('refreshFarmacia').addEventListener('click', () => notifications.refresh());
+    }
+    if (module === 'perfil') void initPerfil();
+    if (module === 'chat') document.getElementById('farmaciaChatReturn').href = farmaciaReturnUrl(new URLSearchParams(location.search).get('volver'));
+    document.dispatchEvent(new Event('farmacia:ready'));
 });

@@ -6,6 +6,9 @@ const prefijo = catalogo ? 'catalogoFarmacia' : 'inventarioFarmacia';
 <section id={catalogo ? 'medicamentos' : 'inventarioFarmacia'} class="farmacia-existencias" data-existencias={tipo} aria-labelledby={`${prefijo}Title`} tabindex="-1">
   <h2 id={`${prefijo}Title`}>{catalogo ? 'Medicamentos' : 'Consulta de inventario'}</h2>
   <p>Consulta de solo lectura. La disponibilidad de existencias no autoriza una dispensación.</p>
+  <p>Saldo del catálogo global: no acredita titularidad ni existencias físicas de tu farmacia. Entradas, salidas y ajustes bloqueados: faltan asignación verificable e historial auditable.</p>
+  <p>Stock bajo: aviso orientativo entre 1 y 5 unidades disponibles; no es un mínimo configurado. Lotes y vencimientos no están registrados.</p>
+  <p data-existencias-part="alerta-bajo" role="status" aria-live="polite"></p>
   <div class="farmacia-existencias-stats" aria-label="Indicadores de existencias">
     <article><strong data-existencias-count="total">—</strong><span>Medicamentos registrados</span></article>
     <article><strong data-existencias-count="disponibles">—</strong><span>Con existencias disponibles</span></article>
@@ -18,7 +21,7 @@ const prefijo = catalogo ? 'catalogoFarmacia' : 'inventarioFarmacia';
     <input id={catalogo ? 'buscarCatalogoFarmacia' : 'buscarFarmacia'} data-existencias-part="buscar" type="search" maxlength="150" placeholder="Nombre, principio activo, presentación o registro" />
     <label for={`${prefijo}Disponibilidad`}>Disponibilidad</label>
     <select id={`${prefijo}Disponibilidad`} data-existencias-part="disponibilidad">
-      <option value="todas">Todas</option><option value="disponibles">Disponibles</option><option value="agotados">Agotados</option><option value="inactivos">Inactivos</option><option value="inconsistentes">Inconsistencias</option><option value="desconocidos">Estado desconocido</option>
+      <option value="todas">Todas</option><option value="disponibles">Disponibles</option><option value="bajos">Stock bajo (1-5)</option><option value="agotados">Agotados</option><option value="inactivos">Inactivos</option><option value="inconsistentes">Inconsistencias</option><option value="desconocidos">Estado desconocido</option>
     </select>
     <label for={`${prefijo}Formula`}>Fórmula</label>
     <select id={`${prefijo}Formula`} data-existencias-part="formula">
