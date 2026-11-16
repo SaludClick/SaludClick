@@ -11,7 +11,7 @@ async function dashboard(req, res) {
     try {
         const medicamentos = await medicationService.listar();
         const disponibles = medicamentos.filter(
-            medicamento => medicamento.estado === "DISPONIBLE"
+            medicamento => medicamento.estado === "DISPONIBLE" && medicamento.stock > 0
         ).length;
 
         res.json({

@@ -158,7 +158,10 @@ const updateProfile = async (req, res) => {
     try {
         const usuario = await userService.updateProfile(req.usuario.id, req.body || {});
         res.json({ ok: true, mensaje: "Perfil actualizado correctamente.", usuario });
-    } catch (error) { res.status(400).json({ ok: false, mensaje: error.message }); }
+    } catch (error) {
+        if (req.farmacia) return res.status(500).json({ ok: false, mensaje: 'No se pudo actualizar el perfil. Revisa los datos e inténtalo nuevamente.' });
+        res.status(400).json({ ok: false, mensaje: error.message });
+    }
 };
 
 // ==========================================

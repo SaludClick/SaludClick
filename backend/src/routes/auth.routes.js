@@ -3,6 +3,8 @@ const express = require("express");
 const router = express.Router();
 
 const { validarJWT } = require("../middlewares/auth.middleware");
+const { farmaciaVigenteSiCorresponde } = require('../middlewares/farmacia-session.middleware');
+const { validarPerfilFarmaciaSiCorresponde } = require('../validators/farmacia-perfil.validator');
 const { requireAdmin } = require("../middlewares/admin.middleware");
 
 const authController = require("../controllers/auth.controller");
@@ -27,7 +29,7 @@ router.post("/recuperar", authController.solicitarRecuperacion);
 router.post("/restablecer", authController.restablecerPassword);
 
 // Perfil protegido
-router.get("/profile", validarJWT, authController.profile);
-router.put("/profile", validarJWT, authController.updateProfile);
+router.get("/profile", validarJWT, farmaciaVigenteSiCorresponde, authController.profile);
+router.put("/profile", validarJWT, farmaciaVigenteSiCorresponde, validarPerfilFarmaciaSiCorresponde, authController.updateProfile);
 
 module.exports = router;

@@ -9,7 +9,7 @@ const conversationSelect = {
 
 async function esStaff(id) {
     const usuario = await prisma.usuario.findUnique({ where: { id }, select: { rol_id: true, estado: true } });
-    return usuario?.rol_id === 3 && usuario.estado !== "INACTIVO";
+    return usuario?.rol_id === 3 && usuario.estado === "ACTIVO";
 }
 async function listar(id, staff) {
     return prisma.conversacion.findMany({
@@ -24,7 +24,8 @@ async function obtenerAutorizada(id, usuarioId, staff) {
     const conversation = await prisma.conversacion.findUnique({ where: { id }, select: { id: true, cliente_id: true, agente_id: true, estado: true } });
     if (!conversation || (staff ? (conversation.agente_id !== usuarioId && conversation.agente_id !== null) : conversation.cliente_id !== usuarioId)) return null;
     if (staff && conversation.agente_id === null) {
-        const claim = await prisma.conversacion.updateMany({ where: { id, agente_id: null }, data: { agente_id: usuarioId } });
+        if (conversation.estado !== 'ABIERTA') return null;
+        const claim = await prisma.conversacion.updateMany({ where: { id, agente_id: null, estado: 'ABIERTA' }, data: { agente_id: usuarioId } });
         if (!claim.count) return obtenerAutorizada(id, usuarioId, staff);
     }
     return prisma.conversacion.findUnique({ where: { id }, select: conversationSelect });

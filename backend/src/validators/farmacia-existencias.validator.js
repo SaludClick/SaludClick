@@ -11,7 +11,7 @@ function listado(query = {}) {
     const buscar = query.buscar ?? '';
     if (typeof buscar !== 'string' || buscar.length > 150 || /[\u0000-\u001f\u007f]/.test(buscar)) throw invalid();
     const disponibilidad = query.disponibilidad ?? 'todas', formula = query.formula ?? 'todas';
-    if (!['todas', 'disponibles', 'agotados', 'inactivos', 'inconsistentes', 'desconocidos'].includes(disponibilidad) ||
+    if (!['todas', 'disponibles', 'bajos', 'agotados', 'inactivos', 'inconsistentes', 'desconocidos'].includes(disponibilidad) ||
         !['todas', 'requiere', 'no-requiere', 'desconocido'].includes(formula)) throw invalid();
     return { pagina, take, skip: (pagina - 1) * take, buscar: buscar.trim(), disponibilidad, formula };
 }

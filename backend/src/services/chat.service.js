@@ -5,6 +5,7 @@ const idFrom = (value) => Number.isSafeInteger(Number(value)) && Number(value) >
 async function listar(usuario) {
     const staff = staffRole(usuario);
     if (!staff && Number(usuario?.rol ?? usuario?.rol_id) !== 2) throw new Error("No autorizado para usar el chat.");
+    if (staff && !(await repository.esStaff(Number(usuario.id)))) throw new Error('La cuenta no tiene acceso vigente a Farmacia.');
     return repository.listar(Number(usuario.id), staff);
 }
 async function crear(usuario) {

@@ -1,5 +1,7 @@
 const prisma = require('../config/prisma');
+const { UMBRAL_BAJO } = require('../config/farmacia-inventario');
 const DISPONIBILIDAD = {
+    bajos: { estado: 'DISPONIBLE', stock: { gt: 0, lte: UMBRAL_BAJO } },
     disponibles: { estado: 'DISPONIBLE', stock: { gt: 0 } },
     agotados: { estado: { in: ['DISPONIBLE', 'AGOTADO'] }, stock: 0 },
     inactivos: { estado: 'INACTIVO', stock: { gte: 0 } },
@@ -25,12 +27,12 @@ function whereFor({ buscar, disponibilidad, formula }) {
 async function listar(options, catalogo = false) {
     const where = whereFor(options);
     return prisma.$transaction(async tx => {
-        const [medicamentos, total, totalCatalogo, disponibles, agotados, inactivos, inconsistentes, desconocidos] = await Promise.all([
+        const [medicamentos, total, totalCatalogo, disponibles, agotados, inactivos, inconsistentes, desconocidos, bajos] = await Promise.all([
             tx.medicamento.findMany({ where, skip: options.skip, take: options.take, orderBy: [{ nombre: 'asc' }, { id: 'asc' }], select: catalogo ? catalogoSelect : baseSelect }),
             tx.medicamento.count({ where }), tx.medicamento.count(),
-            ...['disponibles', 'agotados', 'inactivos', 'inconsistentes', 'desconocidos'].map(key => tx.medicamento.count({ where: DISPONIBILIDAD[key] }))
+            ...['disponibles', 'agotados', 'inactivos', 'inconsistentes', 'desconocidos', 'bajos'].map(key => tx.medicamento.count({ where: DISPONIBILIDAD[key] }))
         ]);
-        return { medicamentos, total, resumen: { total: totalCatalogo, disponibles, agotados, inactivos, inconsistentes, desconocidos } };
+        return { medicamentos, total, resumen: { total: totalCatalogo, disponibles, agotados, inactivos, inconsistentes, desconocidos, bajos } };
     }, { isolationLevel: 'RepeatableRead' });
 }
 const detalle = id => prisma.medicamento.findUnique({ where: { id }, select: detailSelect });
