@@ -1,0 +1,6 @@
+---
+import FarmaciaLayout from '../../layouts/FarmaciaLayout.astro';
+import FarmaciaExistencias from '../../components/FarmaciaExistencias.astro';
+import FarmaciaMovimientosEstado from '../../components/FarmaciaMovimientosEstado.astro';
+---
+<FarmaciaLayout modulo="inventario" titulo="Inventario" descripcion="Consulta de existencias registradas, sin modificar stock ni precios."><FarmaciaExistencias tipo="inventario" /><FarmaciaMovimientosEstado /></FarmaciaLayout>

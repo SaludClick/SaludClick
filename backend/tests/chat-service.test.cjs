@@ -37,6 +37,7 @@ test("chat service: solo usuarios autenticados pueden abrir conversaciones", asy
 });
 
 test("chat service: determina roles y lista solo cuentas autorizadas", async () => {
+  repository.esStaff = async id => id === 20;
   assert.equal(service.staffRole(agent), true);
   assert.equal(service.staffRole({ id: 10, rol_id: 2 }), false);
   assert.equal(service.staffRole(undefined), false);

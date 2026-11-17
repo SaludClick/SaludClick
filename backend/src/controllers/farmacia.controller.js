@@ -11,7 +11,7 @@ async function dashboard(req, res) {
     try {
         const medicamentos = await medicationService.listar();
         const disponibles = medicamentos.filter(
-            medicamento => medicamento.estado === "DISPONIBLE"
+            medicamento => medicamento.estado === "DISPONIBLE" && medicamento.stock > 0
         ).length;
 
         res.json({
@@ -44,8 +44,18 @@ function handle(operation, message) {
 }
 module.exports = {
     verificarAcceso, dashboard,
+    async detallePedido(req, res) {
+        try { res.json({ ok: true, ...await service.detallePedido(req.params.id, req.query, Number(req.usuario?.id)) }); }
+        catch (error) {
+            const status = [400, 403, 404].includes(error.status) ? error.status : 500;
+            res.status(status).json({ ok: false, mensaje: status === 500 ? 'No se pudo cargar la solicitud.' : error.message });
+        }
+    },
     async avanzarPedido(req, res) {
-        try { res.json({ ok: true, pedido: await service.avanzarPedido(req.params.id, req.body, Number(req.usuario?.id)) }); }
+        try {
+            require('../validators/farmacia-solicitudes.validator').sinQuery(req.query);
+            res.json({ ok: true, pedido: await service.avanzarPedido(req.params.id, req.body, req.app.get('farmaciaNotificationEvents'), Number(req.usuario?.id)) });
+        }
         catch (error) {
             const status = [400, 403, 409].includes(error.status) ? error.status : 500;
             res.status(status).json({ ok: false, mensaje: status === 500 ? 'No se pudo actualizar el pedido.' : error.message });

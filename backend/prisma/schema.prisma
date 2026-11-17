@@ -35,7 +35,7 @@ model Usuario {
   eventos_actor_eps EpsEvento[]
   acceso_eps EpsAcceso?
   vinculos_eps EpsFarmacia[]
-
+  notificaciones_farmacia NotificacionFarmacia[]
   atenciones_administrativas AtencionAdministrativa[] @relation("ClienteAdministrativo")
   atenciones_asignadas AtencionAdministrativa[] @relation("ResponsableAdministrativo")
   mensajes_administrativos MensajeAdministrativo[]
@@ -454,6 +454,23 @@ model MensajeAdministrativo {
   remitente Usuario? @relation(fields:[remitente_id],references:[id],onDelete:Restrict)
   @@index([caso_id,id])
   @@map("administrative_messages")
+}
+
+model NotificacionFarmacia {
+  id                Int       @id @default(autoincrement())
+  destinatario_id   Int
+  tipo              String    @db.VarChar(40)
+  titulo            String    @db.VarChar(160)
+  mensaje           String    @db.VarChar(500)
+  referencia_evento String    @db.VarChar(180)
+  created_at        DateTime  @default(now()) @db.Timestamptz
+  leida_at          DateTime? @db.Timestamptz
+  destinatario      Usuario   @relation(fields: [destinatario_id], references: [id], onDelete: Restrict)
+
+  @@unique([destinatario_id, referencia_evento], map: "notificaciones_farmacia_destinatario_evento_key")
+  @@index([destinatario_id, created_at, id], map: "notificaciones_farmacia_destinatario_fecha_idx")
+  @@index([destinatario_id, leida_at], map: "notificaciones_farmacia_destinatario_leida_idx")
+  @@map("notificaciones_farmacia")
 }
 
 model NotificacionAdministrativa {

@@ -14,6 +14,9 @@ const orderIdempotencyKeys = [];
 const registerCalls = [];
 const serviceFailures = {};
 const repositoryFailures = {};
+require.cache[require.resolve('../src/config/prisma')].exports = {
+    usuario: { findUnique: async ({ where }) => ({ id: where.id, rol_id: 3, estado: 'ACTIVO' }) }
+};
 const testRecaptchaMiddleware = createRecaptchaMiddleware({
     getSecret: () => TEST_RECAPTCHA_SECRET,
     getAllowedHostnames: () => 'localhost',
@@ -130,7 +133,7 @@ const fakeModules = new Map([
     ['../services/health.service', { health: async () => ({ ok: true, fecha: 'test-clock' }) }],
     ['../repositories/medication.repository', {
         listar: async () => [
-            { id: 4, nombre: 'Medicamento disponible', categoria: 'Prueba', descripcion: '', estado: 'DISPONIBLE' },
+            { id: 4, nombre: 'Medicamento disponible', categoria: 'Prueba', descripcion: '', estado: 'DISPONIBLE', stock: 5 },
             { id: 5, nombre: 'Medicamento no disponible', categoria: 'Prueba', descripcion: '', estado: 'AGOTADO' }
         ]
     }],

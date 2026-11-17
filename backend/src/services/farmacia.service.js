@@ -1,5 +1,6 @@
 const repository = require('../repositories/farmacia.repository');
-const ESTADOS = new Set(['APROBADA', 'PREPARANDO', 'LISTA', 'ENTREGADA']);
+const validator = require('../validators/farmacia-solicitudes.validator');
+const { SIGUIENTE } = require('../config/farmacia-solicitudes');
 
 function invalid(message) { return Object.assign(new Error(message), { status: 400 }); }
 function pagination(query) {
@@ -11,13 +12,30 @@ function pagination(query) {
 function pageInfo(options, total) {
     return { pagina: options.pagina, tamano: options.take, total, paginas: Math.ceil(total / options.take) };
 }
+function operacion(pedido) {
+    const bloqueos = [];
+    if (!pedido.pagos.some(pago => pago.estado === 'APROBADO' && pago.simulacion === false)) bloqueos.push('PAGO_REAL_NO_APROBADO');
+    if (!pedido.detalles.length) bloqueos.push('SIN_MEDICAMENTOS');
+    if (pedido.detalles.some(item => item.medicamento.requiere_formula === true)) bloqueos.push('VALIDACION_FARMACEUTICA_PENDIENTE');
+    if (pedido.detalles.some(item => item.medicamento.requiere_formula !== true && item.medicamento.requiere_formula !== false)) bloqueos.push('REQUISITO_FORMULA_DESCONOCIDO');
+    return { siguienteEstado: bloqueos.length ? null : SIGUIENTE[pedido.estado] || null, bloqueos };
+}
+function presentar(pedido) {
+    const { pagos, direccion, ...publico } = pedido;
+    return { ...publico, ...(direccion !== undefined && pedido.tipo_entrega === 'DOMICILIO' ? { direccion } : {}), operacion: operacion(pedido) };
+}
 async function listarPedidos(query = {}, actorId) {
-    if(actorId!==undefined)await validarFarmacia(actorId);
-    const options = pagination(query);
-    const estado = query.estado || undefined;
-    if (estado !== undefined && !ESTADOS.has(estado)) throw invalid('Estado de pedido no permitido.');
-    const { pedidos, total } = await repository.listarPedidos({ ...options, estado, actorId });
-    return { pedidos, paginacion: pageInfo(options, total) };
+    await validarFarmacia(actorId);
+    const options = validator.listado(query);
+    const { pedidos, total, resumen } = await repository.listarPedidos({ ...options, actorId });
+    return { pedidos: pedidos.map(presentar), resumen, paginacion: pageInfo(options, total) };
+}
+async function detallePedido(rawId, query = {}, actorId) {
+    const id = validator.id(rawId); validator.sinQuery(query);
+    await validarFarmacia(actorId);
+    const pedido = await repository.detallePedido(id, actorId);
+    if (!pedido) throw Object.assign(new Error('Solicitud no encontrada en la cola de Farmacia.'), { status: 404 });
+    return { pedido: presentar(pedido) };
 }
 async function listarInventario(query = {}) {
     const options = pagination(query);
@@ -27,19 +45,27 @@ async function listarInventario(query = {}) {
     const { medicamentos, total } = await repository.listarInventario({ ...options, buscar: query.buscar?.trim() || '' });
     return { medicamentos, paginacion: pageInfo(options, total) };
 }
-const SIGUIENTE = Object.freeze({ APROBADA: 'PREPARANDO', PREPARANDO: 'LISTA', LISTA: 'ENTREGADA' });
-async function avanzarPedido(idEntrada, body, actorId) {
-    if (!/^[1-9]\d*$/.test(String(idEntrada)) || !Number.isSafeInteger(Number(idEntrada))) throw invalid('Pedido no válido.');
-    if (!body || typeof body !== 'object' || Array.isArray(body) ||
-        Object.keys(body).some(key => !['estadoActual', 'estado'].includes(key)) ||
-        !Object.hasOwn(SIGUIENTE, body.estadoActual) || SIGUIENTE[body.estadoActual] !== body.estado) {
-        throw invalid('Solo se permite avanzar de aprobado a preparando, listo y entregado.');
+async function avanzarPedido(rawId, body, notify, actorId) {
+    const id = validator.id(rawId); validator.transicion(body);
+    await validarFarmacia(actorId);
+    const pedido = await repository.detallePedido(id, actorId);
+    if (!pedido) throw Object.assign(new Error('La solicitud no existe o dejó de estar disponible. Actualiza la lista.'), { status: 409 });
+    // Stored state is authoritative; the browser's old state is only a concurrency precondition.
+    if (pedido.estado !== body.estadoActual || SIGUIENTE[pedido.estado] !== body.estado) {
+        throw Object.assign(new Error('El estado cambió. Actualiza la lista antes de continuar.'), { status: 409 });
     }
-    if(actorId!==undefined)await validarFarmacia(actorId);
-    const id = Number(idEntrada);
-    const count = await repository.avanzarPedido(id, body.estadoActual, body.estado, actorId);
-    if (!count) throw Object.assign(new Error('El pedido cambió, no existe o no tiene un pago aprobado. Actualiza la lista.'), { status: 409 });
-    return { id, estado: body.estado };
+    if (!operacion(pedido).siguienteEstado) throw Object.assign(new Error('Operación bloqueada: se exige pago real aprobado y medicamentos sin validación farmacéutica pendiente o desconocida.'), { status: 409 });
+    const siguiente = SIGUIENTE[pedido.estado];
+    const { count, destinatarios } = await repository.avanzarPedido(id, pedido.estado, siguiente, actorId);
+    if (!count) throw Object.assign(new Error('La solicitud o sus condiciones cambiaron. Actualiza la lista.'), { status: 409 });
+    if (destinatarios.length && notify) {
+        try { await notify(destinatarios); } catch { /* Persistence already committed. */ }
+    }
+    return { id, estado: siguiente };
 }
-async function validarFarmacia(id){if(!Number.isSafeInteger(id)||id<1||!await repository.farmaciaActiva(id))throw Object.assign(new Error('La farmacia no tiene acceso vigente.'),{status:403});}
-module.exports = { listarPedidos, listarInventario, avanzarPedido };
+async function validarFarmacia(id) {
+    if (id !== undefined && (!Number.isSafeInteger(id) || id < 1 || !await repository.farmaciaActiva(id))) {
+        throw Object.assign(new Error('La farmacia no tiene acceso vigente.'), { status: 403 });
+    }
+}
+module.exports = { listarPedidos, detallePedido, listarInventario, avanzarPedido };

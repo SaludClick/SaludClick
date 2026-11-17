@@ -1,0 +1,50 @@
+body.farmacia-chat-body { padding-top: 0; }
+.farmacia-chat-module { color: #173c31; background: #f4f8f6; min-height: 100vh; }
+.farmacia-chat-module * { box-sizing: border-box; }
+.farmacia-chat-module .farmacia-chat-nav { position: static; display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; width: 100%; gap: .5rem; margin: 0; padding: 1rem max(1rem, calc((100% - 1200px) / 2)); background: #103b2e; }
+.farmacia-chat-nav a { color: white; padding: .65rem .8rem; border-radius: 8px; text-decoration: none; min-height: 44px; }
+.farmacia-chat-brand { font-weight: 800; margin-right: auto; }
+.farmacia-chat-nav a[aria-current] { background: #25604b; text-decoration: underline; text-underline-offset: .3rem; }
+.chat-page { width: min(1200px, 100%); padding: 1.5rem; margin: auto; }
+.chat-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.chat-heading h1 { margin: .25rem 0; color: #173c31; font-size: clamp(1.5rem, 4vw, 2rem); }
+.chat-eyebrow { font-size: .75rem; font-weight: 800; letter-spacing: .1em; }
+.chat-connection { border: 1px solid #71877b; border-radius: 30px; padding: .6rem 1rem; font-weight: 700; background: #fff; }
+.chat-connection.online { color: #146c43; }
+.chat-connection.offline { color: #8c3d0b; }
+.chat-shell { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(0, 2fr); border: 1px solid #d6e2dd; border-radius: 12px; overflow: hidden; background: white; }
+.chat-shell:not(:has(.chat-list)) { grid-template-columns: minmax(0, 1fr); }
+.chat-list { padding: 1rem; background: #eef5f0; border-right: 1px solid #d6e2dd; min-width: 0; max-height: 700px; overflow-y: auto; }
+.chat-list h2 { margin-top: 0; font-size: 1.1rem; }
+.chat-list-item { display: flex; flex-direction: column; gap: .4rem; width: 100%; text-align: left; margin-top: .75rem; background: white; color: #173c31; border: 1px solid #71877b; }
+.chat-list-item.selected { border-left: 5px solid #146c43; }
+.chat-list-item.selected strong::after { content: ' · Seleccionada'; }
+.chat-list-item small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.chat-window { min-width: 0; display: flex; flex-direction: column; }
+.chat-window-header { padding: 1rem; border-bottom: 1px solid #d6e2dd; }
+.chat-messages { height: 390px; min-height: 200px; overflow-y: auto; padding: 1rem; }
+.chat-bubble { width: fit-content; max-width: 85%; margin: .75rem auto .75rem 0; padding: .8rem; border: 1px solid #d6e2dd; border-radius: 12px; background: #f3f6f4; }
+.chat-bubble.mine { margin-left: auto; margin-right: 0; background: #e0f2e8; }
+.chat-bubble p { margin: 0 0 .5rem; white-space: pre-wrap; }
+.chat-bubble footer { display: flex; flex-wrap: wrap; gap: .5rem; font-size: .75rem; }
+.chat-composer { padding: 1rem; display: grid; gap: .5rem; border-top: 1px solid #d6e2dd; }
+.chat-composer textarea { width: 100%; min-width: 0; padding: .75rem; border: 1px solid #71877b; border-radius: 8px; font: inherit; resize: vertical; }
+.chat-composer button { justify-self: end; }
+.chat-notice, .chat-error { padding: .75rem 1rem; border-radius: 8px; background: #fff3df; margin: .75rem 0; }
+.chat-error { color: #8b2525; }
+.farmacia-chat-module button { border: 1px solid #71877b; border-radius: 8px; padding: .65rem .8rem; min-height: 44px; font: inherit; cursor: pointer; }
+.chat-composer button { color: white; background: #146c43; }
+.farmacia-chat-module button:disabled { cursor: default; opacity: .65; }
+.farmacia-chat-module :is(a, button, textarea):focus-visible { outline: 3px solid #1456a0; outline-offset: 3px; }
+.farmacia-chat-nav a:focus-visible { outline-color: white; }
+.farmacia-chat-module :is(p, strong, h1, h2, small) { overflow-wrap: anywhere; }
+.chat-privacy { font-size: .85rem; margin-top: 1rem; }
+@media (max-width: 700px) {
+    .chat-page { padding: 1rem; }
+    .chat-shell { grid-template-columns: minmax(0, 1fr); }
+    .chat-list { max-height: 220px; border-right: 0; border-bottom: 1px solid #d6e2dd; }
+    .chat-messages { height: 40dvh; }
+    .farmacia-chat-brand { flex-basis: 100%; }
+    .farmacia-chat-module .farmacia-chat-nav { padding: .5rem; gap: .25rem; }
+    .chat-composer button { width: 100%; }
+}
