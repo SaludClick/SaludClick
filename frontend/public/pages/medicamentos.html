@@ -7,11 +7,12 @@
     <title>Medicamentos | SaludClick</title>
 
     <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/medicamentos.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
 </head>
 
-<body>
+<body class="medicamentos-page">
 
     <header class="navbar">
         <div class="container nav-container">
@@ -34,101 +35,34 @@
         </div>
     </header>
 
-    <section class="hero">
-        <div class="container">
-            <div class="hero-texto">
-                <span class="badge">Gestión Farmacéutica</span>
-                <h1>Consulta de Medicamentos</h1>
-                <p>Busca medicamentos disponibles en la red de farmacias afiliadas y realiza solicitudes de manera rápida.</p>
+    <main class="mc-main">
+        <section class="mc-intro" aria-labelledby="tituloCatalogo">
+            <div class="mc-container">
+                <span class="mc-eyebrow"><i class="fa-solid fa-pills" aria-hidden="true"></i> Gestión farmacéutica</span>
+                <h1 id="tituloCatalogo">Consulta de Medicamentos</h1>
+                <p>Encuentra tus medicamentos, revisa su disponibilidad y prepara tu solicitud.</p>
             </div>
-        </div>
-    </section>
-
-    <section class="servicios">
-        <div class="container">
-            <div class="buscador">
-                <input type="text" id="buscadorMedicamentos" placeholder="Buscar medicamento..." aria-label="Buscar medicamentos">
-                <select id="filtroCategoriaMedicamentos" aria-label="Filtrar por categoría">
-                    <option value="">Todas las categorías</option>
-                </select>
-                <button id="buscarMedicamentos" type="button">Buscar</button>
-                <button id="limpiarMedicamentos" type="button">Limpiar</button>
+        </section>
+        <section class="mc-container mc-catalog" aria-labelledby="tituloDisponibles">
+            <div class="mc-filters" role="search" aria-label="Buscar en el catálogo">
+                <div class="mc-field"><label for="buscadorMedicamentos">Nombre del medicamento</label><input type="search" id="buscadorMedicamentos" placeholder="¿Qué medicamento buscas?" autocomplete="off"></div>
+                <div class="mc-field"><label for="filtroCategoriaMedicamentos">Categoría</label><select id="filtroCategoriaMedicamentos"><option value="">Todas las categorías</option></select></div>
+                <button id="buscarMedicamentos" type="button" class="mc-primary">Buscar</button>
+                <button id="limpiarMedicamentos" type="button" class="mc-secondary">Limpiar</button>
             </div>
-        </div>
-    </section>
-
-    <section class="servicios">
-        <div class="container">
-            <h2>Medicamentos Disponibles</h2>
-            <p>Catálogo conectado a la base de datos. El stock se valida nuevamente al confirmar el pedido.</p>
-            <div class="tabla-responsive">
-                <table class="tabla-medicamentos">
-                    <thead>
-                        <tr>
-                            <th>Medicamento</th>
-                            <th>Categoría</th>
-                            <th>Presentación</th>
-                            <th>Disponibilidad</th>
-                            <th>Acción</th>
-                        </tr>
-                    </thead>
-                    <!-- DATOS TEMPORALES DE PRUEBA: reemplazar por MySQL. -->
-                    <tbody id="catalogoMedicamentos">
-                        <tr>
-                            <td>Acetaminofén</td><td>Analgésicos</td>
-                            <td>500 mg</td>
-                            <td class="disponible">Disponible</td>
-                            <td><button class="btn-tabla" data-medicamento-id="1" type="button">Solicitar</button></td>
-                        </tr>
-                        <tr>
-                            <td>Ibuprofeno</td><td>Antiinflamatorios</td>
-                            <td>400 mg</td>
-                            <td class="disponible">Disponible</td>
-                            <td><button class="btn-tabla" data-medicamento-id="2" type="button">Solicitar</button></td>
-                        </tr>
-                        <tr>
-                            <td>Amoxicilina</td><td>Antibióticos</td>
-                            <td>500 mg</td>
-                            <td class="disponible">Disponible</td>
-                            <td><button class="btn-tabla" data-medicamento-id="3" type="button">Solicitar</button></td>
-                        </tr>
-                        <tr>
-                            <td>Loratadina</td><td>Antialérgicos</td>
-                            <td>10 mg</td>
-                            <td class="disponible">Disponible</td>
-                            <td><button class="btn-tabla" data-medicamento-id="4" type="button">Solicitar</button></td>
-                        </tr>
-                        <tr>
-                            <td>Omeprazol</td><td>Gastrointestinales</td>
-                            <td>20 mg</td>
-                            <td class="disponible">Disponible</td>
-                            <td><button class="btn-tabla" data-medicamento-id="5" type="button">Solicitar</button></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </section>
-
-    <section class="servicios" aria-labelledby="tituloPedido">
-        <div class="container pedido-temporal">
-            <h2 id="tituloPedido">Mi pedido temporal</h2>
-            <p>Se guarda solo en este navegador. No se envía a una farmacia ni a MySQL.</p>
-            <p>Total de unidades seleccionadas: <strong id="totalSeleccionado" aria-live="polite">0</strong></p>
+            <div class="mc-section-heading"><div><h2 id="tituloDisponibles">Medicamentos disponibles</h2><p>La disponibilidad se verifica nuevamente al confirmar tu solicitud.</p></div><p id="catalogoResultados" role="status" aria-live="polite"></p></div>
+            <p id="catalogoEstado" role="status" aria-live="polite">Cargando catálogo...</p>
+            <button id="reintentarCatalogo" type="button" class="mc-secondary" hidden>Volver a cargar catálogo</button>
+            <div id="catalogoMedicamentos" class="mc-grid" aria-busy="true"></div>
+            <button id="verMasMedicamentos" type="button" class="mc-secondary mc-more" hidden>Ver más medicamentos</button>
+        </section>
+        <section class="mc-container mc-selection" aria-labelledby="tituloPedido">
+            <div class="mc-section-heading"><div><span class="mc-eyebrow">Solicitud de medicamentos</span><h2 id="tituloPedido">Tu selección</h2><p>Revisa las cantidades y continúa a Pedidos para confirmar con el proceso existente.</p></div><p class="mc-unit-count"><strong id="totalSeleccionado" aria-live="polite">0</strong> unidades</p></div>
             <p id="mensajePedido" role="status" aria-live="polite"></p>
-            <div class="tabla-responsive">
-                <table class="tabla-medicamentos">
-                    <thead><tr><th>Medicamento</th><th>Cantidad</th><th>Acción</th></tr></thead>
-                    <tbody id="detallePedido"></tbody>
-                </table>
-            </div>
-            <div class="acciones-pedido">
-                <button id="confirmarPedido" type="button" class="btn-primary">Confirmar pedido temporal</button>
-                <button id="vaciarPedido" type="button" class="btn-outline">Vaciar pedido</button>
-                <a href="pedidos.html">Ver pedidos locales</a>
-            </div>
-        </div>
-    </section>
+            <div id="detallePedido" class="mc-selection-list"></div>
+            <div class="mc-selection-actions"><button id="confirmarPedido" type="button" class="mc-primary" disabled>Continuar solicitud</button><button id="vaciarPedido" type="button" class="mc-secondary" disabled>Vaciar selección</button><a href="pedidos.html">Ver mis pedidos</a></div>
+        </section>
+    </main>
 
     <footer class="footer"><div class="container footer-container">
 <div class="footer-col"><div class="logo-footer"><i class="fa-solid fa-heart-pulse"></i><span>SaludClick</span></div><p>Tu bienestar, a un solo clic.</p></div>

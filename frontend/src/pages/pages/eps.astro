@@ -16,31 +16,18 @@ const title = "Dashboard EPS | SaludClick";
 
       <span class="admin-nav-caption">MENÚ PRINCIPAL</span>
       <nav class="admin-side-nav" aria-label="Secciones EPS">
-        <a class="admin-side-link active" href="/pages/eps.html" aria-current="page">
+        <a class="admin-side-link active" href="#dashboard" data-eps-view="dashboard" aria-current="page">
           <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
           <span>Dashboard</span>
         </a>
-        <span class="admin-side-link eps-nav-disabled" aria-disabled="true" title="Esta operación aún no está habilitada para EPS.">
-          <i class="fa-solid fa-users" aria-hidden="true"></i>
-          <span>Afiliados</span>
-          <small>No disponible</small>
-        </span>
-        <span class="admin-side-link eps-nav-disabled" aria-disabled="true" title="Esta operación aún no está habilitada para EPS.">
-          <i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i>
-          <span>Farmacias</span>
-          <small>No disponible</small>
-        </span>
-        <span class="admin-side-link eps-nav-disabled" aria-disabled="true" title="Esta operación aún no está habilitada para EPS.">
-          <i class="fa-solid fa-file-circle-check" aria-hidden="true"></i>
-          <span>Autorizaciones</span>
-          <small>No disponible</small>
-        </span>
-        <span class="admin-side-link eps-nav-disabled" aria-disabled="true" title="Esta operación aún no está habilitada para EPS.">
-          <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
-          <span>Solicitudes</span>
-          <small>No disponible</small>
-        </span>
-        <a class="admin-side-link" href="/pages/perfil.html">
+        <a class="admin-side-link" href="#afiliados" data-eps-view="afiliados"><i class="fa-solid fa-users" aria-hidden="true"></i><span>Afiliados</span></a>
+        <a class="admin-side-link" href="#farmacias" data-eps-view="farmacias"><i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i><span>Farmacias</span></a>
+        <a class="admin-side-link" href="#autorizaciones" data-eps-view="autorizaciones"><i class="fa-solid fa-file-circle-check" aria-hidden="true"></i><span>Autorizaciones</span></a>
+        <a class="admin-side-link" href="#solicitudes" data-eps-view="solicitudes"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i><span>Solicitudes</span></a>
+        <a class="admin-side-link" href="#pacientes" data-eps-view="pacientes"><i class="fa-solid fa-user-group" aria-hidden="true"></i><span>Pacientes</span></a>
+<a class="admin-side-link" href="#inventario" data-eps-view="inventario"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i><span>Inventario</span></a>
+<a class="admin-side-link" href="#notificaciones" data-eps-view="notificaciones"><i class="fa-solid fa-bell" aria-hidden="true"></i><span>Notificaciones</span></a>
+<a class="admin-side-link" href="#perfil" data-eps-view="perfil">
           <i class="fa-solid fa-user" aria-hidden="true"></i>
           <span>Perfil</span>
         </a>
@@ -74,85 +61,24 @@ const title = "Dashboard EPS | SaludClick";
           <span>SaludClick</span>
           <strong>Panel EPS</strong>
         </div>
-        <div class="admin-topbar-status">
+        <button id="epsBell" type="button" class="btn-outline" aria-label="Ver notificaciones"><i class="fa-solid fa-bell" aria-hidden="true"></i> <span id="epsUnread">--</span></button>
+<div class="admin-topbar-status">
           <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
           Acceso EPS
         </div>
       </header>
 
       <main class="admin-content" id="epsMain">
-        <section class="admin-page-heading">
-          <div>
-            <span class="admin-eyebrow">OPERACIÓN EPS</span>
-            <h1>Dashboard</h1>
-            <p>Los módulos de afiliados, farmacias, autorizaciones y solicitudes están deshabilitados hasta contar con endpoints operativos y permisos definidos.</p>
-          </div>
-          <button id="refreshEps" class="btn-outline admin-refresh" type="button">
-            <i class="fa-solid fa-rotate" aria-hidden="true"></i>
-            Verificar acceso
-          </button>
-        </section>
-
-        <div id="epsMessage" class="admin-message" role="status" aria-live="polite"></div>
-
-        <section class="card admin-dashboard-card eps-access-card" aria-live="polite">
-          <span class="admin-eyebrow">ESTADO DE SESIÓN</span>
-          <div class="eps-access-indicator" id="epsAccess" aria-busy="true">
-            <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
-            <span>Verificando permisos...</span>
-          </div>
-          <p>Este panel no muestra estadísticas porque todavía no hay endpoints EPS para consultar datos operativos.</p>
-        </section>
-      </main>
+<section class="admin-page-heading"><div><span class="admin-eyebrow">OPERACION EPS</span><h1 id="epsTitle">Dashboard</h1><p id="epsDescription">Gestion de la entidad EPS autenticada.</p></div><button id="refreshEps" class="btn-outline admin-refresh" type="button">Actualizar</button></section>
+<div id="epsMessage" class="admin-message" role="status" aria-live="polite"></div>
+<div id="epsAccess" aria-live="polite" aria-busy="true">Verificando permisos...</div>
+<div id="epsWorkspace" aria-busy="true"></div>
+<dialog id="epsDialog" aria-labelledby="epsDialogTitle"><div id="epsDialogContent"></div><button id="epsCloseDialog" type="button" class="btn-outline">Cerrar</button></dialog>
+</main>
     </div>
   </div>
 
-  <script is:inline type="module" src="/js/menu.js"></script>
+  <link rel="stylesheet" href="/css/eps.css" />
+<script is:inline type="module" src="/js/menu.js"></script>
   <script is:inline type="module" src="/js/eps.js"></script>
 </Layout>
-
-<style>
-  .eps-nav-disabled {
-    cursor: not-allowed;
-    opacity: 0.62;
-  }
-
-  .eps-nav-disabled small {
-    margin-left: auto;
-    color: #a7c7b7;
-    font-size: 9px;
-    white-space: nowrap;
-  }
-
-  .eps-access-card {
-    margin-top: 20px;
-  }
-
-  .eps-access-indicator {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 18px 0 10px;
-    color: #526a5e;
-    font-size: 15px;
-    font-weight: 700;
-  }
-
-  .eps-access-indicator i {
-    color: var(--admin-green);
-    font-size: 20px;
-  }
-
-  .eps-access-card > p {
-    margin: 0;
-    color: var(--admin-muted);
-    font-size: 12px;
-    line-height: 1.6;
-  }
-
-  @media (max-width: 620px) {
-    .eps-nav-disabled small {
-      display: none;
-    }
-  }
-</style>

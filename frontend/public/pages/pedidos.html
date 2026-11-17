@@ -7,6 +7,7 @@
     <title>Pedidos | SaludClick</title>
 
     <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/pago-simulado.css">
 
     <link
         rel="stylesheet"
@@ -14,7 +15,7 @@
     >
 </head>
 
-<body>
+<body class="checkout-payment-page">
 
 <header class="navbar">
     <div class="container nav-container">
@@ -251,138 +252,24 @@
 
 
 
-            <!-- PAGO -->
-            <div class="checkout-panel payment-panel">
-
-                <div class="checkout-panel-header">
-
-                    <div class="checkout-panel-icon payment-icon">
-                        <i class="fa-solid fa-credit-card"></i>
-                    </div>
-
-                    <div>
-                        <span>02</span>
-                        <h3>Información de pago</h3>
-                        <p>
-                            Pasarela de pago exclusivamente para demostración.
-                        </p>
-                    </div>
-
+            <!-- Pago compacto. Los controles internos conservan la simulación existente. -->
+            <div class="checkout-panel payment-panel sc-pay" id="pagoSimulado" data-state="ready">
+                <div class="sc-pay-heading"><span class="sc-pay-icon" aria-hidden="true"><i class="fa-regular fa-credit-card"></i></span><div><span class="sc-pay-eyebrow">02 · Finalización</span><h3>Método de pago</h3><p>Confirma tu pedido con el método de demostración.</p></div></div>
+                <ol class="sc-pay-progress" aria-label="Progreso del pago"><li data-payment-step="ready" aria-current="step">1. Revisar</li><li data-payment-step="processing">2. Procesar</li><li data-payment-step="approved">3. Comprobante</li></ol>
+                <div class="sc-pay-method"><i class="fa-regular fa-credit-card" aria-hidden="true"></i><div class="sc-pay-method-copy"><strong>Tarjeta de demostración</strong><span id="tarjetaVistaNumero">•••• •••• •••• 4242</span></div><span class="sc-pay-badge">Pago simulado</span></div>
+                <p class="sc-pay-note" role="note">Sin cargos reales. No necesitas ingresar datos bancarios.</p>
+                <div class="sc-pay-technical" hidden>
+                    <label for="escenarioPago">Escenario de prueba</label>
+                    <select id="escenarioPago" aria-describedby="ayudaEscenarioPago"><option value="aprobada">Tarjeta de prueba · aprobación</option><option value="alternativa">Segunda tarjeta de prueba · aprobación</option><option value="rechazada">Tarjeta de prueba · rechazo</option></select>
+                    <p id="ayudaEscenarioPago">Valores ficticios utilizados exclusivamente por la simulación existente.</p>
                 </div>
-
-
-                <div class="payment-security">
-
-                    <div class="payment-security-icon">
-                        <i class="fa-solid fa-shield-halved"></i>
-                    </div>
-
-                    <div>
-
-                        <strong>Pago 100% simulado</strong>
-
-                        <p>
-                            No se realiza ningún cobro real.
-                            Usa la tarjeta de prueba indicada.
-                        </p>
-
-                        <div class="test-card">
-                            <i class="fa-regular fa-credit-card"></i>
-
-                            <span>
-                                4242 4242 4242 4242
-                            </span>
-                        </div>
-
-                    </div>
-
+                <div class="sc-pay-fields">
+                    <div class="sc-pay-field sc-pay-wide"><label for="titular">Nombre del titular de prueba</label><input id="titular" type="text" value="Titular de prueba" readonly autocomplete="off"></div>
+                    <div class="sc-pay-field sc-pay-wide"><label for="numero">Número de tarjeta de prueba</label><input id="numero" type="text" value="4242 4242 4242 4242" readonly autocomplete="off" aria-describedby="ayudaEscenarioPago"></div>
+                    <div class="sc-pay-field"><label for="vencimiento">Vencimiento</label><input id="vencimiento" type="text" value="12/30" readonly autocomplete="off"></div>
+                    <div class="sc-pay-field"><label for="cvv">CVV de prueba</label><input id="cvv" type="text" value="123" readonly autocomplete="off"></div>
                 </div>
-
-
-                <div class="form-group">
-
-                    <label for="titular">
-                        Titular de la tarjeta
-                    </label>
-
-                    <div class="input-icon">
-
-                        <i class="fa-solid fa-user"></i>
-
-                        <input
-                            id="titular"
-                            type="text"
-                            autocomplete="cc-name"
-                            placeholder="Nombre del titular"
-                        >
-
-                    </div>
-
-                </div>
-
-
-                <div class="form-group">
-
-                    <label for="numero">
-                        Número de tarjeta
-                    </label>
-
-                    <div class="input-icon">
-
-                        <i class="fa-regular fa-credit-card"></i>
-
-                        <input
-                            id="numero"
-                            type="text"
-                            inputmode="numeric"
-                            maxlength="19"
-                            placeholder="4242 4242 4242 4242"
-                            autocomplete="cc-number"
-                        >
-
-                    </div>
-
-                </div>
-
-
-                <div class="payment-fields">
-
-                    <div class="form-group">
-
-                        <label for="vencimiento">
-                            Vencimiento
-                        </label>
-
-                        <input
-                            id="vencimiento"
-                            type="text"
-                            placeholder="12/30"
-                            maxlength="5"
-                            autocomplete="cc-exp"
-                        >
-
-                    </div>
-
-
-                    <div class="form-group">
-
-                        <label for="cvv">
-                            CVV
-                        </label>
-
-                        <input
-                            id="cvv"
-                            type="password"
-                            inputmode="numeric"
-                            maxlength="4"
-                            placeholder="123"
-                            autocomplete="off"
-                        >
-
-                    </div>
-
-                </div>
-
+                <p id="estadoPago" class="sc-pay-status" role="status" aria-live="polite">Revisa tu pedido antes de confirmar el pago simulado.</p>
             </div>
 
         </section>
@@ -418,7 +305,7 @@
 
                 <i class="fa-solid fa-lock"></i>
 
-                <span>Pagar y crear pedido</span>
+                <span>Confirmar pago simulado</span>
 
                 <i class="fa-solid fa-arrow-right"></i>
 
@@ -435,7 +322,7 @@
         ></p>
 
 
-        <div id="resultadoPago" hidden></div>
+        <div id="resultadoPago" class="sc-pay-receipt" role="region" aria-label="Comprobante del pago simulado" tabindex="-1" hidden></div>
 
 
 

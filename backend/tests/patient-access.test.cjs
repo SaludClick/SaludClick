@@ -33,3 +33,53 @@ test('rutas personales rechazan administrador, farmacia, EPS y sesiones ausentes
         });
     }
 });
+
+
+test('dashboard: JWT expirado o con firma ajena no accede a registros', async () => {
+    for (const token of [
+        jwt.sign({ id: 71, rol: 2 }, process.env.JWT_SECRET, { expiresIn: -1 }),
+        jwt.sign({ id: 71, rol: 2 }, 'other-test-secret')
+    ]) {
+        const response = await fetch(base + '/api/dashboard/me', { headers: { Authorization: 'Bearer ' + token } });
+        assert.equal(response.status, 401);
+    }
+});
+
+test('dashboard: los cuatro indicadores filtran exclusivamente por paciente y conservan sus criterios', async () => {
+    const Module = require('node:module');
+    const originalLoad = Module._load;
+    const repoPath = require.resolve('../src/repositories/dashboard.repository');
+    const cached = require.cache[repoPath];
+    const calls = [];
+    const fake = {
+        solicitud: { count: async options => { calls.push(['pedido', options]); return options.where.estado ? 2 : 5; } },
+        formulaMedica: { count: async options => { calls.push(['formula', options]); return 3; } },
+        pago: { aggregate: async options => { calls.push(['pago', options]); return { _sum: { monto: '12500.75' } }; } }
+    };
+    try {
+        delete require.cache[repoPath];
+        Module._load = function(request, parent, isMain) {
+            if (request === '../config/prisma' && parent?.filename === repoPath) return fake;
+            return originalLoad.apply(this, arguments);
+        };
+        const repository = require(repoPath);
+        for (const id of [71, 72]) {
+            calls.length = 0;
+            assert.deepEqual(await repository.statsUsuario(id), { pedidos: 5, formulas: 3, pedidosActivos: 2, totalPagado: 12500.75 });
+            assert.equal(calls.length, 4);
+            for (const [, options] of calls) assert.equal(options.where.usuario_id, id);
+            assert.deepEqual(calls[1][1].where.estado, { notIn: ['ENTREGADA', 'CANCELADA'] });
+            assert.deepEqual(calls[2][1].where.estado, { not: 'ELIMINADA' });
+            assert.equal(calls[3][1].where.estado, 'APROBADO');
+            assert.deepEqual(calls[3][1]._sum, { monto: true });
+        }
+        fake.solicitud.count = async () => 0;
+        fake.formulaMedica.count = async () => 0;
+        fake.pago.aggregate = async () => ({ _sum: { monto: null } });
+        assert.deepEqual(await repository.statsUsuario(71), { pedidos: 0, formulas: 0, pedidosActivos: 0, totalPagado: 0 });
+    } finally {
+        Module._load = originalLoad;
+        if (cached) require.cache[repoPath] = cached;
+        else delete require.cache[repoPath];
+    }
+});

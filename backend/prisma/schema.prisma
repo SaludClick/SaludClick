@@ -29,6 +29,13 @@ model Rol {
 }
 
 model Usuario {
+  avisos_integrados EpsNotificacionCompartida[]
+  autorizaciones_responsable_eps EpsAutorizacion[]
+  seguimientos_responsable_eps EpsSeguimiento[]
+  eventos_actor_eps EpsEvento[]
+  acceso_eps EpsAcceso?
+  vinculos_eps EpsFarmacia[]
+
   atenciones_administrativas AtencionAdministrativa[] @relation("ClienteAdministrativo")
   atenciones_asignadas AtencionAdministrativa[] @relation("ResponsableAdministrativo")
   mensajes_administrativos MensajeAdministrativo[]
@@ -67,6 +74,9 @@ model Usuario {
 
 // Los 13 valores del CSV se conservan como texto, sin normalización.
 model Afiliado {
+  eps_version Int @default(1)
+  autorizaciones_eps EpsAutorizacion[]
+
   id String @id
   nombres String
   apellidos String
@@ -86,10 +96,14 @@ model Afiliado {
   usuario Usuario? @relation("CuentaAfiliado", fields: [usuario_id], references: [id], onDelete: Restrict)
   verificador Usuario? @relation("VerificadorAfiliado", fields: [verificado_por], references: [id], onDelete: Restrict)
 
+  @@index([eps_id, estado, id], map:"eps_affiliate_scope")
+  @@index([eps_id, usuario_id], map:"eps_affiliate_patient")
   @@map("afiliados")
 }
 
 model Medicamento {
+  existencias_eps EpsExistencia[]
+
   id                         Int                 @id @default(autoincrement())
   nombre                     String              @db.VarChar(150)
   descripcion                String?
@@ -163,6 +177,9 @@ model ObservacionPrecio {
 }
 
 model Solicitud {
+  autorizaciones_eps EpsAutorizacion[]
+  seguimientos_eps EpsSeguimiento[]
+
   id               Int                @id @default(autoincrement())
   usuario_id       Int
   fecha            DateTime?          @default(now()) @db.Timestamp(0)
@@ -481,4 +498,140 @@ model PreferenciaAdministrativa {
   sesiones_revocadas_at DateTime? @db.Timestamptz
   usuario Usuario @relation(fields:[usuario_id],references:[id],onDelete:Restrict)
   @@map("administrative_preferences")
+}
+
+// EPS: aislamiento explicito. No se asignan entidades ni cuentas automaticamente.
+model EpsEntidad {
+  avisos_integrados EpsNotificacionCompartida[]
+  id String @id @db.VarChar(80)
+  nombre String @db.VarChar(150)
+  nit String @unique @db.VarChar(30)
+  correo String @db.VarChar(150)
+  telefono String @db.VarChar(20)
+  direccion String @db.VarChar(255)
+  ciudad String @db.VarChar(100)
+  activa Boolean @default(true)
+  version Int @default(1)
+  accesos EpsAcceso[]
+  farmacias EpsFarmacia[]
+  autorizaciones EpsAutorizacion[]
+  seguimientos EpsSeguimiento[]
+  eventos EpsEvento[]
+  @@map("eps_entidades")
+}
+model EpsAcceso {
+  usuario_id Int @id
+  eps_id String @db.VarChar(80)
+  activo Boolean @default(true)
+  revocado_at DateTime? @db.Timestamptz
+  usuario Usuario @relation(fields:[usuario_id],references:[id],onDelete:Restrict)
+  eps EpsEntidad @relation(fields:[eps_id],references:[id],onDelete:Restrict)
+  lecturas EpsLectura[]
+  @@index([eps_id,activo])
+  @@map("eps_accesos")
+}
+model EpsFarmacia {
+  autorizaciones_asignadas EpsAutorizacion[]
+  id Int @id @default(autoincrement())
+  eps_id String @db.VarChar(80)
+  farmacia_id Int
+  activa Boolean @default(true)
+  version Int @default(1)
+  vinculada_at DateTime @default(now()) @db.Timestamptz
+  eps EpsEntidad @relation(fields:[eps_id],references:[id],onDelete:Restrict)
+  farmacia Usuario @relation(fields:[farmacia_id],references:[id],onDelete:Restrict)
+  existencias EpsExistencia[]
+  @@unique([eps_id,farmacia_id])
+  @@map("eps_farmacias")
+}
+model EpsExistencia {
+  id Int @id @default(autoincrement())
+  vinculo_id Int
+  medicamento_id Int
+  stock Int @default(0)
+  minimo Int @default(5)
+  actualizado_at DateTime @default(now()) @updatedAt @db.Timestamptz
+  vinculo EpsFarmacia @relation(fields:[vinculo_id],references:[id],onDelete:Restrict)
+  medicamento Medicamento @relation(fields:[medicamento_id],references:[id],onDelete:Restrict)
+  @@unique([vinculo_id,medicamento_id])
+  @@map("eps_existencias")
+}
+model EpsAutorizacion {
+  farmacia_vinculo_id Int?
+  farmacia_vinculo EpsFarmacia? @relation(fields:[farmacia_vinculo_id],references:[id],onDelete:Restrict)
+  id Int @id @default(autoincrement())
+  eps_id String @db.VarChar(80)
+  afiliado_id String
+  solicitud_id Int?
+  responsable Usuario @relation(fields:[responsable_id],references:[id],onDelete:Restrict,map:"eps_authorization_actor")
+  concepto String @db.VarChar(1000)
+  estado String @default("PENDIENTE") @db.VarChar(20)
+  motivo String @db.VarChar(1000)
+  responsable_id Int
+  version Int @default(1)
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz
+  eps EpsEntidad @relation(fields:[eps_id],references:[id],onDelete:Restrict)
+  afiliado Afiliado @relation(fields:[afiliado_id],references:[id],onDelete:Restrict)
+  solicitud Solicitud? @relation(fields:[solicitud_id],references:[id],onDelete:Restrict)
+  @@index([eps_id,estado,id])
+  @@index([farmacia_vinculo_id,estado,id])
+  @@map("eps_autorizaciones")
+}
+model EpsSeguimiento {
+  responsable Usuario @relation(fields:[responsable_id],references:[id],onDelete:Restrict,map:"eps_followup_actor")
+  id Int @id @default(autoincrement())
+  eps_id String @db.VarChar(80)
+  solicitud_id Int
+  estado String @default("ABIERTA") @db.VarChar(20)
+  motivo String @db.VarChar(1000)
+  responsable_id Int
+  version Int @default(1)
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz
+  eps EpsEntidad @relation(fields:[eps_id],references:[id],onDelete:Restrict)
+  solicitud Solicitud @relation(fields:[solicitud_id],references:[id],onDelete:Restrict)
+  @@unique([eps_id,solicitud_id])
+  @@map("eps_seguimientos")
+}
+model EpsEvento {
+  actor Usuario? @relation(fields:[actor_id],references:[id],onDelete:Restrict,map:"eps_event_actor")
+  id Int @id @default(autoincrement())
+  eps_id String @db.VarChar(80)
+  actor_id Int?
+  tipo String @db.VarChar(30)
+  registro_id String @db.VarChar(150)
+  titulo String @db.VarChar(160)
+  detalle Json
+  created_at DateTime @default(now()) @db.Timestamptz
+  eps EpsEntidad @relation(fields:[eps_id],references:[id],onDelete:Restrict)
+  lecturas EpsLectura[]
+  @@index([eps_id,id])
+  @@map("eps_eventos")
+}
+model EpsLectura {
+  evento_id Int
+  usuario_id Int
+  leida_at DateTime @default(now()) @db.Timestamptz
+  evento EpsEvento @relation(fields:[evento_id],references:[id],onDelete:Restrict)
+  acceso EpsAcceso @relation(fields:[usuario_id],references:[usuario_id],onDelete:Restrict)
+  @@id([evento_id,usuario_id])
+  @@map("eps_lecturas")
+}
+
+model EpsNotificacionCompartida {
+  rol_destinatario Int
+  id Int @id @default(autoincrement())
+  usuario_id Int
+  eps_id String @db.VarChar(80)
+  clave String @db.VarChar(160)
+  tipo String @db.VarChar(30)
+  registro_id String @db.VarChar(150)
+  titulo String @db.VarChar(160)
+  created_at DateTime @default(now()) @db.Timestamptz
+  leida_at DateTime? @db.Timestamptz
+  usuario Usuario @relation(fields:[usuario_id],references:[id],onDelete:Restrict)
+  eps EpsEntidad @relation(fields:[eps_id],references:[id],onDelete:Restrict)
+  @@unique([usuario_id,clave])
+  @@index([usuario_id,leida_at,id])
+  @@map("eps_notificaciones_compartidas")
 }

@@ -1,0 +1,82 @@
+/* Presentación exclusiva de pago: no altera resumen, entrega, header o footer. */
+.checkout-payment-page .sc-pay { scroll-margin-top: 90px; min-width: 0; padding: 28px; border: 1px solid #dce8e0; border-radius: 22px; background: #fff; box-shadow: 0 10px 30px #173b3108; }
+.checkout-payment-page .sc-pay-heading { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 24px; }
+.checkout-payment-page .sc-pay-icon { display: grid; place-items: center; flex: 0 0 46px; height: 46px; border-radius: 14px; background: #eaf5ee; color: #087f59; font-size: 21px; }
+.checkout-payment-page .sc-pay-eyebrow { color: #08734e; font-size: 11px; font-weight: 700; letter-spacing: .04em; }
+.checkout-payment-page .sc-pay h3 { margin: 5px 0 8px; color: #173b31; font-size: 24px; line-height: 1.25; letter-spacing: -.025em; }
+.checkout-payment-page .sc-pay-heading p { margin: 0; color: #52695e; font-size: 13px; line-height: 1.65; }
+.checkout-payment-page .sc-pay-progress { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; padding: 0; margin: 0 0 24px; list-style: none; }
+.checkout-payment-page .sc-pay-progress li { padding: 10px 3px; border-top: 3px solid #e3ebe6; color: #5b6e63; font-size: 11px; line-height: 1.5; }
+.checkout-payment-page .sc-pay-progress [aria-current="step"] { border-color: #087f59; color: #17613f; font-weight: 700; }
+.checkout-payment-page .sc-pay-method { display: flex; align-items: center; gap: 12px; padding: 15px; border: 1px solid #91bfa5; border-radius: 14px; background: #f4faf6; color: #17613f; }
+.checkout-payment-page .sc-pay-method > i { font-size: 23px; }
+.checkout-payment-page .sc-pay-method strong { display: block; font-size: 14px; }
+.checkout-payment-page .sc-pay-method span { display: block; margin-top: 4px; font-size: 12px; color: #52695e; }
+.checkout-payment-page .sc-pay-method .sc-pay-selected { display: grid; place-items: center; width: 24px; height: 24px; flex-shrink: 0; margin: 0 0 0 auto; border-radius: 50%; background: #087f59; color: #fff; }
+.checkout-payment-page .sc-pay-demo { margin: 18px 0 22px; padding: 14px 16px; border-left: 3px solid #82b59a; border-radius: 0 10px 10px 0; background: #f6f9f7; color: #345646; }
+.checkout-payment-page .sc-pay-demo strong { font-size: 13px; }
+.checkout-payment-page .sc-pay-demo p { margin: 6px 0 0; font-size: 12px; line-height: 1.7; }
+.checkout-payment-page .sc-pay-label,
+.checkout-payment-page .sc-pay-field label { display: block; margin-bottom: 8px; color: #345646; font-size: 12px; font-weight: 650; }
+.checkout-payment-page .sc-pay select,
+.checkout-payment-page .sc-pay input { display: block; width: 100%; min-width: 0; min-height: 44px; padding: 11px 12px; border: 1px solid #d3e2d9; border-radius: 10px; background: #fff; color: #173b31; font: inherit; font-size: 13px; }
+.checkout-payment-page .sc-pay input[readonly] { background: #f7faf8; color: #456153; }
+.checkout-payment-page .sc-pay :is(input,select):focus-visible,
+.checkout-payment-page .sc-pay-receipt a:focus-visible { outline: 3px solid #238b62; outline-offset: 3px; }
+.checkout-payment-page .sc-pay-help { margin: 9px 0 20px; color: #52695e; font-size: 11px; line-height: 1.7; }
+.checkout-payment-page .sc-pay-card { position: relative; overflow: hidden; padding: 23px; margin-bottom: 24px; border: 1px solid #ffffff40; border-radius: 18px; background: radial-gradient(ellipse at 100% 0,#427e60,transparent 65%),linear-gradient(130deg,#123e30,#1c5c42); color: #fff; box-shadow: 0 12px 24px #123e3020; }
+.checkout-payment-page .sc-pay-card-top,
+.checkout-payment-page .sc-pay-card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; letter-spacing: .04em; }
+.checkout-payment-page .sc-pay-card-top span:last-child { font-size: 24px; color: #cce5d5; }
+.checkout-payment-page .sc-pay-card > strong { display: block; margin: 20px 0 24px; font-size: clamp(18px,2vw,23px); letter-spacing: .07em; white-space: nowrap; }
+.checkout-payment-page .sc-pay-card-bottom { color: #d5e8dd; font-size: 10px; }
+.checkout-payment-page .sc-pay-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.checkout-payment-page .sc-pay-field { min-width: 0; }
+.checkout-payment-page .sc-pay-wide { grid-column: 1 / -1; }
+.checkout-payment-page .sc-pay-status { margin: 20px 0 0; padding: 13px 15px; border: 1px solid #e1ebe5; border-radius: 10px; background: #f7faf8; color: #456153; font-size: 12px; line-height: 1.7; }
+.checkout-payment-page .sc-pay[data-state="error"] .sc-pay-status,
+.checkout-payment-page .sc-pay[data-state="rejected"] .sc-pay-status { border-color: #e4ccc4; background: #fff8f5; color: #813a2a; }
+.checkout-payment-page .sc-pay[data-state="approved"] .sc-pay-status { border-color: #a5ceb5; background: #edf8f1; color: #17613f; }
+.checkout-payment-page .sc-pay[data-state="processing"] .sc-pay-status { animation: sc-payment-pulse 1.4s ease-in-out infinite alternate; }
+.checkout-payment-page .sc-pay-receipt { scroll-margin-top: 90px; margin: 24px 0; padding: 28px; border: 1px solid #9fc9ae; border-radius: 20px; background: linear-gradient(120deg,#eff8f2,#fff); color: #173b31; }
+.checkout-payment-page .sc-pay-receipt h3 { margin: 0 0 10px; font-size: 23px; line-height: 1.3; }
+.checkout-payment-page .sc-pay-receipt p { color: #52695e; font-size: 14px; line-height: 1.7; }
+.checkout-payment-page .sc-pay-receipt dl { display: grid; grid-template-columns: minmax(120px,1fr) minmax(0,2fr); gap: 12px 24px; margin: 22px 0; }
+.checkout-payment-page .sc-pay-receipt dt { color: #52695e; font-size: 13px; }
+.checkout-payment-page .sc-pay-receipt dd { margin: 0; font-size: 14px; font-weight: 650; overflow-wrap: anywhere; }
+.checkout-payment-page .sc-pay-receipt a { color: #17613f; font-size: 14px; font-weight: 650; text-underline-offset: 4px; }
+.checkout-payment-page .sc-pay-receipt[hidden] { display: none; }
+.checkout-payment-page .checkout-final .checkout-pay-button { border-radius: 12px; }
+@keyframes sc-payment-pulse { from { opacity: .65; } to { opacity: 1; } }
+@media (max-width: 600px) {
+    .checkout-payment-page .sc-pay { padding: 20px; }
+    .checkout-payment-page .sc-pay h3 { font-size: 22px; }
+    .checkout-payment-page .sc-pay-card { padding: 18px; }
+    .checkout-payment-page .sc-pay-receipt { padding: 20px; }
+    .checkout-payment-page .sc-pay-receipt dl { grid-template-columns: 1fr; gap: 5px; }
+    .checkout-payment-page .sc-pay-receipt dd { margin-bottom: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .checkout-payment-page .sc-pay[data-state="processing"] .sc-pay-status { animation: none; }
+}
+
+/* Presentación compacta: conserva los controles internos sin exponerlos al paciente. */
+.checkout-payment-page .sc-pay { align-self: start; padding: 24px; }
+.checkout-payment-page .sc-pay-heading { margin-bottom: 18px; }
+.checkout-payment-page .sc-pay h3 { font-size: 22px; }
+.checkout-payment-page .sc-pay-progress { margin-bottom: 20px; }
+.checkout-payment-page .sc-pay-method { gap: 12px; padding: 18px 16px; border-color: #d4e5d9; background: #f8fbf9; }
+.checkout-payment-page .sc-pay-method-copy { min-width: 0; flex: 1; }
+.checkout-payment-page .sc-pay-method #tarjetaVistaNumero { margin-top: 7px; font-size: 12px; letter-spacing: .045em; }
+.checkout-payment-page .sc-pay-method .sc-pay-badge { flex-shrink: 0; margin: 0 0 0 auto; padding: 6px 9px; border: 1px solid #d5e8dc; border-radius: 999px; color: #235a3e; background: #eaf5ee; font-size: 10px; font-weight: 650; }
+.checkout-payment-page .sc-pay-note { margin: 14px 0 0; color: #52695e; font-size: 12px; line-height: 1.7; }
+.checkout-payment-page .sc-pay [hidden],
+.checkout-payment-page .sc-pay[data-state="ready"] .sc-pay-status { display: none !important; }
+@media (max-width: 600px) {
+    .checkout-payment-page .sc-pay { padding: 20px; }
+    .checkout-payment-page .sc-pay-method { flex-wrap: wrap; }
+    .checkout-payment-page .sc-pay-method .sc-pay-badge { margin-left: 0; }
+}
+
+/* Campos visibles de demostración; el selector técnico permanece oculto. */
+.checkout-payment-page .sc-pay > .sc-pay-fields { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e1ebe5; }

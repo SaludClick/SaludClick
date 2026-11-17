@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const calls = [];
 let fail = false;
 let updateCount = 1;
-const fakePrisma = {};
+const fakePrisma = {usuario:{findFirst:async()=>({id:30})},$queryRawUnsafe:async()=>[{ready:true}]};
 for (const name of ['solicitud', 'medicamento']) fakePrisma[name] = {
     findMany: async options => { calls.push({ name, options }); if (fail) throw new Error('private provider diagnostics'); return []; },
     count: async () => 0
@@ -80,7 +80,7 @@ test('farmacia avanza unicamente estados consecutivos con pago aprobado y contro
         assert.equal(response.status, 200);
         assert.deepEqual((await response.json()).pedido, { id: 9, estado });
         const { options } = calls.at(-1);
-        assert.deepEqual(options.where, { id: 9, estado: estadoActual, pagos: { some: { estado: 'APROBADO' } } });
+        assert.equal(options.where.id,9);assert.equal(options.where.estado,estadoActual);assert.deepEqual(options.where.pagos,{some:{estado:'APROBADO'}});assert.equal(options.where.OR[1].autorizaciones_eps.some.farmacia_vinculo.farmacia_id,30);
         assert.equal(options.data.estado, estado);
         assert.ok(options.data.updated_at instanceof Date);
     }
@@ -116,3 +116,5 @@ test('otra transicion concurrente responde 409 y otros roles nunca escriben', as
     try { assert.equal((await request('/pedidos/9/estado', 3, body)).status, 409); }
     finally { updateCount = 1; }
 });
+
+test('rutas existentes de farmacia filtran solicitudes EPS por asignacion propia', async()=>{await request('/pedidos');const {options}=calls.at(-1);assert.deepEqual(options.where.OR[0],{usuario:{afiliado:{is:null}}});assert.equal(options.where.OR[1].autorizaciones_eps.some.farmacia_vinculo.farmacia_id,30);});

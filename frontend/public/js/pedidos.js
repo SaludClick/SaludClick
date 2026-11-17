@@ -4,7 +4,7 @@
 // Descripción: Finalización de pedidos y pago simulado.
 // ============================================================
 
-import { checkAuthGuard, initAuth } from './auth.js';
+import { checkAuthGuard, initAuth, getToken } from './auth.js';
 
 import {
     leerEstado,
@@ -64,6 +64,77 @@ if (checkAuthGuard()) {
 
             const cvv =
                 document.getElementById('cvv');
+
+
+            // Solo se transmiten fixtures públicos de demostración, nunca campos introducidos por el usuario.
+            const scenarios = Object.freeze({
+                aprobada: Object.freeze({numero:'4242424242424242',vencimiento:'12/30',cvv:'123',titular:'Titular de prueba'}),
+                alternativa: Object.freeze({numero:'5555555555554444',vencimiento:'12/30',cvv:'123',titular:'Titular de prueba'}),
+                rechazada: Object.freeze({numero:'4000000000000002',vencimiento:'12/30',cvv:'123',titular:'Titular de prueba'})
+            });
+            const scenario = document.getElementById('escenarioPago');
+            const paymentPanel = document.getElementById('pagoSimulado');
+            const paymentStatus = document.getElementById('estadoPago');
+            const payLabel = btn.querySelector('span');
+            let processing = false;
+            let registered = false;
+            function demoPayment() {
+                const payment = Object.hasOwn(scenarios, scenario.value) ? scenarios[scenario.value] : null;
+                if (!payment) throw new Error('Selecciona un escenario de prueba válido.');
+                return payment;
+            }
+            function updateDemo() {
+                const payment = demoPayment();
+                titular.value = payment.titular;
+                numero.value = payment.numero.replace(/(.{4})/g,'$1 ').trim();
+                vencimiento.value = payment.vencimiento;
+                cvv.value = payment.cvv;
+                document.getElementById('tarjetaVistaNumero').textContent = '•••• •••• •••• ' + payment.numero.slice(-4);
+                paymentState('ready', 'Datos ficticios preparados. El resultado lo confirma el servidor.');
+            }
+            function paymentState(state, message) {
+                paymentPanel.dataset.state = state;
+                paymentPanel.setAttribute('aria-busy', String(state === 'processing'));
+                scenario.disabled = state === 'processing' || state === 'approved';
+                paymentStatus.textContent = message;
+                paymentStatus.setAttribute('role', ['error','rejected'].includes(state) ? 'alert' : 'status');
+                const step = state === 'approved' ? 'approved' : state === 'processing' ? 'processing' : 'ready';
+                for (const item of paymentPanel.querySelectorAll('[data-payment-step]')) {
+                    if (item.dataset.paymentStep === step) item.setAttribute('aria-current','step');
+                    else item.removeAttribute('aria-current');
+                }
+            }
+            scenario.addEventListener('change', () => { if (!processing && !registered) updateDemo(); });
+            function receipt(result, detail) {
+                resultado.replaceChildren();
+                const heading = document.createElement('h3');
+                heading.textContent = 'Pago simulado registrado';
+                const note = document.createElement('p');
+                note.textContent = 'Operación de demostración. No se realizó ningún cobro real.';
+                const list = document.createElement('dl');
+                const date = detail?.fecha ? new Date(detail.fecha) : null;
+                const values = [
+                    ['Resultado', detail?.pago_estado || result.pago.estado],
+                    ['Referencia de operación', detail?.referencia || result.pago.referencia],
+                    ['Número de pedido', '#' + result.solicitudId],
+                    ['Fecha registrada', date && Number.isFinite(date.getTime()) ? date.toLocaleString('es-CO') : 'No disponible: falta consultar el detalle registrado.'],
+                    ['Método', detail?.metodo || result.pago.metodo],
+                    ['Total confirmado', money(result.total)],
+                    ['Estado del pedido', detail?.estado || 'Pendiente de consultar']
+                ];
+                for (const [label,value] of values) {
+                    const term = document.createElement('dt'), description = document.createElement('dd');
+                    term.textContent = label;
+                    description.textContent = value;
+                    list.append(term,description);
+                }
+                const link = document.createElement('a');
+                link.href = 'historial.html';
+                link.textContent = 'Consultar mi historial';
+                resultado.append(heading,note,list,link);
+                resultado.hidden = false;
+            }
+            updateDemo();
 
             function limpiarClavePedido() {
                 sessionStorage.removeItem(IDEMPOTENCY_STORAGE_KEY);
@@ -336,7 +407,7 @@ if (checkAuthGuard()) {
                  * el botón debe quedar habilitado.
                  */
 
-                btn.disabled = false;
+                btn.disabled = processing || registered;
             }
 
 
@@ -464,88 +535,21 @@ if (checkAuthGuard()) {
             // =================================================
 
             function validarFormulario() {
-
-                const state =
-                    leerCarrito();
-
-
-                if (
-                    !state ||
-                    !state.borrador ||
-                    !state.borrador.length
-                ) {
-
-                    throw new Error(
-                        'Agrega al menos un medicamento antes de pagar.'
-                    );
+                const state = leerCarrito();
+                if (!state?.borrador?.length) throw new Error('Agrega al menos un medicamento antes de pagar.');
+                if (tipoEntrega.value === 'DOMICILIO' && direccion.value.trim().length < 8) {
+                    direccion.setAttribute('aria-invalid','true');
+                    direccion.focus();
+                    throw new Error('Para domicilio debes ingresar una dirección válida.');
                 }
-
-
-                if (
-                    tipoEntrega.value ===
-                    'DOMICILIO'
-                    &&
-                    direccion.value.trim().length < 8
-                ) {
-
-                    throw new Error(
-                        'Para domicilio debes ingresar una dirección válida.'
-                    );
+                direccion.removeAttribute('aria-invalid');
+                const payment = demoPayment();
+                if (numero.value.replace(/\D/g,'') !== payment.numero || vencimiento.value.trim() !== payment.vencimiento || cvv.value.trim() !== payment.cvv) {
+                    updateDemo();
+                    throw new Error('Solo se permiten los datos ficticios del escenario seleccionado. Vuelve a confirmar.');
                 }
-
-
-                if (
-                    titular.value.trim().length < 3
-                ) {
-
-                    throw new Error(
-                        'Ingresa el nombre del titular de la tarjeta.'
-                    );
-                }
-
-
-                const digits =
-                    numero.value.replace(
-                        /\D/g,
-                        ''
-                    );
-
-
-                if (digits.length !== 16) {
-
-                    throw new Error(
-                        'El número de tarjeta debe tener 16 dígitos. Usa 4242 4242 4242 4242.'
-                    );
-                }
-
-
-                if (
-                    !/^\d{2}\/\d{2}$/.test(
-                        vencimiento.value.trim()
-                    )
-                ) {
-
-                    throw new Error(
-                        'El vencimiento debe tener el formato MM/AA. Ejemplo: 12/30.'
-                    );
-                }
-
-
-                if (
-                    !/^\d{3,4}$/.test(
-                        cvv.value.trim()
-                    )
-                ) {
-
-                    throw new Error(
-                        'El CVV debe tener 3 o 4 dígitos.'
-                    );
-                }
-
-
                 return state;
             }
-
 
             // =================================================
             // EVENTO ENTREGA
@@ -629,224 +633,73 @@ if (checkAuthGuard()) {
             // PAGAR
             // =================================================
 
-            btn.addEventListener(
-                'click',
-                async () => {
-
-                    if (btn.disabled) {
-                        return;
+            btn.addEventListener('click', async () => {
+                if (!checkAuthGuard() || processing || registered || btn.disabled) return;
+                resultado.hidden = true;
+                resultado.replaceChildren();
+                setMensaje('');
+                const token = getToken();
+                try {
+                    const state = validarFormulario();
+                    processing = true;
+                    btn.disabled = true;
+                    btn.classList.add('loading');
+                    payLabel.textContent = 'Procesando simulación...';
+                    paymentState('processing','Validando disponibilidad y registrando la operación simulada...');
+                    setMensaje('Procesando pago simulado...');
+                    const payload = {
+                        items: state.borrador.map(item => ({id:Number(item.id),cantidad:Number(item.cantidad)})),
+                        tipoEntrega: tipoEntrega.value,
+                        direccion: direccion.value.trim(),
+                        observaciones: observaciones.value.trim(),
+                        pago: {...demoPayment()}
+                    };
+                    const idempotencyKey = obtenerClavePedido(payload.items);
+                    const result = await apiFetch('/api/pedidos', {
+                        method:'POST', body:JSON.stringify(payload), headers:{'Idempotency-Key':idempotencyKey}
+                    });
+                    if (token !== getToken()) return;
+                    if (!Number.isSafeInteger(result.solicitudId) || result.solicitudId < 1 || result.pago?.estado !== 'APROBADO' ||
+                        typeof result.pago.referencia !== 'string' || !result.pago.referencia || typeof result.total !== 'number' || !Number.isFinite(result.total) || result.total < 0) {
+                        throw new Error('No se pudo verificar el registro del pago. Reintenta sin cambiar el pedido para recuperar su resultado.');
                     }
-
-
-                    resultado.hidden =
-                        true;
-
-                    resultado.replaceChildren();
-
-
-                    setMensaje('');
-
-
+                    registered = true;
+                    receipt(result);
+                    paymentState('approved','El servidor confirmó el registro del pago simulado.');
+                    setMensaje('Pago simulado aprobado. Pedido #' + result.solicitudId + ' registrado.');
                     try {
-
-                        const state =
-                            validarFormulario();
-
-
-                        btn.disabled = true;
-
-                        btn.classList.add(
-                            'loading'
-                        );
-
-
-                        setMensaje(
-                            'Procesando pago simulado...'
-                        );
-
-
-                        const payload = {
-
-                            items:
-                                state.borrador.map(
-                                    item => ({
-
-                                        id:
-                                            Number(
-                                                item.id
-                                            ),
-
-                                        cantidad:
-                                            Number(
-                                                item.cantidad
-                                            )
-                                    })
-                                ),
-
-
-                            tipoEntrega:
-                                tipoEntrega.value,
-
-
-                            direccion:
-                                direccion.value.trim(),
-
-
-                            observaciones:
-                                observaciones.value.trim(),
-
-
-                            pago: {
-
-                                titular:
-                                    titular.value.trim(),
-
-                                numero:
-                                    numero.value.replace(
-                                        /\D/g,
-                                        ''
-                                    ),
-
-                                vencimiento:
-                                    vencimiento.value.trim(),
-
-                                cvv:
-                                    cvv.value.trim()
-                            }
-                        };
-                        const idempotencyKey =
-                            obtenerClavePedido(payload.items);
-
-
-                        const result =
-                            await apiFetch(
-                                '/api/pedidos',
-                                {
-                                    method: 'POST',
-
-                                    body:
-                                        JSON.stringify(
-                                            payload
-                                        ),
-                                    headers: {
-                                        'Idempotency-Key': idempotencyKey
-                                    }
-                                }
-                            );
-
+                        localStorage.setItem(STORAGE_KEY,JSON.stringify({version:1,borrador:[],confirmados:[]}));
                         limpiarClavePedido();
-
-                        /*
-                         * SOLAMENTE después de que
-                         * el servidor confirme el pedido
-                         * vaciamos el carrito.
-                         */
-
-                        localStorage.setItem(
-                            STORAGE_KEY,
-                            JSON.stringify({
-
-                                version: 1,
-
-                                borrador: [],
-
-                                confirmados: []
-                            })
-                        );
-
-
-                        setMensaje(
-                            `Pago aprobado. Pedido #${result.solicitudId} creado correctamente.`
-                        );
-
-
-                        const box =
-                            document.createElement(
-                                'div'
-                            );
-
-
-                        box.className =
-                            'success-box';
-
-
-                        box.innerHTML = `
-
-                            <strong>
-                                Pago aprobado
-                            </strong>
-                            <br>
-
-                            Pedido #${result.solicitudId}
-                            <br>
-
-                            Referencia:
-                            ${result.pago.referencia}
-                            <br>
-
-                            Tarjeta:
-                            ${result.pago.marca}
-                            terminada en
-                            ${result.pago.ultimos_digitos}
-                            <br>
-
-                            Total:
-                            ${money(result.total)}
-
-                        `;
-
-
-                        resultado.appendChild(
-                            box
-                        );
-
-
-                        resultado.hidden =
-                            false;
-
-
-                        titular.value = '';
-                        numero.value = '';
-                        vencimiento.value = '';
-                        cvv.value = '';
-
-
-                        renderCart();
-
-
-                        await cargarPedidos();
-
-
-                    } catch (error) {
-                        if (error.status >= 400 && error.status < 500) {
-                            limpiarClavePedido();
-                        }
-
-                        console.error(
-                            'Error al crear pedido:',
-                            error
-                        );
-
-
-                        setMensaje(
-                            error.message ||
-                            'No se pudo crear el pedido.',
-                            true
-                        );
-
-
-                        btn.disabled =
-                            false;
-
-                    } finally {
-
-                        btn.classList.remove(
-                            'loading'
-                        );
+                    } catch {
+                        setMensaje('Pedido #' + result.solicitudId + ' registrado. No se pudo actualizar la selección local; no repitas el pago.',true);
                     }
+                    renderCart();
+                    try {
+                        const detail = await apiFetch('/api/pedidos/' + result.solicitudId);
+                        if (token === getToken() && Array.isArray(detail.pedido) && detail.pedido.length) receipt(result,detail.pedido[0]);
+                    } catch {
+                        if (token === getToken()) paymentStatus.textContent = 'Pago registrado. La fecha y el estado del pedido podrán consultarse en el historial cuando se restablezca la conexión.';
+                    }
+                    if (token === getToken()) {
+                        await cargarPedidos();
+                        resultado.focus();
+                    }
+                } catch (error) {
+                    if (token !== getToken()) return;
+                    if (error.status >= 400 && error.status < 500) limpiarClavePedido();
+                    const rejected = /Pago rechazado/i.test(error.message);
+                    paymentState(rejected ? 'rejected' : 'error', error.message || 'No se pudo registrar el pago simulado.');
+                    setMensaje(error.message || 'No se pudo crear el pedido.',true);
+                    payLabel.textContent = 'Reintentar pago simulado';
+                } finally {
+                    processing = false;
+                    btn.classList.remove('loading');
+                    if (registered) payLabel.textContent = 'Pago simulado registrado';
+                    else if (paymentPanel.dataset.state === 'processing') payLabel.textContent = 'Confirmar pago simulado';
+                    if (token === getToken()) renderCart();
                 }
-            );
-
+            });
+            window.addEventListener('pagehide', () => { resultado.hidden = true; resultado.replaceChildren(); });
 
             // =================================================
             // MIS PEDIDOS

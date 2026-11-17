@@ -1,0 +1,83 @@
+/* Catálogo del paciente. Todas las reglas quedan limitadas al módulo. */
+.medicamentos-page .mc-main { color: #173b31; padding-bottom: 64px; }
+.medicamentos-page .mc-container { width: min(1160px, calc(100% - 48px)); margin-inline: auto; }
+.medicamentos-page .mc-intro { padding: 48px 0 58px; background: linear-gradient(115deg, #f0f8f3, #fbfdfb); border-bottom: 1px solid #dfeae3; }
+.medicamentos-page .mc-eyebrow { display: inline-flex; align-items: center; gap: 8px; color: #08734e; font-size: 12px; font-weight: 700; letter-spacing: .045em; }
+.medicamentos-page .mc-intro h1 { margin: 14px 0; font-size: clamp(30px, 4vw, 44px); font-weight: 750; line-height: 1.15; letter-spacing: -.035em; }
+.medicamentos-page .mc-intro p { max-width: 620px; color: #52695e; line-height: 1.75; font-size: 16px; }
+.medicamentos-page .mc-catalog { padding-block: 32px 40px; }
+.medicamentos-page .mc-filters { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) auto auto; align-items: end; gap: 14px; padding: 22px; border: 1px solid #dfeae3; border-radius: 18px; background: #fff; box-shadow: 0 6px 24px #173b3106; }
+.medicamentos-page .mc-field { min-width: 0; }
+.medicamentos-page .mc-field label { display: block; margin-bottom: 8px; color: #345246; font-size: 13px; font-weight: 650; }
+.medicamentos-page .mc-field input,
+.medicamentos-page .mc-field select { display: block; width: 100%; min-height: 46px; padding: 11px 13px; border: 1px solid #d1e2d7; border-radius: 10px; background: #fcfefc; color: #173b31; font: inherit; font-size: 14px; }
+.medicamentos-page .mc-primary,
+.medicamentos-page .mc-secondary { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 8px; padding: 11px 18px; border: 1px solid transparent; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 650; line-height: 1.4; cursor: pointer; transition: background .18s ease, border-color .18s ease, box-shadow .18s ease; }
+.medicamentos-page .mc-primary { background: #087f59; color: #fff; }
+.medicamentos-page .mc-primary:hover:not(:disabled) { background: #066645; box-shadow: 0 5px 12px #087f591a; }
+.medicamentos-page .mc-secondary { border-color: #d1e2d7; background: #fff; color: #205641; }
+.medicamentos-page .mc-secondary:hover:not(:disabled) { border-color: #8ebea1; background: #edf6f0; }
+.medicamentos-page .mc-primary:disabled,
+.medicamentos-page .mc-secondary:disabled { background: #edf1ee; border-color: #dfe5e1; color: #627168; cursor: not-allowed; box-shadow: none; }
+.medicamentos-page .mc-main :is(button,input,select,a):focus-visible { outline: 3px solid #238b62; outline-offset: 3px; }
+.medicamentos-page .mc-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 32px 0 22px; }
+.medicamentos-page .mc-section-heading h2 { color: #173b31; font-size: clamp(23px, 2.5vw, 28px); letter-spacing: -.025em; line-height: 1.3; margin: 0 0 8px; }
+.medicamentos-page .mc-section-heading p { color: #52695e; line-height: 1.65; font-size: 14px; }
+.medicamentos-page #catalogoResultados { flex-shrink: 0; font-size: 13px; }
+.medicamentos-page #catalogoEstado:not(:empty) { padding: 24px; margin-bottom: 20px; border: 1px solid #dfeae3; border-radius: 14px; background: #fff; color: #52695e; line-height: 1.7; }
+.medicamentos-page #catalogoEstado[data-state="error"] { border-color: #dec8c1; color: #7a3327; background: #fffaf8; }
+.medicamentos-page .mc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.medicamentos-page .mc-card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid #dfeae3; border-radius: 20px; background: #fff; box-shadow: 0 5px 20px #173b3106; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.medicamentos-page .mc-card:hover { transform: translateY(-3px); border-color: #b9d8c4; box-shadow: 0 14px 28px #173b3110; }
+.medicamentos-page .mc-image { display: grid; place-items: center; min-height: 165px; padding: 22px; background: linear-gradient(135deg, #f1f7f3, #f9fcfa); border-bottom: 1px solid #eaf0ec; }
+.medicamentos-page .mc-medication-image { width: 160px; height: 120px; object-fit: contain; border-radius: 10px; }
+.medicamentos-page .mc-card-body { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: 12px; padding: 24px; }
+.medicamentos-page .mc-category { padding: 5px 9px; border-radius: 7px; background: #edf6f0; color: #275f44; font-size: 11px; font-weight: 650; line-height: 1.5; }
+.medicamentos-page .mc-card h3 { margin: 0; color: #173b31; font-size: 19px; line-height: 1.4; overflow-wrap: anywhere; letter-spacing: -.015em; }
+.medicamentos-page .mc-presentation { margin: 0; color: #52695e; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.medicamentos-page .mc-availability { margin: 0; color: #17613f; font-size: 13px; font-weight: 650; }
+.medicamentos-page .mc-unavailable { color: #6e6358; }
+.medicamentos-page .mc-prescription { margin: 0 0 6px; color: #5a6b61; font-size: 12px; line-height: 1.6; }
+.medicamentos-page .mc-card .mc-primary { width: 100%; margin-top: auto; }
+.medicamentos-page .mc-more { display: flex; margin: 24px auto 0; }
+.medicamentos-page .mc-selection { padding: 28px; border: 1px solid #d7e7dd; border-radius: 20px; background: #fff; box-shadow: 0 5px 24px #173b3106; }
+.medicamentos-page .mc-selection .mc-section-heading { margin-top: 0; }
+.medicamentos-page .mc-unit-count { flex-shrink: 0; padding: 10px 14px; background: #edf6f0; border-radius: 10px; }
+.medicamentos-page .mc-unit-count strong { color: #17613f; }
+.medicamentos-page #mensajePedido { margin-bottom: 12px; color: #345b47; font-size: 14px; line-height: 1.6; }
+.medicamentos-page .mc-selection-item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 16px; padding-block: 18px; border-top: 1px solid #e8efea; }
+.medicamentos-page .mc-selected-name { font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.medicamentos-page .mc-selection-item small { grid-column: 1 / -1; color: #78533a; }
+.medicamentos-page .mc-quantity { display: flex; align-items: center; gap: 6px; }
+.medicamentos-page .mc-quantity button { width: 44px; padding: 8px; }
+.medicamentos-page .mc-quantity input { width: 66px; min-height: 44px; padding: 9px 4px; border: 1px solid #d1e2d7; border-radius: 9px; background: #fff; text-align: center; color: #173b31; font: inherit; font-size: 14px; }
+.medicamentos-page .mc-empty-selection { padding: 18px 0; color: #52695e; font-size: 14px; line-height: 1.7; }
+.medicamentos-page .mc-selection-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 20px; border-top: 1px solid #e8efea; }
+.medicamentos-page .mc-selection-actions a { margin-left: auto; color: #17613f; font-size: 14px; text-underline-offset: 3px; }
+.medicamentos-page .mc-main [hidden] { display: none !important; }
+@media (max-width: 960px) {
+    .medicamentos-page .mc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .medicamentos-page .mc-filters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+    .medicamentos-page .mc-container { width: calc(100% - 32px); }
+    .medicamentos-page .mc-intro { padding: 34px 0 40px; }
+    .medicamentos-page .mc-filters { padding: 18px; gap: 12px; }
+    .medicamentos-page .mc-field { grid-column: 1 / -1; }
+    .medicamentos-page .mc-grid { grid-template-columns: 1fr; gap: 18px; }
+    .medicamentos-page .mc-section-heading { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .medicamentos-page .mc-card-body { padding: 22px; }
+    .medicamentos-page .mc-selection { padding: 20px; }
+    .medicamentos-page .mc-selection-item { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
+    .medicamentos-page .mc-selected-name { grid-column: 1 / -1; }
+    .medicamentos-page .mc-selection-actions { flex-direction: column; align-items: stretch; }
+    .medicamentos-page .mc-selection-actions a { margin: 4px 0 0; text-align: center; }
+}
+@media (max-width: 380px) {
+    .medicamentos-page .mc-selection-item { grid-template-columns: minmax(0, 1fr); }
+    .medicamentos-page .mc-quantity { justify-content: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .medicamentos-page .mc-card { transition: none; }
+    .medicamentos-page .mc-card:hover { transform: none; }
+}

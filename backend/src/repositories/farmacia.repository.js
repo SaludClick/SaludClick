@@ -1,7 +1,8 @@
 const prisma = require('../config/prisma');
+const {orderScope,assignmentReady}=require('./eps-order-scope');
 
-async function listarPedidos({ estado, skip, take }) {
-    const where = { estado: estado || { in: ['APROBADA', 'PREPARANDO', 'LISTA'] } };
+async function listarPedidos({ estado, skip, take, actorId }) {
+    const where = { estado: estado || { in: ['APROBADA', 'PREPARANDO', 'LISTA'] }, ...orderScope(actorId, actorId===undefined?false:await assignmentReady(prisma)) };
     const [pedidos, total] = await Promise.all([
         prisma.solicitud.findMany({
             where, skip, take, orderBy: [{ fecha: 'asc' }, { id: 'asc' }],
@@ -32,13 +33,14 @@ async function listarInventario({ buscar, skip, take }) {
     return { medicamentos, total };
 }
 
-async function avanzarPedido(id, actual, siguiente) {
+async function avanzarPedido(id, actual, siguiente, actorId) {
     // Comparar y actualizar en una sola operación evita sobrescribir una
     // transición concurrente realizada por otra farmacia o el administrador.
     const result = await prisma.solicitud.updateMany({
-        where: { id, estado: actual, pagos: { some: { estado: 'APROBADO' } } },
+        where: { id, estado: actual, pagos: { some: { estado: 'APROBADO' } }, ...orderScope(actorId, actorId===undefined?false:await assignmentReady(prisma)) },
         data: { estado: siguiente, updated_at: new Date() }
     });
     return result.count;
 }
-module.exports = { listarPedidos, listarInventario, avanzarPedido };
+async function farmaciaActiva(id){return prisma.usuario.findFirst({where:{id,rol_id:3,estado:'ACTIVO'},select:{id:true}});}
+module.exports = { listarPedidos, listarInventario, avanzarPedido, farmaciaActiva };

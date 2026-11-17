@@ -58,17 +58,21 @@ const formulaRepository = {
         return 1;
     }
 };
+const dashboardPatientIds = [];
 const dashboardRepository = {
-    statsUsuario: async () => {
+    statsUsuario: async usuarioId => {
+        dashboardPatientIds.push(usuarioId);
         if (repositoryFailures.dashboardUsuario) throw repositoryFailures.dashboardUsuario;
-        return { pedidos: 0, formulas: 0 };
+        return { pedidos: 0, formulas: 0, pedidosActivos: 0, totalPagado: 0 };
     },
     statsAdmin: async () => {
         if (repositoryFailures.dashboardAdmin) throw repositoryFailures.dashboardAdmin;
         return { usuarios: { total: 0 } };
     }
 };
+const {createEpsSession:createEpsContractSession}=require('../src/middlewares/eps-session.middleware');
 const fakeModules = new Map([
+    ['../middlewares/eps-session.middleware', {createEpsSession: () => createEpsContractSession({db: {usuario: {findUnique: async id => ({id, rol_id:4, estado:'ACTIVO'})}, epsAcceso: {findUnique: async () => ({eps_id:'EPS-CONTRACT', activo:true, eps:{activa:true}})}}})}],
     ['../services/auth.service', {
         register: async () => {
             registerCalls.push(true);
@@ -629,4 +633,15 @@ test('lectura de fórmula privada limita propietario y no requiere filesystem re
         assert.equal(response.status, 401);
         assert.equal(data.mensaje, 'Token no proporcionado');
     });
+});
+
+
+test('dashboard: el endpoint usa la identidad JWT y entrega los cuatro indicadores sin aceptar IDs del cliente', async () => {
+    for (const id of [71, 72]) {
+        const token = jwt.sign({ id, rol: 2 }, TEST_SECRET);
+        const response = await fetch(origin + '/api/dashboard/me?usuario_id=999&id=999', { headers: { Authorization: 'Bearer ' + token } });
+        assert.equal(response.status, 200);
+        assert.equal(dashboardPatientIds.at(-1), id);
+        assert.deepEqual(await response.json(), { ok: true, estadisticas: { pedidos: 0, formulas: 0, pedidosActivos: 0, totalPagado: 0 } });
+    }
 });

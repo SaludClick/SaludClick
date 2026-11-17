@@ -1,0 +1,146 @@
+#epsWorkspace {
+  margin-top: 20px;
+}
+#epsWorkspace .eps-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+#epsWorkspace label,
+#epsDialog label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: #334155;
+}
+#epsWorkspace input,
+#epsWorkspace select,
+#epsDialog input,
+#epsDialog select,
+#epsDialog textarea {
+  padding: 10px;
+  border: 1px solid #cbdad2;
+  border-radius: 8px;
+  background: white;
+  color: #163e2a;
+  max-width: 100%;
+  font: inherit;
+}
+#epsWorkspace .eps-table-scroll {
+  overflow: auto;
+  background: white;
+  border-radius: 12px;
+}
+#epsWorkspace table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+#epsWorkspace th,
+#epsWorkspace td {
+  text-align: left;
+  padding: 14px;
+  border-bottom: 1px solid #e5eee9;
+  vertical-align: top;
+}
+#epsWorkspace th {
+  color: #166534;
+  background: #f0f8f3;
+}
+#epsWorkspace td {
+  max-width: 300px;
+  overflow-wrap: anywhere;
+}
+#epsWorkspace .eps-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#epsWorkspace .eps-pages {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  justify-content: center;
+  margin: 20px;
+}
+#epsWorkspace .eps-empty {
+  padding: 30px;
+  background: white;
+  border-radius: 12px;
+  color: #526a5e;
+}
+#epsDialog {
+  border: 1px solid #cfdfd5;
+  border-radius: 16px;
+  max-width: 720px;
+  width: calc(100% - 32px);
+  max-height: 85vh;
+  padding: 24px;
+  color: #183e2d;
+}
+#epsDialog::backdrop {
+  background: #102d2280;
+}
+#epsDialog form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+#epsDialog h2 {
+  margin-bottom: 16px;
+}
+#epsDialog .eps-wide {
+  grid-column: 1/-1;
+}
+#epsDialog pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+#epsDialog button {
+  margin-top: 10px;
+}
+#epsWorkspace button,
+#epsDialog button {
+  cursor: pointer;
+}
+#epsWorkspace button:disabled,
+#epsDialog button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+#epsWorkspace .eps-alert {
+  color: #9f3b16;
+  font-weight: bold;
+}
+#epsAccess {
+  font-size: 12px;
+  color: #526a5e;
+}
+#epsUnread {
+  font-weight: bold;
+}
+#epsBell {
+  white-space: nowrap;
+}
+#epsWorkspace form.eps-profile {
+  display: grid;
+  gap: 16px;
+  max-width: 640px;
+  padding: 24px;
+  background: white;
+  border-radius: 14px;
+}
+#epsWorkspace dd {
+  margin: 0 0 12px;
+  overflow-wrap: anywhere;
+}
+#epsWorkspace dt {
+  font-weight: bold;
+}
+.admin-console [hidden] {
+  display: none !important;
+}

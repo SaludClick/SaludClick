@@ -200,7 +200,7 @@
 
             <!-- USUARIO -->
 
-            <div class="dashboard-user">
+            <div class="dashboard-user" aria-busy="true">
 
                 <div class="dashboard-user-icon">
 
@@ -211,7 +211,7 @@
 
                 <div>
 
-                    <span>Sesión iniciada como</span>
+                    <span id="dashboardIdentidadEstado" role="status" aria-live="polite">Verificando tu identidad...</span>
 
                     <strong id="nombreUsuario">
                         Usuario
@@ -240,16 +240,14 @@
                         Resumen
                     </h2>
 
-                    <p>
-                        Consulta rápidamente la actividad de tu cuenta.
-                    </p>
+                    <p id="dashboardEstado" role="status" aria-live="polite" aria-atomic="true" data-state="loading">Cargando información...</p>
 
                 </div>
 
             </div>
 
 
-            <div class="dashboard-stats">
+            <div class="dashboard-stats" aria-busy="true">
 
 
                 <!-- PEDIDOS -->
@@ -269,9 +267,7 @@
                             Total de pedidos
                         </span>
 
-                        <strong id="totalPedidos">
-                            0
-                        </strong>
+                        <strong id="totalPedidos">—</strong>
 
                         <small>
                             Pedidos registrados
@@ -300,9 +296,7 @@
                             Fórmulas médicas
                         </span>
 
-                        <strong id="totalFormulas">
-                            0
-                        </strong>
+                        <strong id="totalFormulas">—</strong>
 
                         <small>
                             Documentos registrados
@@ -331,9 +325,7 @@
                             Pedidos activos
                         </span>
 
-                        <strong id="pedidosActivos">
-                            0
-                        </strong>
+                        <strong id="pedidosActivos">—</strong>
 
                         <small>
                             En proceso de atención
@@ -362,9 +354,7 @@
                             Total pagado
                         </span>
 
-                        <strong id="totalGastado">
-                            $0
-                        </strong>
+                        <strong id="totalGastado">—</strong>
 
                         <small>
                             Pagos registrados
@@ -720,7 +710,8 @@
 
         </section>
 
-    </main>
+    <section id="integracionEPS" data-eps-integration class="card"><h2>Integracion EPS</h2></section><script type="module" src="/js/eps-integracion.js"></script>
+</main>
 
 
 

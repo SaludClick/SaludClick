@@ -19,14 +19,17 @@ const medicamentos = [
 ];
 
 let shouldFail = false;
+let empty = false;
+const queries = [];
 let repository;
 let service;
 let controller;
 
 const fakePool = {
-    query: async () => {
+    query: async sql => {
+        queries.push(sql);
         if (shouldFail) throw new Error('db unavailable');
-        return { rows: medicamentos };
+        return { rows: empty ? [] : medicamentos };
     }
 };
 
@@ -104,4 +107,21 @@ test('fallo del repositorio conserva HTTP 500 y el mensaje actual del catálogo'
     } finally {
         shouldFail = false;
     }
+});
+
+
+test('catalogo consulta las categorias y metadatos existentes sin escribir ni modificar el esquema', async () => {
+    shouldFail = false;
+    await repository.listar();
+    const sql = queries.at(-1);
+    assert.match(sql, /m\.presentacion/);
+    assert.match(sql, /m\.requiere_formula/);
+    assert.match(sql, /JOIN categorias c ON c\.id = m\.categoria_id/);
+    assert.doesNotMatch(sql, /INSERT|UPDATE|DELETE|ALTER|CREATE/i);
+});
+
+test('catalogo vacio devuelve un listado vacio real', async () => {
+    empty = true;
+    try { assert.deepEqual(await service.listar(), []); }
+    finally { empty = false; }
 });

@@ -34,10 +34,10 @@ async function dashboard(req, res) {
 const service = require('../services/farmacia.service');
 function handle(operation, message) {
     return async (req, res) => {
-        try { res.json({ ok: true, ...await operation(req.query) }); }
+        try { res.json({ ok: true, ...await operation(req.query, Number(req.usuario?.id)) }); }
         catch (error) {
-            res.status(error.status === 400 ? 400 : 500).json({
-                ok: false, mensaje: error.status === 400 ? error.message : message
+            res.status([400,403].includes(error.status) ? error.status : 500).json({
+                ok: false, mensaje: [400,403].includes(error.status) ? error.message : message
             });
         }
     };
@@ -45,9 +45,9 @@ function handle(operation, message) {
 module.exports = {
     verificarAcceso, dashboard,
     async avanzarPedido(req, res) {
-        try { res.json({ ok: true, pedido: await service.avanzarPedido(req.params.id, req.body) }); }
+        try { res.json({ ok: true, pedido: await service.avanzarPedido(req.params.id, req.body, Number(req.usuario?.id)) }); }
         catch (error) {
-            const status = [400, 409].includes(error.status) ? error.status : 500;
+            const status = [400, 403, 409].includes(error.status) ? error.status : 500;
             res.status(status).json({ ok: false, mensaje: status === 500 ? 'No se pudo actualizar el pedido.' : error.message });
         }
     },

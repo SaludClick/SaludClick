@@ -74,6 +74,11 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     let farmaciaUpdates = 0;
     let farmaciaRequests = 0;
     let chatRequests = 0;
+    let paymentFixture = null;
+    const paymentRecords = new Map();
+    const paymentChecks = [];
+    let medicationFixture = null;
+    let dashboardFixture = null;
     let profileEnabled = false;
     let profileUpdate;
     const demoProfile = { id: 30, nombre: 'Farmacia', apellido: 'Prueba', correo: 'farmacia@example.test', numeroDocumento: 'DOC-123', rol_id: 3 };
@@ -101,6 +106,18 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         if(await administrativeFixture.handle(req,res))return;
         if(req.url==='/socket.io/socket.io.js'){res.writeHead(200,{'Content-Type':'text/javascript'});res.end('/* realtime unavailable in isolated fixture */');return;}
         const pathname = new URL(req.url, 'http://localhost').pathname;
+        if (dashboardFixture && ['/api/auth/profile', '/api/dashboard/me'].includes(pathname)) {
+            const config = { ...dashboardFixture };
+            const second = req.headers.authorization === 'Bearer patient-b';
+            const status = pathname === '/api/auth/profile' ? (config.profileStatus || 200) : (config.statsStatus || 200);
+            const identity = config.identity || { id: second ? 72 : 71, nombre: second ? 'Beatriz' : 'Ana', apellido: 'Prueba', rol_id: 2, correo: 'patient@example.test' };
+            const statistics = config.statistics || (second ? { pedidos: 8, formulas: 4, pedidosActivos: 3, totalPagado: 27000 } : { pedidos: 5, formulas: 3, pedidosActivos: 2, totalPagado: 12500 });
+            if (config.delay) await new Promise(resolve => setTimeout(resolve, config.delay));
+            if (config.disconnect) { req.socket.destroy(); return; }
+            res.writeHead(status, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(status === 200 ? { ok: true, ...(pathname === '/api/auth/profile' ? { usuario: identity } : { estadisticas: statistics }) } : { ok: false, mensaje: status === 401 ? 'Sesion expirada de prueba.' : 'Servicio de datos no disponible.' }));
+            return;
+        }
         if (pathname.startsWith('/api/chat/')) vitalixApiRequests += 1;
         if (pathname === '/api/auth/profile' && profileEnabled) {
             res.setHeader('Content-Type', 'application/json');
@@ -146,8 +163,11 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             return;
         }
         if (pathname === '/api/medicamentos') {
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ ok: true, medicamentos }));
+            const config = medicationFixture ? { ...medicationFixture } : {};
+            if (config.delay) await new Promise(resolve => setTimeout(resolve, config.delay));
+            const status = config.status || 200;
+            res.writeHead(status, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(status === 200 ? { ok: true, medicamentos: config.medicamentos || medicamentos } : { ok: false, mensaje: 'Catalogo no disponible.' }));
             return;
         }
         if (pathname === '/api/admin/cuentas' && req.method === 'GET') {
@@ -208,10 +228,11 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             }));
             return;
         }
-        if (pathname === '/api/eps/verificar-acceso') {
+        if (pathname === '/api/eps/notificaciones') { res.writeHead(200, {'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true,datos:[],paginacion:{pagina:1,paginas:1,total:0,tamano:25}})); return; }
+        if (pathname === '/api/eps/dashboard') {
             epsAccessRequests += 1;
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ ok: true, mensaje: 'Acceso autorizado al panel EPS.' }));
+            res.end(JSON.stringify({ ok: true, estadisticas:{pacientes:0,afiliados:0,farmacias:0,autorizaciones:0,pendientes:0,solicitudes:0,inventario:0,agotados:0,stock_bajo:0,notificaciones:0} }));
             return;
         }
         if (pathname === '/api/formulas/admin/all') {
@@ -228,6 +249,38 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         if (pathname === '/api/pedidos' && req.method === 'POST') {
             orderRequests += 1;
             orderIdempotencyKeys.push(req.headers['idempotency-key']);
+        }
+        if (paymentFixture && (pathname === '/api/pedidos' || /^\/api\/pedidos\/\d+$/.test(pathname))) {
+            if (req.method === 'POST') {
+                const config = {...paymentFixture};
+                let raw = '';
+                for await (const chunk of req) raw += chunk;
+                const input = JSON.parse(raw);
+                const safe = ['4242424242424242','5555555555554444','4000000000000002'].includes(input.pago?.numero) && input.pago?.cvv === '123' && input.pago?.titular === 'Titular de prueba';
+                paymentChecks.push({safe,key:req.headers['idempotency-key'],tipoEntrega:input.tipoEntrega,direccion:input.direccion});
+                assert.equal(safe,true,'Solo pueden salir fixtures ficticios del escenario');
+                if (config.delay) await new Promise(resolve => setTimeout(resolve,config.delay));
+                let status = config.status || (input.pago.numero === '4000000000000002' ? 400 : 201);
+                if (status !== 201) {
+                    res.writeHead(status,{'Content-Type':'application/json'});
+                    res.end(JSON.stringify({ok:false,mensaje:config.message || (status === 400 ? 'Pago rechazado. Referencia: SIM-REJECT-TEST' : 'Sesion expirada de prueba.')}));
+                    return;
+                }
+                const key=req.headers['idempotency-key'];
+                if (!paymentRecords.has(key)) paymentRecords.set(key,{
+                    solicitudId:801+paymentRecords.size,total:4321,
+                    pago:{referencia:'SIM-TEST-'+(801+paymentRecords.size),metodo:'TARJETA',marca:input.pago.numero.startsWith('5')?'MASTERCARD':'VISA',ultimos_digitos:input.pago.numero.slice(-4),estado:'APROBADO'}
+                });
+                res.writeHead(201,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:true,...paymentRecords.get(key)}));return;
+            }
+            res.writeHead(200,{'Content-Type':'application/json'});
+            const records=[...paymentRecords.values()];
+            if (pathname === '/api/pedidos') res.end(JSON.stringify({ok:true,pedidos:records.map(r=>({id:r.solicitudId,fecha:'2026-11-14T12:00:00Z',estado:'APROBADA',total:r.total,pago_estado:'APROBADO',ultimos_digitos:r.pago.ultimos_digitos}))}));
+            else {
+                const record=records.find(r=>r.solicitudId===Number(pathname.split('/').at(-1)));
+                res.end(JSON.stringify({ok:true,pedido:record?[{id:record.solicitudId,fecha:'2026-11-14T12:00:00Z',estado:'APROBADA',pago_estado:'APROBADO',referencia:record.pago.referencia,metodo:'TARJETA'}]:[]}));
+            }
+            return;
         }
         if (pathname === '/api/auth/login' && loginCorrecto) {
             // Respuesta controlada Ãºnicamente en este servidor de pruebas.
@@ -429,16 +482,16 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     async function click(selector) { await evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`); }
     async function value(selector, text) { await evaluate(`document.querySelector(${JSON.stringify(selector)}).value = ${JSON.stringify(text)}`); }
     async function enter(selector) { await evaluate(`document.querySelector(${JSON.stringify(selector)}).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))`); }
-    const visibleNames = () => evaluate(`[...document.querySelectorAll('#catalogoMedicamentos tr')].filter(r => !r.hidden).map(r => r.cells[0].textContent)`);
+    const visibleNames = () => evaluate(`[...document.querySelectorAll('#catalogoMedicamentos .mc-card h3')].map(node => node.textContent)`);
     const catalogReady = () => evaluate('Array.isArray(window.saludClickCatalogo) && window.saludClickCatalogo.length === 5');
     const state = () => evaluate(`JSON.parse(localStorage.getItem('saludclick_pedido_temporal_v1'))`);
     async function clickCartControl(name, controlIndex) {
-        await until(() => evaluate(`[...document.querySelectorAll('#detallePedido tr')].some(r=>r.cells[0]?.textContent.includes(${JSON.stringify(name)}))`));
-        await evaluate(`(()=>{const row=[...document.querySelectorAll('#detallePedido tr')].find(r=>r.cells[0]?.textContent.includes(${JSON.stringify(name)})); if(!row) throw new Error('No se encontró la línea del carrito: '+${JSON.stringify(name)}); const button=${controlIndex}===2?row.cells[2].querySelector('button'):row.cells[1].querySelectorAll('button')[${controlIndex}]; button.click();})()`);
+        await until(() => evaluate(`[...document.querySelectorAll('#detallePedido .mc-selection-item')].some(row=>row.querySelector('strong')?.textContent.includes(${JSON.stringify(name)}))`));
+        await evaluate(`(()=>{const row=[...document.querySelectorAll('#detallePedido .mc-selection-item')].find(row=>row.querySelector('strong')?.textContent.includes(${JSON.stringify(name)})); const button=${controlIndex}===2?row.querySelector(':scope > button'):row.querySelectorAll('.mc-quantity button')[${controlIndex}]; button.click();})()`);
     }
     async function setCartQuantity(name, quantity) {
-        await until(() => evaluate(`[...document.querySelectorAll('#detallePedido tr')].some(r=>r.cells[0]?.textContent.includes(${JSON.stringify(name)}))`));
-        await evaluate(`(()=>{const row=[...document.querySelectorAll('#detallePedido tr')].find(r=>r.cells[0]?.textContent.includes(${JSON.stringify(name)})); if(!row) throw new Error('No se encontró la línea del carrito: '+${JSON.stringify(name)}); const input=row.cells[1].querySelector('input'); input.value=${JSON.stringify(String(quantity))}; input.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+        await until(() => evaluate(`[...document.querySelectorAll('#detallePedido .mc-selection-item')].some(row=>row.querySelector('strong')?.textContent.includes(${JSON.stringify(name)}))`));
+        await evaluate(`(()=>{const row=[...document.querySelectorAll('#detallePedido .mc-selection-item')].find(row=>row.querySelector('strong')?.textContent.includes(${JSON.stringify(name)}));const input=row.querySelector('input');input.value=${JSON.stringify(String(quantity))};input.dispatchEvent(new Event('change',{bubbles:true}));})()`);
     }
     if (process.env.FRONTEND_TEST_ADMIN_ONLY === '1') {
         await go('/login.html');
@@ -596,10 +649,15 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             const links = await evaluate('[...document.querySelectorAll("a[href]")].map(a=>a.href).filter(h=>h.startsWith(location.origin))');
             for (const link of links) assert.equal((await fetch(link)).status,200,link);
         }
-        await go('/pages/dashboard.html'); await click('#menuToggle'); assert.equal(await evaluate('document.querySelector("#menu").classList.contains("active")'),true);
-        assert.equal(await evaluate('document.querySelector("#bienvenida").textContent'),'¡Bienvenido, Prueba!');
-        await click('#logout'); await until(() => evaluate('location.pathname === "/login.html"'));
-        assert.equal(await evaluate('localStorage.getItem("saludclick_token")'),null); assert.ok(await state());
+        dashboardFixture = { identity: { id:71, nombre:'Prueba', apellido:'Paciente', rol_id:2 } };
+        try {
+            await go('/pages/dashboard.html');
+            await until(() => evaluate('document.querySelector("#dashboardEstado").dataset.state === "loaded"'));
+            await click('#menuToggle'); assert.equal(await evaluate('document.querySelector("#menu").classList.contains("active")'),true);
+            assert.equal(await evaluate('document.querySelector("#bienvenida").textContent'),'¡Bienvenido, Prueba!');
+            await click('#logout'); await until(() => evaluate('location.pathname === "/login.html"'));
+            assert.equal(await evaluate('localStorage.getItem("saludclick_token")'),null); assert.ok(await state());
+        } finally { dashboardFixture = null; }
     });
     await t.test('farmacia consulta inventario, avanza pedidos y rechaza usuarios ajenos', async () => {
         await evaluate(`for (const s of [localStorage,sessionStorage]) { s.setItem('saludclick_token','frontend-test-only'); s.setItem('saludclick_user',JSON.stringify({nombre:'Farmacia',rol:3})); }`);
@@ -648,12 +706,12 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
 
         assert.equal(await evaluate('document.querySelector("#epsMain h1")?.textContent.trim()'), 'Dashboard');
         assert.match(await evaluate('document.querySelector("#epsAccess").textContent'), /Acceso EPS verificado/);
-        assert.match(await evaluate('document.querySelector("#epsMain").textContent'), /no hay endpoints EPS/);
-        assert.equal(await evaluate('document.querySelectorAll(".admin-side-link").length'), 6);
+        assert.match(await evaluate('document.querySelector("#epsMain").textContent'), /Pacientes vinculados/);
+        assert.equal(await evaluate('document.querySelectorAll(".admin-side-link").length'), 9);
         assert.deepEqual(await evaluate('[...document.querySelectorAll(".admin-side-link")].map(link => link.querySelector("span")?.textContent.trim())'), [
-            'Dashboard', 'Afiliados', 'Farmacias', 'Autorizaciones', 'Solicitudes', 'Perfil'
+            'Dashboard', 'Afiliados', 'Farmacias', 'Autorizaciones', 'Solicitudes', 'Pacientes', 'Inventario', 'Notificaciones', 'Perfil'
         ]);
-        assert.equal(await evaluate('document.querySelectorAll(".eps-nav-disabled[aria-disabled=true]").length'), 4);
+        assert.equal(await evaluate('document.querySelectorAll(".eps-nav-disabled[aria-disabled=true]").length'), 0);
         assert.equal(epsAccessRequests, 1);
 
         const adminRequests = adminDashboardRequests;
@@ -840,6 +898,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         ];
         for (const action of actions) {
             await go('/pages/medicamentos.html');
+            await until(catalogReady);
             if (!(await state()).borrador.some(item=>item.id===1)) await click('[data-medicamento-id="1"]');
             const before = await state(); await sinSesion(); await action(); await esperarPagina('/login.html');
             assert.deepEqual(await state(),before);
@@ -919,8 +978,12 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only'); localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',rol:2}))`);
         await go('/pages/medicamentos.html');
         await until(async () => (await visibleNames()).length === 5);
-        await until(async () => await evaluate('[...document.querySelectorAll("#catalogoMedicamentos .tabla-medicamento-imagen")].length === 5 && [...document.querySelectorAll("#catalogoMedicamentos .tabla-medicamento-imagen")].every(img => img.complete)'));
-        const catalogoImagenes = await evaluate(`[...document.querySelectorAll('#catalogoMedicamentos .tabla-medicamento-imagen')].map(img=>({src:img.getAttribute('src'),complete:img.complete,width:img.naturalWidth,height:img.naturalHeight}))`);
+        const images = await evaluate("document.querySelectorAll('#catalogoMedicamentos .mc-medication-image').length");
+        for (let i=0;i<images;i++) {
+            await evaluate(`document.querySelectorAll('#catalogoMedicamentos .mc-medication-image')[${i}].scrollIntoView()`);
+            await until(() => evaluate(`document.querySelectorAll('#catalogoMedicamentos .mc-medication-image')[${i}].complete`));
+        }
+        const catalogoImagenes = await evaluate(`[...document.querySelectorAll('#catalogoMedicamentos .mc-medication-image')].map(img=>({src:img.getAttribute('src'),complete:img.complete,width:img.naturalWidth,height:img.naturalHeight}))`);
         assert.equal(catalogoImagenes.length,5);
         for (const imagen of catalogoImagenes) { assert.equal(imagen.complete,true); assert.ok(imagen.width > 0 && imagen.height > 0); assert.equal((await fetch(new URL(imagen.src,base))).status,200); }
     });
@@ -1055,6 +1118,299 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             }
         }finally{await send('Page.removeScriptToEvaluateOnNewDocument',{identifier});}
     });
+
+
+
+    async function paymentPage(config = {}, empty = false) {
+        paymentFixture = config;
+        paymentRecords.clear();
+        paymentChecks.length = 0;
+        await go('/login.html');
+        await evaluate("localStorage.clear();sessionStorage.clear();sessionStorage.setItem('saludclick_token','patient-payment');sessionStorage.setItem('saludclick_user',JSON.stringify({id:71,nombre:'Paciente',rol:2}));");
+        if (!empty) await evaluate("localStorage.setItem('saludclick_pedido_temporal_v1',JSON.stringify({version:1,borrador:[{id:1,cantidad:1}],confirmados:[]}))");
+        await go('/pages/pedidos.html#checkout');
+        if (!empty) await until(() => evaluate("!document.getElementById('pagarPedido').disabled"));
+        else await until(() => evaluate("document.getElementById('carritoPedido').rows.length > 0"));
+    }
+    const paymentState = state => evaluate('document.getElementById("pagoSimulado").dataset.state === '+JSON.stringify(state));
+    try {
+        await t.test('pago: aprobacion confirmada, comprobante con fecha persistida e historial actualizado', async () => {
+            await paymentPage({delay:500});
+            await evaluate("document.getElementById('titular').value='NO ENVIAR ESTE NOMBRE';document.getElementById('pagarPedido').click();document.getElementById('pagarPedido').click();");
+            assert.equal(await paymentState('processing'),true);
+            assert.equal(await evaluate("document.getElementById('resultadoPago').hidden"),true);
+            await until(() => paymentState('approved'));
+            await until(() => evaluate("document.getElementById('resultadoPago').textContent.includes('2026')"));
+            assert.equal(paymentRecords.size,1);
+            assert.equal(paymentChecks.length,1);
+            assert.equal(paymentChecks[0].safe,true);
+            const receipt=await evaluate("document.getElementById('resultadoPago').textContent");
+            for(const text of ['SIM-TEST-801','#801','TARJETA','APROBADO','APROBADA','2026']) assert.ok(receipt.includes(text),text);
+            assert.equal(await evaluate("document.getElementById('resultadoPago').textContent.includes(new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(4321))"),true);
+            await until(() => evaluate("document.getElementById('tablaPedidos').textContent.includes('#801')"));
+            assert.equal((await state()).borrador.length,0);
+            assert.equal(await evaluate("document.getElementById('pagarPedido').disabled"),true);
+        });
+        await t.test('pago: rechazo real de la simulacion conserva el carrito y permite reintento', async () => {
+            await paymentPage();
+            await value('#escenarioPago','rechazada');
+            await evaluate("document.getElementById('escenarioPago').dispatchEvent(new Event('change'))");
+            await click('#pagarPedido');
+            await until(() => paymentState('rejected'));
+            assert.equal(paymentRecords.size,0);
+            assert.equal((await state()).borrador.length,1);
+            assert.equal(await evaluate("document.getElementById('resultadoPago').hidden"),true);
+            await value('#escenarioPago','alternativa');await evaluate("document.getElementById('escenarioPago').dispatchEvent(new Event('change'))");
+            await click('#pagarPedido');await until(() => paymentState('approved'));
+            assert.equal([...paymentRecords.values()][0].pago.marca,'MASTERCARD');
+        });
+        await t.test('pago: respuesta perdida recupera el mismo registro con la misma clave', async () => {
+            await paymentPage();
+            await evaluate("(()=>{const original=window.fetch;window.fetch=async function(...args){const response=await original.apply(this,args);if(String(args[0]).includes('/api/pedidos')&&args[1]?.method==='POST'){window.fetch=original;throw new TypeError('Respuesta perdida de prueba');}return response;};})()");
+            await click('#pagarPedido');await until(() => paymentState('error'));
+            assert.equal(paymentRecords.size,1);
+            assert.equal((await state()).borrador.length,1);
+            assert.equal(await evaluate("document.getElementById('resultadoPago').hidden"),true);
+            await click('#pagarPedido');await until(() => paymentState('approved'));
+            assert.equal(paymentRecords.size,1);
+            assert.equal(paymentChecks[0].key,paymentChecks[1].key);
+        });
+        await t.test('pago: carrito vacio, stock insuficiente y sesion expirada no muestran aprobacion', async () => {
+            await paymentPage({},true);
+            assert.equal(await evaluate("document.getElementById('pagarPedido').disabled"),true);
+            assert.equal(paymentChecks.length,0);
+            await paymentPage({status:409,message:'Stock insuficiente para el medicamento.'});
+            await click('#pagarPedido');await until(() => paymentState('error'));
+            assert.equal((await state()).borrador.length,1);
+            assert.equal(paymentRecords.size,0);
+            await paymentPage({status:401});await click('#pagarPedido');
+            await until(() => evaluate("location.pathname==='/login.html'"));
+            assert.equal(await evaluate("sessionStorage.getItem('saludclick_token')"),null);
+        });
+        await t.test('pago: campos de demostracion no admiten numeros arbitrarios ni los transmiten', async () => {
+            await paymentPage();
+            assert.equal(await evaluate("['titular','numero','vencimiento','cvv'].every(id=>document.getElementById(id).readOnly)"),true);
+            await value('#numero','1111111111111111');await click('#pagarPedido');await until(() => paymentState('error'));
+            assert.equal(paymentChecks.length,0);
+            assert.equal(await evaluate("document.getElementById('numero').value.split(' ').join('')"),'4242424242424242');
+        });
+        await t.test('pago: fallo de almacenamiento local tras confirmar no permite crear otro pedido', async () => {
+            await paymentPage();
+            await evaluate("(()=>{const original=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key==='saludclick_pedido_temporal_v1')throw new Error('Storage unavailable in fixture');return original.call(this,key,value);};})()");
+            await click('#pagarPedido');await until(() => paymentState('approved'));
+            assert.equal(paymentRecords.size,1);
+            assert.equal(await evaluate("document.getElementById('pagarPedido').disabled"),true);
+            await click('#pagarPedido');
+            assert.equal(paymentChecks.length,1);
+            assert.equal((await state()).borrador.length,1);
+            assert.ok(await evaluate("!!sessionStorage.getItem('saludclick_pedido_idempotencia')"));
+        });
+        await t.test('pago: cuatro campos visibles de demostracion con selector tecnico oculto', async () => {
+            await paymentPage();
+            assert.equal(await evaluate("document.getElementById('escenarioPago').getClientRects().length"),0);
+            assert.equal(await evaluate("['titular','numero','vencimiento','cvv'].every(id=>{const node=document.getElementById(id);return node.getClientRects().length>0&&node.readOnly&&node.autocomplete==='off'})"),true);
+            assert.deepEqual(await evaluate("['titular','numero','vencimiento','cvv'].map(id=>document.getElementById(id).value)"),['Titular de prueba','4242 4242 4242 4242','12/30','123']);
+            assert.equal(await evaluate("document.querySelector('.sc-pay-card')===null"),true);
+            assert.equal(await evaluate("document.querySelector('.sc-pay-badge').textContent"),'Pago simulado');
+            assert.equal(await evaluate("document.querySelectorAll('#escenarioPago option').length"),3);
+        });
+        await t.test('pago: entrega en farmacia y domicilio conservan requisitos y datos enviados', async () => {
+            await paymentPage();
+            assert.equal(await evaluate("document.getElementById('tipoEntrega').value"),'RECOGER');
+            assert.equal(await evaluate("document.getElementById('direccion').disabled && !document.getElementById('direccion').required"),true);
+            await value('#tipoEntrega','DOMICILIO');
+            await evaluate("document.getElementById('tipoEntrega').dispatchEvent(new Event('change'))");
+            assert.equal(await evaluate("!document.getElementById('direccion').disabled && document.getElementById('direccion').required"),true);
+            await click('#pagarPedido');await until(() => paymentState('error'));
+            assert.equal(paymentChecks.length,0);
+            assert.equal(await evaluate("document.getElementById('direccion').getAttribute('aria-invalid')"),'true');
+            await value('#direccion','Direccion ficticia de pruebas 123');
+            await click('#pagarPedido');await until(() => paymentState('approved'));
+            assert.equal(paymentChecks[0].tipoEntrega,'DOMICILIO');
+            assert.equal(paymentChecks[0].direccion,'Direccion ficticia de pruebas 123');
+            await paymentPage();await click('#pagarPedido');await until(() => paymentState('approved'));
+            assert.equal(paymentChecks[0].tipoEntrega,'RECOGER');
+            assert.equal(paymentChecks[0].direccion,'');
+        });
+        await t.test('pago: panel y comprobante adaptables a escritorio y movil', async () => {
+            await paymentPage();
+            const directory=fs.mkdtempSync(path.join(os.tmpdir(),'saludclick-payment-preview-'));
+            for(const width of [1440,768,390,320]){
+                await send('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:false});
+                await evaluate("document.getElementById('pagoSimulado').scrollIntoView({behavior:'instant'})");
+                assert.equal(await evaluate("(()=>{const r=document.getElementById('pagoSimulado').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth})()"),true);
+                assert.equal(await evaluate("document.querySelector('.sc-pay-method').getBoundingClientRect().height < 160"),true);
+                assert.equal(await evaluate("document.getElementById('escenarioPago').getClientRects().length===0"),true);
+                assert.equal(await evaluate("(()=>{const titular=document.getElementById('titular').getBoundingClientRect(),number=document.getElementById('numero').getBoundingClientRect(),expiry=document.getElementById('vencimiento').getBoundingClientRect(),cvv=document.getElementById('cvv').getBoundingClientRect();return Math.abs(titular.width-number.width)<1&&number.width>expiry.width&&Math.abs(expiry.top-cvv.top)<1&&expiry.right<=cvv.left&&['titular','numero','vencimiento','cvv'].every(id=>document.getElementById(id).getClientRects().length>0)})()"),true);
+                const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
+                fs.writeFileSync(path.join(directory,width+'.png'),Buffer.from(shot.data,'base64'));
+            }
+            await click('#pagarPedido');await until(() => paymentState('approved'));
+            await until(() => evaluate("document.getElementById('resultadoPago').textContent.includes('2026')"));
+            assert.equal(await evaluate("(()=>{const r=document.getElementById('resultadoPago').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth})()"),true);
+            t.diagnostic('Capturas pago: '+directory);
+            await send('Emulation.clearDeviceMetricsOverride');
+        });
+    } finally { paymentFixture = null; }
+
+    async function medicationPage(config = {}) {
+        medicationFixture = config;
+        await go('/login.html');
+        await evaluate(`localStorage.clear();sessionStorage.clear();sessionStorage.setItem('saludclick_token','patient-a');sessionStorage.setItem('saludclick_user',JSON.stringify({id:71,nombre:'Paciente',rol:2}));`);
+        await go('/pages/medicamentos.html');
+    }
+    try {
+        await t.test('medicamentos: carga sin filas de prueba, vacio real, error y reintento', async () => {
+            await medicationPage({delay:900});
+            assert.equal(await evaluate(`document.querySelector('#catalogoEstado').dataset.state`),'loading');
+            assert.equal(await evaluate(`document.querySelectorAll('.mc-card').length`),0);
+            await until(catalogReady);
+            await medicationPage({medicamentos:[]});
+            await until(() => evaluate(`document.querySelector('#catalogoEstado').dataset.state==='empty'`));
+            assert.equal(await evaluate(`document.querySelectorAll('.mc-card').length`),0);
+            assert.equal(await evaluate(`document.querySelector('#confirmarPedido').disabled`),true);
+            await medicationPage({status:500});
+            await until(() => evaluate(`document.querySelector('#catalogoEstado').dataset.state==='error'`));
+            assert.equal(await evaluate(`document.querySelectorAll('.mc-card').length`),0);
+            medicationFixture = {};
+            await click('#reintentarCatalogo');
+            await until(catalogReady);
+        });
+        await t.test('medicamentos: categorias reales, presentacion, receta y disponibilidad sin inferencias', async () => {
+            await medicationPage({medicamentos:medicamentos.map((med,i)=>({...med,presentacion:i===0?'Caja de prueba x 20':null,requiere_formula:i===0?true:null,...(i===1?{stock:0}:{})}))});
+            await until(catalogReady);
+            assert.match(await evaluate(`document.querySelector('[data-catalog-id="1"]').textContent`),/Caja de prueba x 20/);
+            assert.match(await evaluate(`document.querySelector('[data-catalog-id="1"]').textContent`),/Requiere fórmula/);
+            assert.equal(await evaluate(`document.querySelector('[data-medicamento-id="2"]').disabled`),true);
+            await value('#filtroCategoriaMedicamentos','1');
+            await evaluate(`document.querySelector('#filtroCategoriaMedicamentos').dispatchEvent(new Event('change'))`);
+            assert.deepEqual(await visibleNames(),['Acetaminofén']);
+            await value('#buscadorMedicamentos','inexistente');await click('#buscarMedicamentos');
+            assert.equal((await visibleNames()).length,0);
+            assert.match(await evaluate(`document.querySelector('#catalogoEstado').textContent`),/coincidan/);
+        });
+        await t.test('medicamentos: limita cantidades segun stock sin crear pedidos desde el catalogo', async () => {
+            await medicationPage({medicamentos:medicamentos.map((med,i)=>({...med,stock:i===0?2:med.stock}))});
+            await until(catalogReady);
+            const before=orderRequests;
+            await click('[data-medicamento-id="1"]');await click('[data-medicamento-id="1"]');
+            assert.equal((await state()).borrador[0].cantidad,2);
+            assert.equal(await evaluate(`document.querySelector('[data-medicamento-id="1"]').disabled`),true);
+            await setCartQuantity('Acetaminofén',3);
+            assert.equal((await state()).borrador[0].cantidad,2);
+            assert.equal(orderRequests,before);
+            await click('#vaciarPedido');
+            assert.equal(await evaluate(`document.querySelector('[data-medicamento-id="1"]').disabled`),false);
+            assert.equal(await evaluate(`document.querySelector('#catalogoMedicamentos table')===null&&document.querySelector('#detallePedido table')===null`),true);
+            assert.equal(await evaluate(`document.querySelector('#tituloPedido').textContent.includes('Mi pedido temporal')`),false);
+        });
+        await t.test('medicamentos: pagina tarjetas sin perder filtros ni seleccion', async () => {
+            await medicationPage({medicamentos:Array.from({length:30},(_,i)=>({...medicamentos[0],id:i+1,nombre:'Catalogo '+String(i+1).padStart(2,'0')}))});
+            await until(() => evaluate(`document.querySelectorAll('.mc-card').length===24`));
+            await click('#verMasMedicamentos');
+            assert.equal(await evaluate(`document.querySelectorAll('.mc-card').length`),30);
+            await click('[data-medicamento-id="30"]');
+            assert.equal((await state()).borrador[0].id,30);
+            await value('#buscadorMedicamentos','Catalogo 30');await click('#buscarMedicamentos');
+            assert.deepEqual(await visibleNames(),['Catalogo 30']);
+        });
+        await t.test('medicamentos: escritorio y movil sin desbordamiento; imagenes de referencia', async () => {
+            await medicationPage();await until(catalogReady);await click('[data-medicamento-id="1"]');
+            const screenshots=fs.mkdtempSync(path.join(os.tmpdir(),'saludclick-medication-preview-'));
+            for(const width of [1440,768,390,320]) {
+                await send('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:false});
+                await evaluate(`window.scrollTo({top:0,behavior:'instant'})`);
+                assert.equal(await evaluate(`document.documentElement.scrollWidth<=innerWidth`),true);
+                assert.equal(await evaluate(`document.querySelectorAll('.mc-card').length`),5);
+                const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});
+                fs.writeFileSync(path.join(screenshots,width+'.png'),Buffer.from(shot.data,'base64'));
+            }
+            t.diagnostic('Capturas medicamentos: '+screenshots);
+            await send('Emulation.clearDeviceMetricsOverride');
+        });
+    } finally { medicationFixture = null; }
+
+    async function patientDashboard(config = {}) {
+        dashboardFixture = config;
+        await go('/login.html');
+        await evaluate(`localStorage.clear(); sessionStorage.clear(); sessionStorage.setItem('saludclick_token','patient-a'); sessionStorage.setItem('saludclick_user',JSON.stringify({id:71,nombre:'Nombre local anterior',rol:2}));`);
+        await go('/pages/dashboard.html');
+    }
+    const dashboardState = state => evaluate(`document.querySelector('#dashboardEstado')?.dataset.state === ${JSON.stringify(state)}`);
+    try {
+        await t.test('dashboard paciente: carga, cuatro valores reales de la respuesta e identidad verificada', async () => {
+            await patientDashboard({ delay: 1000 });
+            assert.equal(await dashboardState('loading'), true);
+            assert.equal(await evaluate(`document.querySelector('.dashboard-stats').getAttribute('aria-busy')`), 'true');
+            assert.deepEqual(await evaluate(`['totalPedidos','totalFormulas','pedidosActivos','totalGastado'].map(id=>document.getElementById(id).textContent)`), ['—','—','—','—']);
+            assert.equal(await evaluate(`document.querySelector('#nombreUsuarioPanel').textContent.trim()`), 'Usuario');
+            await until(() => dashboardState('loaded'));
+            assert.deepEqual(await evaluate(`['totalPedidos','totalFormulas','pedidosActivos'].map(id=>document.getElementById(id).textContent)`), ['5','3','2']);
+            assert.equal(await evaluate(`document.querySelector('#totalGastado').textContent === new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(12500)`), true);
+            assert.deepEqual(await evaluate(`['nombreUsuarioTop','nombreUsuario','nombreUsuarioPanel'].map(id=>document.getElementById(id).textContent)`), ['Ana','Ana','Ana']);
+            assert.equal(await evaluate(`JSON.parse(sessionStorage.getItem('saludclick_user')).nombre`), 'Ana');
+            assert.equal(await evaluate(`localStorage.getItem('saludclick_token')`), null);
+            for (const width of [1440,768,390,320]) {
+                await send('Emulation.setDeviceMetricsOverride', {width,height:900,deviceScaleFactor:1,mobile:false});
+                assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true);
+                assert.equal(await evaluate(`document.querySelectorAll('.dashboard-stat').length`), 4);
+            }
+            await send('Emulation.clearDeviceMetricsOverride');
+        });
+        await t.test('dashboard paciente: cero es ausencia de registros y no error', async () => {
+            await patientDashboard({ statistics: { pedidos:0, formulas:0, pedidosActivos:0, totalPagado:0 } });
+            await until(() => dashboardState('empty'));
+            assert.deepEqual(await evaluate(`['totalPedidos','totalFormulas','pedidosActivos'].map(id=>document.getElementById(id).textContent)`), ['0','0','0']);
+            assert.match(await evaluate(`document.querySelector('#dashboardEstado').textContent`), /Sin registros/);
+        });
+        await t.test('dashboard paciente: errores HTTP y de conexion no se muestran como ceros; permite recarga', async () => {
+            for (const config of [{statsStatus:503},{disconnect:true}]) {
+                await patientDashboard(config);
+                await until(() => dashboardState('error'));
+                assert.equal(await evaluate(`document.querySelector('#totalPedidos').textContent`), '—');
+                assert.equal(await evaluate(`document.querySelector('#dashboardEstado').getAttribute('role')`), 'alert');
+            }
+            dashboardFixture = {};
+            await evaluate(`window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}))`);
+            await until(() => dashboardState('loaded'));
+        });
+        await t.test('dashboard paciente: respuestas incompletas o invalidas no inventan indicadores', async () => {
+            for (const statistics of [{pedidos:0,formulas:0},{pedidos:1,formulas:0,pedidosActivos:-1,totalPagado:1},{pedidos:1,formulas:0,pedidosActivos:1,totalPagado:'incorrecto'}]) {
+                await patientDashboard({ statistics });
+                await until(() => dashboardState('error'));
+                assert.equal(await evaluate(`document.querySelector('#totalGastado').textContent`), '—');
+            }
+        });
+        await t.test('dashboard paciente: identidad ajena o de otro rol impide mostrar el resumen', async () => {
+            for (const identity of [{id:72,nombre:'Otro paciente',rol_id:2},{id:71,nombre:'Otro rol',rol_id:3}]) {
+                await patientDashboard({ identity });
+                await until(() => dashboardState('error'));
+                assert.equal(await evaluate(`document.querySelector('#totalPedidos').textContent`), '—');
+                assert.equal(await evaluate(`document.querySelector('#nombreUsuarioPanel').textContent`), 'Usuario');
+            }
+        });
+        await t.test('dashboard paciente: fallo de perfil no usa el nombre local como identidad verificada', async () => {
+            await patientDashboard({profileStatus:503});
+            await until(() => dashboardState('error'));
+            assert.equal(await evaluate(`document.querySelector('#nombreUsuarioPanel').textContent`), 'Usuario');
+            assert.equal(await evaluate(`document.querySelector('#totalPedidos').textContent`), '5');
+        });
+        await t.test('dashboard paciente: descarta respuestas pendientes al cambiar de paciente', async () => {
+            await patientDashboard({delay:700});
+            dashboardFixture = {};
+            await evaluate(`sessionStorage.setItem('saludclick_token','patient-b');sessionStorage.setItem('saludclick_user',JSON.stringify({id:72,nombre:'Beatriz local',rol:2}));window.dispatchEvent(new StorageEvent('storage',{key:'saludclick_token'}));`);
+            await until(() => dashboardState('loaded'));
+            await delay(900);
+            assert.equal(await evaluate(`document.querySelector('#totalPedidos').textContent`), '8');
+            assert.equal(await evaluate(`document.querySelector('#nombreUsuarioPanel').textContent`), 'Beatriz');
+        });
+        await t.test('dashboard paciente: sesion expirada borra datos y vuelve al login', async () => {
+            await patientDashboard({statsStatus:401,delay:100});
+            await until(() => evaluate(`location.pathname === '/login.html'`));
+            assert.equal(await evaluate(`sessionStorage.getItem('saludclick_token') || localStorage.getItem('saludclick_token')`), null);
+        });
+    } finally { dashboardFixture = null; }
+
     await t.test('sin excepciones JavaScript propias', () => assert.deepEqual(errors,[]));
 });
 
