@@ -120,7 +120,7 @@ model Medicamento {
   principio_activo           String?
   concentracion              String?             @db.VarChar(120)
   forma_farmaceutica         String?             @db.VarChar(120)
-  presentacion               String?             @db.VarChar(180)
+  presentacion               String?             @db.Text
   via_administracion         String?             @db.VarChar(120)
   titular_registro           String?             @db.VarChar(220)
   registro_sanitario         String?             @db.VarChar(100)

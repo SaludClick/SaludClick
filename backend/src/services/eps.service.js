@@ -361,6 +361,7 @@ function createService(db) {
           select: {
             ...authorizationSelect,
             afiliado: { select: { id: true, nombres: true, apellidos: true, documento: true } },
+            farmacia_vinculo: { select: { activa: true, farmacia: { select: { nombre: true, apellido: true } } } },
           },
         },
       );

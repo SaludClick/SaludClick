@@ -82,6 +82,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     const paymentChecks = [];
     let medicationFixture = null;
     let dashboardFixture = null;
+    let formulaFixture = null;
     let profileEnabled = false;
     let profileUpdate;
     const demoProfile = { id: 30, nombre: 'Farmacia', apellido: 'Prueba', correo: 'farmacia@example.test', numeroDocumento: 'DOC-123', rol_id: 3 };
@@ -109,6 +110,12 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         if(await administrativeFixture.handle(req,res))return;
         if(req.url==='/socket.io/socket.io.js'){res.writeHead(200,{'Content-Type':'text/javascript'});res.end('/* realtime unavailable in isolated fixture */');return;}
         const pathname = new URL(req.url, 'http://localhost').pathname;
+        if (dashboardFixture && pathname === '/api/health') {
+            const ok = dashboardFixture.healthOk !== false;
+            res.writeHead(ok ? 200 : 503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok }));
+            return;
+        }
         if (dashboardFixture && ['/api/auth/profile', '/api/dashboard/me'].includes(pathname)) {
             const config = { ...dashboardFixture };
             const second = req.headers.authorization === 'Bearer patient-b';
@@ -163,7 +170,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             res.end(JSON.stringify(/\/medicamentos\/\d+$/.test(pathname) ? { ok: true, medicamento: items[0] } : { ok: true, medicamentos: items, paginacion, resumen }));
             return;
         }
-        if (pathname === '/api/farmacia/inventario' || pathname.startsWith('/api/farmacia/pedidos')) {
+        if (pathname === '/api/farmacia/inventario' || pathname.startsWith('/api/integracion/farmacia/pedidos') || pathname.startsWith('/api/integracion/farmacia/solicitudes/')) {
             farmaciaRequests++;
             res.setHeader('Content-Type', 'application/json');
             if (req.method === 'PATCH') {
@@ -260,6 +267,30 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             res.end(JSON.stringify({ ok: true, estadisticas:{pacientes:0,afiliados:0,farmacias:0,autorizaciones:0,pendientes:0,solicitudes:0,inventario:0,agotados:0,stock_bajo:0,notificaciones:0} }));
             return;
         }
+        if (formulaFixture && pathname === '/api/formulas') {
+            res.setHeader('Content-Type', 'application/json');
+            if (req.method === 'POST') {
+                let raw = '';
+                for await (const chunk of req) raw += chunk;
+                const data = JSON.parse(raw);
+                assert.equal(data.nombre, 'Formula ficticia');
+                assert.match(data.archivo, /^data:application\/pdf;base64,/);
+                formulaFixture.uploads++;
+                await new Promise(resolve => setTimeout(resolve, 120));
+                formulaFixture.formulas.push({ id: 71, nombre: data.nombre, estado: 'PENDIENTE', tipo_mime: 'application/pdf', tamano: 8, created_at: '2026-11-14' });
+                res.statusCode = 201;
+                res.end(JSON.stringify({ ok: true, mensaje: 'Documento guardado.' }));
+            } else {
+                res.end(JSON.stringify({ ok: true, formulas: formulaFixture.formulas }));
+            }
+            return;
+        }
+        if (formulaFixture && pathname === '/api/formulas/71') {
+            assert.equal(req.headers.authorization, 'Bearer frontend-test-only');
+            res.setHeader('Content-Type', 'application/pdf');
+            res.end('%PDF-1.4');
+            return;
+        }
         if (pathname === '/api/formulas/admin/all') {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true, formulas: [] }));
@@ -310,7 +341,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         if (pathname === '/api/auth/login' && loginCorrecto) {
             // Respuesta controlada Ãºnicamente en este servidor de pruebas.
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ ok: true, token: 'frontend-test-only', usuario: { nombre: 'Prueba', correo: 'prueba@example.com', rol: loginRole } }));
+            res.end(JSON.stringify({ ok: true, token: 'frontend-test-only', usuario: { id: 71, nombre: 'Prueba', correo: 'prueba@example.com', rol: loginRole } }));
             return;
         }
         if (pathname.startsWith('/api/')) {
@@ -509,7 +540,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     async function enter(selector) { await evaluate(`document.querySelector(${JSON.stringify(selector)}).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))`); }
     const visibleNames = () => evaluate(`[...document.querySelectorAll('#catalogoMedicamentos .mc-card h3')].map(node => node.textContent)`);
     const catalogReady = () => evaluate('Array.isArray(window.saludClickCatalogo) && window.saludClickCatalogo.length === 5');
-    const state = () => evaluate(`JSON.parse(localStorage.getItem('saludclick_pedido_temporal_v1'))`);
+    const state = () => evaluate(`JSON.parse(localStorage.getItem('saludclick_pedido_temporal_v1:71'))`);
     async function clickCartControl(name, controlIndex) {
         await until(() => evaluate(`[...document.querySelectorAll('#detallePedido .mc-selection-item')].some(row=>row.querySelector('strong')?.textContent.includes(${JSON.stringify(name)}))`));
         await evaluate(`(()=>{const row=[...document.querySelectorAll('#detallePedido .mc-selection-item')].find(row=>row.querySelector('strong')?.textContent.includes(${JSON.stringify(name)})); const button=${controlIndex}===2?row.querySelector(':scope > button'):row.querySelectorAll('.mc-quantity button')[${controlIndex}]; button.click();})()`);
@@ -566,7 +597,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         assert.equal(farmaciaUpdates, 3);
         assert.equal(await evaluate('document.querySelectorAll(".farmacia-order button").length'), 1);
         const before = farmaciaRequests;
-        await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',rol:2}))`);
+        await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({id:71,nombre:'Prueba',rol:2}))`);
         await send('Page.navigate', { url: base + '/pages/farmacia.html' });
         await until(() => evaluate('location.pathname === "/pages/dashboard.html"'));
         assert.equal(farmaciaRequests, before);
@@ -582,7 +613,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         assert.deepEqual(errors, [], 'VITALIX no debe producir excepciones JavaScript.');
         return;
     }
-    await evaluate(`for(const s of [localStorage,sessionStorage]){s.setItem('saludclick_token','frontend-test-only');s.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',correo:'prueba@example.com',rol:2}));}`);
+    await evaluate(`for(const s of [localStorage,sessionStorage]){s.setItem('saludclick_token','frontend-test-only');s.setItem('saludclick_user',JSON.stringify({id:71,nombre:'Prueba',correo:'prueba@example.com',rol:2}));}`);
     await go('/index.html');
     await t.test('inicio: buscar, Enter, vacÃ­o, solicitar y servicios', async () => {
         await value('#busquedaInicio', 'acetaminofen'); await click('#buscarInicio');
@@ -645,8 +676,12 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         assert.equal(await evaluate('document.querySelectorAll("#carritoPedido tr").length'), 5);
         assert.equal(await evaluate('document.querySelector("#resultadoPago").hidden'), true);
     });
+    await t.test('carrito: separa cuentas y evita recuperar el borrador comun', async () => {
+        const result = await evaluate('(async()=>{ const auth = await import("/js/auth.js"); const { carritoSesion } = await import("/js/carrito-sesion.js"); const key = "saludclick_pedido_temporal_v1"; localStorage.setItem(key,"legacy"); auth.setSession("patient-a",{id:71,rol:2},false); carritoSesion.setItem(key,"own"); auth.setSession("patient-b",{id:72,rol:2},false); const other = carritoSesion.getItem(key); auth.setSession("frontend-test-only",{id:71,nombre:"Prueba",rol:2},false); const own = carritoSesion.getItem(key); localStorage.removeItem(key); return {other,own}; })()');
+        assert.deepEqual(result, {other:null,own:'own'});
+    });
     await t.test('doble clic de pago envía una sola solicitud de pedido', async () => {
-        await evaluate(`localStorage.setItem('saludclick_pedido_temporal_v1',JSON.stringify({version:1,borrador:[{id:1,cantidad:1}],confirmados:[]}))`);
+        await evaluate(`localStorage.setItem('saludclick_pedido_temporal_v1:71',JSON.stringify({version:1,borrador:[{id:1,cantidad:1}],confirmados:[]}))`);
         await go('/pages/pedidos.html');
         await until(() => evaluate('document.querySelector("#pagarPedido") && !document.querySelector("#pagarPedido").disabled'));
         for (const [id,text] of [['titular','Usuario de prueba'],['numero','4242424242424242'],['vencimiento','12/30'],['cvv','123']]) await value('#'+id,text);
@@ -662,7 +697,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     });
     await t.test('perfil: validaciÃ³n, guardar sin falso Ã©xito y cancelar', async () => {
         await evaluate(`sessionStorage.removeItem('saludclick_user')`);
-        await evaluate(`localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',correo:'prueba@example.com',rol:2}))`);
+        await evaluate(`localStorage.setItem('saludclick_user',JSON.stringify({id:71,nombre:'Prueba',correo:'prueba@example.com',rol:2}))`);
         await go('/pages/perfil.html'); await until(() => evaluate('document.querySelector("#email").value === "prueba@example.com"')); assert.equal(await evaluate('document.querySelector("#email").value'),'prueba@example.com');
         await value('#nombre','Editado'); await click('#guardarPerfil');
         assert.match(await evaluate('document.querySelector("#mensajePerfil").textContent'),/Servicio de datos no disponible/);
@@ -704,7 +739,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         assert.equal(farmaciaUpdates, 3);
         assert.equal(await evaluate('document.querySelectorAll(".farmacia-order button").length'), 1);
         const before = farmaciaRequests;
-        await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',rol:2}))`);
+        await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({id:71,nombre:'Prueba',rol:2}))`);
         await send('Page.navigate', { url: base + '/pages/farmacia.html' });
         await until(() => evaluate('location.pathname === "/pages/dashboard.html"'));
         assert.equal(farmaciaRequests, before);
@@ -734,6 +769,35 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         await until(() => evaluate('location.pathname === "/pages/dashboard.html"'));
     });
 
+    await t.test('dashboard paciente: accesos compactos y chat con enlaces a ambos canales', async () => {
+        await evaluate('sessionStorage.setItem("saludclick_token","frontend-test-only");sessionStorage.setItem("saludclick_user",JSON.stringify({id:71,nombre:"Paciente",rol:2}));');
+        await go('/pages/dashboard.html');
+        assert.equal(await evaluate('document.querySelector("[data-eps-integration]")'), null);
+        assert.doesNotMatch(await evaluate('document.body.textContent'), /Ayuda con tu cuenta/);
+        assert.deepEqual(await evaluate('[...document.querySelectorAll(".dashboard-actions a")].map(a=>new URL(a.href).pathname)'), [
+            '/pages/medicamentos.html', '/pages/pedidos.html', '/pages/formulas.html', '/pages/historial.html', '/pages/chat-farmacia.html'
+        ]);
+        try {
+            for (const [width, columns] of [[1440,5],[1024,3],[768,2],[375,1]]) {
+                await send('Emulation.setDeviceMetricsOverride', {width,height:900,deviceScaleFactor:1,mobile:width<800});
+                const layout = await evaluate('(() => { const rect = s=>document.querySelector(s).getBoundingClientRect(); return {top:Math.round(rect(".dashboard-welcome").top-rect("#navbar").bottom),bottom:Math.round(rect("#contacto").top-rect(".dashboard-info-grid").bottom),columns:getComputedStyle(document.querySelector(".dashboard-actions")).gridTemplateColumns.split(" ").length,fits:document.documentElement.scrollWidth <= innerWidth}; })()');
+                assert.equal(layout.columns, columns, JSON.stringify(layout));
+                assert.ok(layout.top >= 10 && layout.top <= 25, JSON.stringify(layout));
+                assert.ok(layout.bottom >= 16 && layout.bottom <= 34, JSON.stringify(layout));
+                assert.equal(layout.fits, true);
+            }
+            const chat = '.dashboard-actions a[href="chat-farmacia.html"]';
+            assert.match(await evaluate('document.querySelector('+JSON.stringify(chat)+').textContent'), /Comunícate con farmacia y soporte/);
+            await click(chat);
+            await until(() => evaluate('location.pathname === "/pages/chat-farmacia.html" && Boolean(document.querySelector(".chat-composer"))'));
+            const soporte = '.farmacia-chat-nav a[href="/pages/soporte.html"]';
+            await click(soporte);
+            await until(() => evaluate('location.pathname === "/pages/soporte.html" && Boolean(document.querySelector("#adminView"))'));
+        } finally {
+            await send('Emulation.clearDeviceMetricsOverride');
+        }
+    });
+
     await t.test('dashboard EPS valida el acceso y redirige roles no autorizados', async () => {
         await evaluate(`for (const s of [localStorage,sessionStorage]) { s.setItem('saludclick_token','frontend-test-only'); s.setItem('saludclick_user',JSON.stringify({nombre:'EPS de prueba',rol:4})); }`);
         await go('/pages/eps.html');
@@ -741,10 +805,10 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
 
         assert.equal(await evaluate('document.querySelector("#epsMain h1")?.textContent.trim()'), 'Dashboard');
         assert.match(await evaluate('document.querySelector("#epsAccess").textContent'), /Acceso EPS verificado/);
-        assert.match(await evaluate('document.querySelector("#epsMain").textContent'), /Pacientes vinculados/);
-        assert.equal(await evaluate('document.querySelectorAll(".admin-side-link").length'), 9);
-        assert.deepEqual(await evaluate('[...document.querySelectorAll(".admin-side-link")].map(link => link.querySelector("span")?.textContent.trim())'), [
-            'Dashboard', 'Afiliados', 'Farmacias', 'Autorizaciones', 'Solicitudes', 'Pacientes', 'Inventario', 'Notificaciones', 'Perfil'
+        assert.match(await evaluate('document.querySelector("#epsWorkspace").textContent'), /Farmacias activas/);
+        assert.doesNotMatch(await evaluate('document.querySelector("#epsWorkspace").textContent'), /Pacientes vinculados|Autorizaciones/);
+        assert.deepEqual(await evaluate('[...document.querySelectorAll("[data-eps-view]")].map(link => link.querySelector("span")?.textContent.trim())'), [
+            'Dashboard', 'Afiliados', 'Farmacias', 'Solicitudes', 'Inventario', 'Notificaciones', 'Perfil'
         ]);
         assert.equal(await evaluate('document.querySelectorAll(".eps-nav-disabled[aria-disabled=true]").length'), 0);
         assert.equal(epsAccessRequests, 1);
@@ -820,7 +884,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             } else if (route === '/pages/farmacia.html') {
                 await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Farmacia',rol:3}))`);
             } else {
-                await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',rol:2}))`);
+                await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({id:71,nombre:'Prueba',rol:2}))`);
             }
             if(route==='/pages/soporte.html')await evaluate(`for(const s of [localStorage,sessionStorage])s.setItem('saludclick_user',JSON.stringify({id:42,nombre:'Cliente',rol:2}))`);
             if(route==='/pages/admin-cuentas.html'){await go('/pages/admin.html#usuarios');}
@@ -941,7 +1005,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         }
     });
     await t.test('sesiÃ³n: cinco medicamentos, confirmar, logout limpia destino y volver exige login', async () => {
-        await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only'); localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',correo:'prueba@example.com'}))`);
+        await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only'); localStorage.setItem('saludclick_user',JSON.stringify({id:71,nombre:'Prueba',correo:'prueba@example.com'}))`);
         await go('/pages/medicamentos.html'); await until(catalogReady); await click('#vaciarPedido');
         for (const [index,id] of [1,2,3,4,5].entries()) {
             await click(`[data-medicamento-id="${id}"]`);
@@ -1010,7 +1074,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         assert.equal(await evaluate('document.querySelectorAll("#servicios button[type=button]").length'),6);
     });
     await t.test('imágenes locales del catálogo de medicamentos cargan', async () => {
-        await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only'); localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',rol:2}))`);
+        await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only'); localStorage.setItem('saludclick_user',JSON.stringify({id:71,nombre:'Prueba',rol:2}))`);
         await go('/pages/medicamentos.html');
         await until(async () => (await visibleNames()).length === 5);
         const images = await evaluate("document.querySelectorAll('#catalogoMedicamentos .mc-medication-image').length");
@@ -1162,7 +1226,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         paymentChecks.length = 0;
         await go('/login.html');
         await evaluate("localStorage.clear();sessionStorage.clear();sessionStorage.setItem('saludclick_token','patient-payment');sessionStorage.setItem('saludclick_user',JSON.stringify({id:71,nombre:'Paciente',rol:2}));");
-        if (!empty) await evaluate("localStorage.setItem('saludclick_pedido_temporal_v1',JSON.stringify({version:1,borrador:[{id:1,cantidad:1}],confirmados:[]}))");
+        if (!empty) await evaluate("localStorage.setItem('saludclick_pedido_temporal_v1:71',JSON.stringify({version:1,borrador:[{id:1,cantidad:1}],confirmados:[]}))");
         await go('/pages/pedidos.html#checkout');
         if (!empty) await until(() => evaluate("!document.getElementById('pagarPedido').disabled"));
         else await until(() => evaluate("document.getElementById('carritoPedido').rows.length > 0"));
@@ -1185,6 +1249,12 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             await until(() => evaluate("document.getElementById('tablaPedidos').textContent.includes('#801')"));
             assert.equal((await state()).borrador.length,0);
             assert.equal(await evaluate("document.getElementById('pagarPedido').disabled"),true);
+            await go('/pages/historial.html');
+            await until(() => evaluate('Boolean(document.querySelector(".btn-ver-pedido"))'));
+            await click('.btn-ver-pedido');
+            await until(() => evaluate('document.querySelector("#modalPedidoContenido")?.textContent.includes("SIM-TEST-801")'));
+            assert.match(await evaluate('document.querySelector("#modalPedidoContenido").textContent'), /Aprobado/);
+            await click('#cerrarModalPedido');
         });
         await t.test('pago: rechazo real de la simulacion conserva el carrito y permite reintento', async () => {
             await paymentPage();
@@ -1231,14 +1301,14 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         });
         await t.test('pago: fallo de almacenamiento local tras confirmar no permite crear otro pedido', async () => {
             await paymentPage();
-            await evaluate("(()=>{const original=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key==='saludclick_pedido_temporal_v1')throw new Error('Storage unavailable in fixture');return original.call(this,key,value);};})()");
+            await evaluate("(()=>{const original=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key==='saludclick_pedido_temporal_v1:71')throw new Error('Storage unavailable in fixture');return original.call(this,key,value);};})()");
             await click('#pagarPedido');await until(() => paymentState('approved'));
             assert.equal(paymentRecords.size,1);
             assert.equal(await evaluate("document.getElementById('pagarPedido').disabled"),true);
             await click('#pagarPedido');
             assert.equal(paymentChecks.length,1);
             assert.equal((await state()).borrador.length,1);
-            assert.ok(await evaluate("!!sessionStorage.getItem('saludclick_pedido_idempotencia')"));
+            assert.ok(await evaluate("!!sessionStorage.getItem('saludclick_pedido_idempotencia:71')"));
         });
         await t.test('pago: cuatro campos visibles de demostracion con selector tecnico oculto', async () => {
             await paymentPage();
@@ -1392,6 +1462,14 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             }
             await send('Emulation.clearDeviceMetricsOverride');
         });
+        await t.test('dashboard paciente: salud de la API se muestra sin falsear estadisticas', async () => {
+            await patientDashboard({});
+            await until(() => evaluate('document.querySelector("#dashboardSaludEstado").textContent === "Conexión operativa"'));
+            await patientDashboard({healthOk:false});
+            await until(() => evaluate('document.querySelector("#dashboardSaludEstado").textContent === "Conexión no verificada"'));
+            await until(() => evaluate('document.querySelector("#dashboardEstado").dataset.state === "loaded"'));
+            assert.equal(await evaluate('document.querySelector("#totalPedidos").textContent'), '5');
+        });
         await t.test('dashboard paciente: cero es ausencia de registros y no error', async () => {
             await patientDashboard({ statistics: { pedidos:0, formulas:0, pedidosActivos:0, totalPagado:0 } });
             await until(() => dashboardState('empty'));
@@ -1446,6 +1524,20 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         });
     } finally { dashboardFixture = null; }
 
+    await t.test('formula del paciente: evita doble carga y abre el visor desde el clic', async () => {
+        formulaFixture = { uploads: 0, formulas: [] };
+        try {
+            await evaluate('sessionStorage.setItem("saludclick_token","frontend-test-only"); sessionStorage.setItem("saludclick_user",JSON.stringify({id:71,nombre:"Paciente",rol:2}));');
+            await go('/pages/formulas.html');
+            await until(() => evaluate('Boolean(document.querySelector("#listaFormulas .empty-state"))'));
+            await value('#formulaNombre', 'Formula ficticia');
+            await evaluate('(() => { const files = new DataTransfer(); files.items.add(new File(["%PDF-1.4"], "fixture.pdf", {type:"application/pdf"})); document.querySelector("#formulaArchivo").files = files.files; const submit = document.querySelector("#formulaForm button[type=submit]"); submit.click(); submit.click(); })()');
+            await until(() => evaluate('Boolean(document.querySelector(".formula-card button"))'));
+            assert.equal(formulaFixture.uploads, 1);
+            await evaluate('(() => { window.open = () => ({closed:false,close(){},location:{replace(url){window.formulaPreview = url;}}}); document.querySelector(".formula-card button").click(); window.open = () => null; })()');
+            await until(() => evaluate('window.formulaPreview?.startsWith("blob:")'));
+        } finally { formulaFixture = null; }
+    });
     await t.test('sin excepciones JavaScript propias', () => assert.deepEqual(errors,[]));
 });
 

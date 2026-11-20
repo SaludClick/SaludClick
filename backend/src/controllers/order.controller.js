@@ -31,7 +31,7 @@ async function crearPedido(req, res) {
     } catch (error) {
         console.error("Error al crear pedido:", error);
 
-        const status = [400, 409].includes(error.status)
+        const status = [400, 409, 503].includes(error.status)
             ? error.status
             : 500;
         res.status(status).json({
@@ -138,22 +138,21 @@ async function eliminarPedido(req, res) {
 
         res.json({
             ok: true,
-            mensaje: "Pedido eliminado correctamente."
+            mensaje: "Pedido cancelado correctamente."
         });
 
     } catch (error) {
-        console.error("Error al eliminar pedido:", error);
-
-        if (error.message === "Pedido no encontrado.") {
-            return res.status(404).json({
+        if ([404, 409].includes(error.status) || error.message === "Pedido no encontrado.") {
+            return res.status(error.status || 404).json({
                 ok: false,
                 mensaje: error.message
             });
         }
 
+        console.error("Error al cancelar pedido:", error?.code || error?.name);
         res.status(500).json({
             ok: false,
-            mensaje: "No se pudo eliminar el pedido."
+            mensaje: "No se pudo cancelar el pedido."
         });
     }
 }

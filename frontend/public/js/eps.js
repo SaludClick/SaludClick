@@ -4,10 +4,10 @@ import { apiFetch } from './api.js';
 const titles = {
   dashboard: 'Dashboard',
   afiliados: 'Afiliados',
-  pacientes: 'Pacientes',
+  pacientes: 'Pacientes vinculados',
+  autorizaciones: 'Autorizaciones',
   farmacias: 'Farmacias',
   inventario: 'Inventario',
-  autorizaciones: 'Autorizaciones',
   solicitudes: 'Solicitudes',
   notificaciones: 'Notificaciones',
   perfil: 'Perfil EPS',
@@ -15,9 +15,9 @@ const titles = {
 const states = {
   afiliados: ['ACTIVO', 'INACTIVO', 'SUSPENDIDO', 'RETIRADO'],
   pacientes: ['ACTIVO', 'INACTIVO'],
+  autorizaciones: ['PENDIENTE', 'APROBADA', 'RECHAZADA'],
   farmacias: ['ACTIVA', 'INACTIVA'],
   inventario: ['DISPONIBLE', 'AGOTADO', 'BAJO'],
-  autorizaciones: ['PENDIENTE', 'APROBADA', 'RECHAZADA'],
   solicitudes: ['PENDIENTE', 'APROBADA', 'PREPARANDO', 'LISTA', 'ENTREGADA', 'CANCELADA'],
   notificaciones: ['PENDIENTE', 'LEIDA'],
 };
@@ -81,11 +81,17 @@ function init() {
   for (const a of document.querySelectorAll('[data-eps-view]'))
     a.addEventListener('click', (e) => {
       e.preventDefault();
+      const toggle = document.getElementById('menuToggle');
+      const menuWasOpen = toggle.getAttribute('aria-expanded') === 'true' && toggle.offsetWidth > 0;
       navigate(a.dataset.epsView);
+      if (menuWasOpen) {
+        toggle.click();
+        document.getElementById('epsTitle').focus();
+      }
     });
   window.addEventListener('hashchange', () => {
     const target = location.hash.slice(1);
-    if (titles[target] && target !== view) navigate(target);
+    if (target !== view) navigate(target);
   });
   window.addEventListener('pagehide', () => {
     clearInterval(timer);
@@ -107,7 +113,7 @@ function init() {
     }
   });
   function navigate(target, extra = {}) {
-    view = titles[target] ? target : 'dashboard';
+    view = Object.hasOwn(titles, target) ? target : 'dashboard';
     pagina = 1;
     filters = { ...extra };
     history.replaceState(null, '', '#' + view);
@@ -180,12 +186,10 @@ function init() {
   }
   function dashboard(stats) {
     const box = el('section', undefined, 'admin-stats');
+    box.setAttribute('aria-label', 'Indicadores EPS');
     for (const [k, label] of Object.entries({
-      pacientes: 'Pacientes vinculados',
       afiliados: 'Afiliados',
       farmacias: 'Farmacias activas',
-      autorizaciones: 'Autorizaciones',
-      pendientes: 'Autorizaciones pendientes',
       solicitudes: 'Solicitudes',
       inventario: 'Productos por farmacia',
       agotados: 'Productos agotados',
@@ -201,12 +205,20 @@ function init() {
       el(
         'p',
         'Las existencias corresponden a registros por farmacia vinculada. Las solicitudes muestran el estado operativo y un seguimiento EPS independiente.',
+        'eps-dashboard-note',
       ),
     );
   }
   function toolbar() {
     const f = el('form', undefined, 'eps-toolbar'),
-      search = field(f, 'buscar', 'Buscar', 'text', filters.buscar || '');
+      search = field(
+        f,
+        'buscar',
+        'Buscar',
+        'text',
+        filters.buscar || '',
+        !['farmacias', 'inventario'].includes(view),
+      );
     search.maxLength = 100;
     select(f, 'estado', 'Estado', ['', ...(states[view] || [])], filters.estado || '');
     if (view === 'inventario')
@@ -228,21 +240,23 @@ function init() {
       }),
     );
     if (view === 'afiliados') f.append(button('Registrar afiliado', () => affiliateForm()));
-    if (view === 'farmacias') f.append(button('Vincular farmacia', () => pharmacyForm()));
-    if (view === 'autorizaciones')
-      f.append(button('Crear autorizacion', () => authorizationForm()));
-    workspace.append(f);
-    if (filters.paciente)
-      workspace.append(
-        el(
-          'p',
-          'Mostrando registros del paciente seleccionado. Usa Limpiar filtros para ver todos.',
-        ),
+    if (view === 'afiliados') f.append(button('Pacientes vinculados', () => navigate('pacientes')));
+    if (view === 'solicitudes') f.append(button('Autorizaciones', () => navigate('autorizaciones')));
+    if (view === 'pacientes') f.append(button('Volver a afiliados', () => navigate('afiliados')));
+    if (view === 'autorizaciones') {
+      f.append(
+        button('Crear autorizacion', () => authorizationForm()),
+        button('Volver a solicitudes', () => navigate('solicitudes')),
       );
+    }
+    if (view === 'farmacias') f.append(button('Vincular farmacia', () => pharmacyForm()));
+    workspace.append(f);
+    if (filters.paciente) workspace.append(el('p', 'Mostrando registros del paciente seleccionado.'));
   }
   function pagination(p) {
     pagina = p.pagina;
-    const n = el('div', undefined, 'eps-pages');
+    const n = el('nav', undefined, 'eps-pages');
+    n.setAttribute('aria-label', 'Paginación de ' + titles[view]);
     const prev = button('Anterior', () => {
         pagina--;
         load();
@@ -262,31 +276,33 @@ function init() {
   }
   function table(rows) {
     if (!rows.length) {
-      workspace.append(
-        el(
-          'p',
-          view === 'inventario' && !Object.values(filters).some(Boolean)
-            ? 'Todavia no hay existencias registradas para las farmacias vinculadas a esta EPS.'
-            : view === 'pacientes' && !Object.values(filters).some(Boolean)
-              ? 'No hay cuentas de pacientes vinculadas y verificadas para esta EPS. Los afiliados sin cuenta se consultan en Afiliados.'
-              : 'No hay registros para los filtros seleccionados.',
-          'eps-empty',
-        ),
-      );
+      const emptyInventory = view === 'inventario' && !filters.buscar?.trim() && !filters.estado;
+      const message = emptyInventory
+        ? (filters.farmacia
+          ? 'Esta farmacia todavía no tiene existencias registradas para el convenio EPS.'
+          : 'Todavía no hay existencias registradas para los convenios activos de esta EPS.')
+        : 'No hay registros para los filtros seleccionados.';
+      workspace.append(el('p', message, 'eps-empty'));
+      if (emptyInventory) {
+        workspace.append(el('p', 'La cuenta de Farmacia puede cargarlas en Integración EPS → Registrar existencias.'));
+      }
       return;
     }
     const headers = {
       afiliados: ['Nombre / ID', 'Documento', 'Regimen / Estado', 'Acciones'],
       pacientes: ['Paciente', 'Documento', 'Afiliacion', 'Acciones'],
+      autorizaciones: ['Autorizacion', 'Paciente', 'Estado / Fecha', 'Acciones'],
       farmacias: ['Farmacia / ID', 'Contacto', 'Vinculacion', 'Acciones'],
       inventario: ['Medicamento', 'Farmacia', 'Existencias', 'Actualizado'],
-      autorizaciones: ['Autorizacion', 'Paciente', 'Estado / Fecha', 'Acciones'],
       solicitudes: ['Solicitud', 'Paciente', 'Estado operativo / EPS', 'Acciones'],
       notificaciones: ['Notificacion', 'Tipo / Fecha', 'Estado', 'Acciones'],
     }[view];
     const scroll = el('div', undefined, 'eps-table-scroll'),
       t = el('table'),
       head = el('tr');
+    scroll.tabIndex = 0;
+    scroll.setAttribute('role', 'region');
+    scroll.setAttribute('aria-label', 'Listado de ' + titles[view]);
     for (const h of headers) {
       const th = el('th', h);
       th.scope = 'col';
@@ -403,8 +419,12 @@ function init() {
           actions.append(
             button('Marcar leida', async (b) => {
               b.disabled = true;
-              await apiFetch('/api/eps/notificaciones/' + r.id + '/leida', { method: 'PATCH' });
-              await load();
+              try {
+                await apiFetch('/api/eps/notificaciones/' + r.id + '/leida', { method: 'PATCH' });
+                await load();
+              } finally {
+                b.disabled = false;
+              }
             }),
           );
       }

@@ -34,7 +34,7 @@ test('navegador: nueve pantallas independientes, permisos, módulos aislados, ll
             if (url.pathname === '/api/farmacia/eps') return send({ ok: true, vinculacion });
             if (url.pathname === '/api/farmacia/usuarios') return send({ ok: true, vinculacion, pacientes: [], totalActivos: 0, paginacion: { pagina: 1, tamano: 25, total: 0, paginas: 0 } });
             if (url.pathname === '/api/farmacia/verificar-acceso') { res.statusCode = access; return send({ ok: access === 200, mensaje: 'Acceso no vigente.' }); }
-            if (url.pathname === '/api/farmacia/pedidos') {
+            if (url.pathname === '/api/integracion/farmacia/pedidos') {
                 if (denyOrders) { res.statusCode = 503; return send({ ok: false, codigo: 'FARMACIA_PEDIDOS_TITULARIDAD_PENDIENTE', mensaje: 'Falta titularidad verificable del pedido.' }); }
                 return send({ ok: true, resumen: { pendientes: 0, preparando: 0, listas: 0, entregadas: 0 }, pedidos: [], paginacion: { pagina: 1, tamano: 25, total: 0, paginas: 0 } });
             }
@@ -80,8 +80,8 @@ test('navegador: nueve pantallas independientes, permisos, módulos aislados, ll
             const actual = calls.slice(before).map(url => url.split('?')[0]);
             const expected = ['/api/farmacia/verificar-acceso'];
             expected.push(module === 'usuarios' ? '/api/farmacia/usuarios' : '/api/farmacia/eps');
-            if (module === 'dashboard') expected.push('/api/farmacia/pedidos','/api/farmacia/inventario');
-            if (['solicitudes','entregas'].includes(module)) expected.push('/api/farmacia/pedidos');
+            if (module === 'dashboard') expected.push('/api/integracion/farmacia/pedidos','/api/farmacia/inventario');
+            if (['solicitudes','entregas'].includes(module)) expected.push('/api/integracion/farmacia/pedidos');
             if (['inventario','medicamentos','notificaciones'].includes(module)) expected.push('/api/farmacia/' + module);
             if (module === 'perfil') expected.push('/api/auth/profile');
             if (module === 'chat') expected.push('/api/chat/conversaciones');

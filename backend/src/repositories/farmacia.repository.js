@@ -3,6 +3,7 @@ const { orderScope, assignmentReady } = require('./eps-order-scope');
 const notifications = require('./farmacia-notificaciones.repository');
 const { habilitadas } = require('../config/farmacia-notificaciones');
 const { ESTADOS_OPERATIVOS } = require('../config/farmacia-solicitudes');
+const { habilitados: pedidosSimulados } = require('../config/pedidos-simulados');
 
 // The queue needs no personal identifiers, contacts, addresses or payment cards.
 const solicitudSelect = {
@@ -13,8 +14,8 @@ const solicitudSelect = {
     } } } }
 };
 
-async function listarPedidos({ estado, id, skip, take, actorId }) {
-    const scope = await scopeFor(actorId);
+async function listarPedidos({ estado, id, skip, take, actorId, authorizationId }) {
+    const scope = await scopeFor(actorId, authorizationId);
     const where = { ...scope, estado: estado === 'todas' ? { in: ESTADOS_OPERATIVOS } : estado || { in: ESTADOS_OPERATIVOS.slice(0, 3) }, ...(id === undefined ? {} : { id }) };
     return prisma.$transaction(async tx => {
         const [pedidos, total, grupos] = await Promise.all([
@@ -27,12 +28,19 @@ async function listarPedidos({ estado, id, skip, take, actorId }) {
     }, { isolationLevel: 'RepeatableRead' });
 }
 
-async function scopeFor(actorId) {
+async function scopeFor(actorId, authorizationId) {
+    if (authorizationId !== undefined) {
+        return { autorizaciones_eps: { some: {
+            ...(authorizationId === null ? {} : { id: authorizationId }), estado: 'APROBADA',
+            farmacia_vinculo: { farmacia_id: actorId, activa: true, eps: { activa: true },
+                farmacia: { rol_id: 3, estado: 'ACTIVO' } }
+        } } };
+    }
     return orderScope(actorId, actorId !== undefined && await assignmentReady(prisma));
 }
 
-async function detallePedido(id, actorId) {
-    return prisma.solicitud.findFirst({ where: { ...await scopeFor(actorId), id, estado: { in: ESTADOS_OPERATIVOS } },
+async function detallePedido(id, actorId, authorizationId) {
+    return prisma.solicitud.findFirst({ where: { ...await scopeFor(actorId, authorizationId), id, estado: { in: ESTADOS_OPERATIVOS } },
         select: { ...solicitudSelect, direccion: true, usuario: { select: { nombre: true, apellido: true } } } });
 }
 
@@ -49,15 +57,17 @@ async function listarInventario({ buscar, skip, take }) {
     return { medicamentos, total };
 }
 
-async function avanzarPedido(id, actual, siguiente, actorId) {
+async function avanzarPedido(id, actual, siguiente, actorId, authorizationId) {
     // Comparar y actualizar en una sola operación evita sobrescribir una
     // transición concurrente realizada por otra farmacia o el administrador.
     const update = async tx => {
         const result = await tx.solicitud.updateMany({
-            // A simulated approval never authorizes preparation or dispensing.
             where: {
-                ...await scopeFor(actorId),
-                id, estado: actual, pagos: { some: { estado: 'APROBADO', simulacion: false } },
+                ...await scopeFor(actorId, authorizationId),
+                id, estado: actual, pagos: { some: {
+                    estado: 'APROBADO',
+                    ...(pedidosSimulados() ? {} : { simulacion: false })
+                } },
                 // No authorized prescription-to-order validation exists. Fail closed
                 // for prescription-required, unknown requirements and empty orders.
                 detalles: {

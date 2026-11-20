@@ -11,7 +11,7 @@ export function initFarmaciaDashboard() {
         document.querySelectorAll('[data-dashboard-state]').forEach(card => card.setAttribute('aria-busy', 'true'));
         document.getElementById('farmaciaCatalogStats').setAttribute('aria-busy', 'true');
         const results = await Promise.allSettled([
-            apiFetch('/api/farmacia/pedidos?estado=todas&tamano=1'),
+            apiFetch('/api/integracion/farmacia/pedidos?estado=todas&tamano=1'),
             apiFetch('/api/farmacia/inventario?tamano=1')
         ]);
         if (current !== sequence) return;

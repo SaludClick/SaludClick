@@ -3,6 +3,7 @@ const { createGuard } = require('../middlewares/eps-integration.middleware');
 const { createService } = require('../services/eps-integration.service');
 const { databaseFailure, safeDiagnostic } = require('../services/eps-errors');
 function createRouter({ db, guard, service } = {}) {
+  const { sinQuery } = require('../validators/farmacia-solicitudes.validator');
   const r = express.Router(),
     allow = guard || createGuard({ db });
   let s = service;
@@ -90,6 +91,9 @@ function createRouter({ db, guard, service } = {}) {
     allow(4),
     handle(async (s, r) => ({ asignacion: await s.derivar(r.actor, r.params.id, r.body) })),
   );
+  const farmacia = require('../services/farmacia.service');
+  r.get('/farmacia/pedidos', allow(3), handle((s, r) => farmacia.listarPedidos(r.query, r.actor.id, null)));
+  r.get('/farmacia/pedidos/:id', allow(3), handle((s, r) => farmacia.detallePedido(r.params.id, r.query, r.actor.id, null)));
   r.get(
     '/farmacia/autorizaciones',
     allow(3),
@@ -98,12 +102,20 @@ function createRouter({ db, guard, service } = {}) {
   r.patch(
     '/farmacia/solicitudes/:id/estado',
     allow(3),
-    handle(async (s, r) => ({ pedido: await s.avanzarFarmacia(r.actor, r.params.id, r.body) })),
+    handle(async (s, r) => {
+      sinQuery(r.query);
+      return { pedido: await s.avanzarFarmacia(r.actor, r.params.id, r.body, r.app.get('farmaciaNotificationEvents')) };
+    }),
   );
   r.get(
     '/farmacia/convenios',
     allow(3),
     handle(async (s, r) => ({ datos: await s.conveniosFarmacia(r.actor) })),
+  );
+  r.get(
+    '/farmacia/catalogo',
+    allow(3),
+    handle((s, r) => s.catalogoFarmacia(r.actor, r.query)),
   );
   r.get(
     '/farmacia/existencias',

@@ -1,3 +1,4 @@
+const { habilitados: pedidosSimulados } = require('../config/pedidos-simulados');
 const crypto = require("crypto");
 
 const orderRepository = require("../repositories/order.repository");
@@ -137,6 +138,9 @@ function simularPago({
 // =================================================
 
 async function crearPedido(usuarioId, data, idempotencyKey) {
+    if (process.env.NODE_ENV === 'production' && !pedidosSimulados()) {
+        throw serviceError('El pago simulado no está habilitado en este entorno.', 503);
+    }
     const key = String(idempotencyKey || "").trim().toLowerCase();
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(key)) {
         throw serviceError("La clave Idempotency-Key debe ser un UUID válido.");
@@ -216,7 +220,13 @@ async function crearPedido(usuarioId, data, idempotencyKey) {
             );
         }
 
-        const precio = Number(med.precio);
+        const precio = typeof med.precio === "number" ||
+            (typeof med.precio === "string" && /^-?\d+(?:\.\d+)?$/.test(med.precio))
+            ? Number(med.precio)
+            : NaN;
+        if (!Number.isFinite(precio) || precio < 0.01) {
+            throw serviceError(`${med.nombre} no tiene un precio comercial valido.`, 409);
+        }
 
         const subtotal = Number(
             (precio * item.cantidad).toFixed(2)

@@ -6,7 +6,7 @@ function orderConflict(message) {
 
 async function buscarPedidoIdempotenteEn(queryable, usuarioId, key, hash) {
     const { rows } = await queryable.query(
-        `SELECT s.id AS "solicitudId", s.idempotency_hash,
+        `SELECT s.id AS "solicitudId", s.idempotency_hash, s.estado AS solicitud_estado,
                 p.id AS "pagoId", p.monto AS total, p.estado,
                 p.metodo, p.marca, p.ultimos_digitos, p.referencia
          FROM solicitudes s
@@ -21,6 +21,9 @@ async function buscarPedidoIdempotenteEn(queryable, usuarioId, key, hash) {
         throw orderConflict(
             "La clave Idempotency-Key ya fue utilizada con otros datos."
         );
+    }
+    if (pedido.solicitud_estado === 'CANCELADA') {
+        throw orderConflict('El pedido asociado a esta clave fue cancelado. Inicia un pedido nuevo.');
     }
     if (pedido.pagoId == null) {
         throw new Error("No se pudo recuperar el resultado del pedido anterior.");
@@ -111,7 +114,14 @@ async function crearPedidoConPago({
                     `Stock insuficiente para ${medicamento.nombre}. Disponible: ${medicamento.stock}.`
                 );
             }
-            if (Number(medicamento.precio) !== Number(item.precio)) {
+            const precio = typeof medicamento.precio === "number" ||
+                (typeof medicamento.precio === "string" && /^-?\d+(?:\.\d+)?$/.test(medicamento.precio))
+                ? Number(medicamento.precio)
+                : NaN;
+            if (!Number.isFinite(precio) || precio < 0.01) {
+                throw orderConflict(`${medicamento.nombre} no tiene un precio comercial valido.`);
+            }
+            if (precio !== Number(item.precio)) {
                 throw orderConflict(
                     `El precio de ${medicamento.nombre} cambió. Actualiza el carrito.`
                 );
@@ -159,7 +169,7 @@ async function listarPedidosUsuario(usuarioId) {
     const { rows } = await pool.query(
         `SELECT s.id, s.fecha, s.estado, s.tipo_entrega, s.direccion,
                 COALESCE(SUM(ds.subtotal), 0) AS total,
-                p.estado AS pago_estado, p.metodo AS pago_metodo,
+                p.estado AS pago_estado, p.simulacion AS pago_simulado, p.metodo AS pago_metodo,
                 p.marca AS pago_marca, p.ultimos_digitos
          FROM solicitudes s
          LEFT JOIN detalle_solicitud ds ON ds.solicitud_id = s.id
@@ -193,25 +203,28 @@ async function eliminarPedidoUsuario(usuarioId, pedidoId) {
     const connection = await pool.connect();
     try {
         await connection.query("BEGIN");
-        const { rows: pedidos } = await connection.query(
-            `SELECT id FROM solicitudes
-             WHERE id = $1 AND usuario_id = $2 LIMIT 1`,
+        const { rows: [pedido] } = await connection.query(
+            'SELECT id, estado FROM solicitudes WHERE id = $1 AND usuario_id = $2 FOR UPDATE',
             [pedidoId, usuarioId]
         );
-        if (!pedidos.length) throw new Error("Pedido no encontrado.");
-
-        await connection.query(
-            "DELETE FROM pagos WHERE solicitud_id = $1 AND usuario_id = $2",
-            [pedidoId, usuarioId]
-        );
-        await connection.query(
-            "DELETE FROM detalle_solicitud WHERE solicitud_id = $1",
-            [pedidoId]
-        );
-        await connection.query(
-            "DELETE FROM solicitudes WHERE id = $1 AND usuario_id = $2",
-            [pedidoId, usuarioId]
-        );
+        if (!pedido) throw Object.assign(new Error('Pedido no encontrado.'), { status: 404 });
+        if (pedido.estado !== 'CANCELADA') {
+            const { rows: pagosReales } = await connection.query(
+                'SELECT id FROM pagos WHERE solicitud_id = $1 AND simulacion IS DISTINCT FROM TRUE LIMIT 1',
+                [pedidoId]
+            );
+            if (!['PENDIENTE', 'APROBADA'].includes(pedido.estado) || pagosReales.length) {
+                throw Object.assign(new Error('El pedido no puede cancelarse desde el historial. Contacta a soporte.'), { status: 409 });
+            }
+            const { rows: items } = await connection.query(
+                'SELECT medicamento_id, SUM(cantidad)::int AS cantidad FROM detalle_solicitud WHERE solicitud_id = $1 GROUP BY medicamento_id ORDER BY medicamento_id',
+                [pedidoId]
+            );
+            for (const item of items) {
+                await connection.query('UPDATE medicamentos SET stock = stock + $1 WHERE id = $2', [item.cantidad, item.medicamento_id]);
+            }
+            await connection.query("UPDATE solicitudes SET estado = 'CANCELADA', updated_at = NOW() WHERE id = $1", [pedidoId]);
+        }
         await connection.query("COMMIT");
         return true;
     } catch (error) {

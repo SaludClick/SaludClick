@@ -4,6 +4,7 @@ const { entregas = false } = Astro.props;
 <section id="pedidosFarmacia" class="farmacia-orders-panel" aria-labelledby="pedidosTitle" tabindex="-1">
   <h2 id="pedidosTitle">{entregas ? 'Solicitudes para entrega' : 'Solicitudes de Farmacia'}</h2>
   <p>Consulta la cola operativa y sus medicamentos. Los avances exigen pago real aprobado. Los medicamentos que requieren fórmula o tienen ese requisito sin determinar permanecen bloqueados.</p>
+  <p><a href="/pages/farmacia.html#integracionEPS">Consultar las autorizaciones EPS asignadas a tu farmacia</a></p>
   <div class="farmacia-orders-stats" aria-label="Indicadores de solicitudes">
     {!entregas && <><article><strong data-order-count="pendientes">—</strong><span>Pendientes de preparar</span></article><article><strong data-order-count="preparando">—</strong><span>En preparación</span></article></>}
     <article><strong data-order-count="listas">—</strong><span>Listas</span></article>

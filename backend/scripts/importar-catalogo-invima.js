@@ -193,11 +193,11 @@ async function importCatalog(rows, prisma, expectedCount) {
       estado: "INACTIVO",
       codigo_fuente: row.codigo_fuente,
       expediente: row.expediente || null,
-      nombre_generico: (row.principio_activo || "").slice(0, 180) || null,
+      nombre_generico: Array.from(row.principio_activo || "").length <= 180 ? row.principio_activo || null : null,
       principio_activo: row.principio_activo || null,
       concentracion: (row.concentracion || "").slice(0, 120) || null,
       forma_farmaceutica: (row.forma_farmaceutica || "").slice(0, 120) || null,
-      presentacion: (row.presentacion || "").slice(0, 180) || null,
+      presentacion: row.presentacion?.trim() || null,
       via_administracion: (row.via_administracion || "").slice(0, 120) || null,
       titular_registro: (row.titular || "").slice(0, 220) || null,
       registro_sanitario: row.registro_sanitario.trim().slice(0, 100),
@@ -246,24 +246,7 @@ async function main() {
   console.log(`Catálogo validado: ${rows.length} registros.`);
   // Offline validation must never load credentials or open a database connection.
   if (process.argv.includes('--validar')) return;
-  prisma = require("../src/config/prisma");
-
-  try {
-    const result = await importCatalog(rows, prisma, 1000);
-    console.log(`Catálogo validado: ${rows.length} registros.`);
-    console.log(`Nuevos: ${result.created}`);
-    console.log(`Omitidos por código existente: ${result.skipped}`);
-    console.log(`Referencias verificadas: ${result.total}/1000`);
-  } finally {
-    await prisma.$disconnect();
-  }
-}
-
-if (require.main === module) {
-  main().catch(error => {
-    console.error("ERROR:", prisma ? `Falló la importación (${error.code || error.name}).` : error.message);
-    process.exitCode = 1;
-  });
+  await require('./plan-integracion-invima.cjs').main(process.argv.slice(2));
 }
 
 module.exports = {
@@ -274,3 +257,10 @@ module.exports = {
   categoryFor,
   importCatalog
 };
+
+if (require.main === module) {
+  main().catch(error => {
+    console.error("ERROR:", prisma ? `Falló la importación (${error.code || error.name}).` : error.message);
+    process.exitCode = 1;
+  });
+}

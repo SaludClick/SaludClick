@@ -49,17 +49,20 @@ export function mountIntegration(root) {
     });
     return b;
   }
-  function form(title, fields, save) {
+  function form(title, fields, save, beforeFields) {
     const dialog = node('dialog');
     const h = node('h2', title),
       f = node('form', undefined, role === 1 ? 'ad-form' : 'profile-form'),
       error = node('p', '');
     error.setAttribute('role', 'alert');
+    if (beforeFields) f.append(beforeFields);
     for (const field of fields) {
       const [name, label, type, value = '', required = true] = field,
         wrap = node('label', label);
       let input;
-      if (Array.isArray(type)) {
+      if (type instanceof HTMLSelectElement) {
+        input = type;
+      } else if (Array.isArray(type)) {
         input = node('select');
         for (const [key, text] of type) {
           const option = node('option', text);
@@ -322,6 +325,62 @@ export function mountIntegration(root) {
         'Sin autorizacion EPS',
     ]);
   }
+  function catalogPicker() {
+    const controls = node('div');
+    const label = node('label', 'Buscar por medicamento, principio activo o registro sanitario');
+    const search = node('input');
+    search.type = 'search';
+    search.maxLength = 100;
+    label.append(search);
+    const select = node('select');
+    const status = node('p');
+    status.setAttribute('role', 'status');
+    let page = 1;
+    let term = '';
+    const find = node('button', 'Buscar en catálogo', 'btn-outline');
+    const previous = node('button', 'Anterior', 'btn-outline');
+    const next = node('button', 'Siguiente', 'btn-outline');
+    for (const control of [find, previous, next]) control.type = 'button';
+    find.addEventListener('click', () => void load(1, search.value.trim()));
+    previous.addEventListener('click', () => void load(page - 1));
+    next.addEventListener('click', () => void load(page + 1));
+    search.addEventListener('keydown', event => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      find.click();
+    });
+    controls.append(label, find, previous, next, status);
+    async function load(target, query = term) {
+      const placeholder = node('option', 'Selecciona un medicamento');
+      placeholder.value = '';
+      select.replaceChildren(placeholder);
+      previous.disabled = next.disabled = find.disabled = true;
+      status.textContent = 'Cargando catálogo...';
+      try {
+        const params = new URLSearchParams({ pagina: String(target), buscar: query });
+        const { datos, paginacion } = await request('/farmacia/catalogo?' + params);
+        page = paginacion.pagina;
+        term = query;
+        for (const item of datos) {
+          const details = [item.nombre, item.concentracion, item.presentacion, item.registro_sanitario, '#' + item.id];
+          const option = node('option', details.filter(Boolean).join(' / '));
+          option.value = String(item.id);
+          select.append(option);
+        }
+        previous.disabled = page <= 1;
+        next.disabled = page >= paginacion.paginas;
+        status.textContent = paginacion.total
+          ? 'Página ' + page + ' de ' + paginacion.paginas
+          : 'No se encontraron medicamentos en el catálogo.';
+      } catch (error) {
+        status.textContent = error.message;
+      } finally {
+        find.disabled = false;
+      }
+    }
+    return { controls, select, load };
+  }
+
   async function pharmacy() {
     const convenios = (await request('/farmacia/convenios')).datos;
     const g = group('Existencias de mis convenios EPS');
@@ -331,20 +390,22 @@ export function mountIntegration(root) {
         'Registra cantidades reales del convenio. Los pedidos y el catalogo general conservan su proceso habitual.',
       ),
     );
-    const saveStock = (row) =>
+    const saveStock = (row) => {
+      const catalog = row ? null : catalogPicker();
       form(
         'Existencias del convenio',
         [
           [
             'vinculo_id',
             'Convenio EPS',
-            convenios.map((c) => [String(c.id), c.eps.nombre]),
+            convenios.filter(c => !row || c.id === row.vinculo_id)
+              .map(c => [String(c.id), c.eps.nombre]),
             String(row?.vinculo_id || convenios[0]?.id || ''),
           ],
           [
             'medicamento_id',
-            'ID del medicamento del catalogo',
-            'number',
+            'Medicamento del catálogo general',
+            row ? [[String(row.medicamento_id), row.medicamento.nombre]] : catalog.select,
             row?.medicamento_id || '',
           ],
           ['stock', 'Existencias reales', 'number', row?.stock ?? ''],
@@ -358,7 +419,10 @@ export function mountIntegration(root) {
             minimo: number(d.minimo),
             ...(row ? { actualizado_at: row.actualizado_at } : {}),
           }),
+        catalog?.controls,
       );
+      if (catalog) void catalog.load(1);
+    };
     if (convenios.length) g.append(button('Registrar existencias', () => saveStock()));
     else g.append(node('p', 'No tienes convenios EPS activos.'));
     const stock = node('div');
@@ -380,9 +444,14 @@ export function mountIntegration(root) {
       '/farmacia/autorizaciones',
       ['Autorizacion / EPS', 'Paciente', 'Solicitud / estado', 'Medicamentos', 'Proceso'],
       (r) => {
-        const next = { APROBADA: 'PREPARANDO', PREPARANDO: 'LISTA', LISTA: 'ENTREGADA' }[
-          r.solicitud?.estado
-        ];
+        const next = r.solicitud?.operacion?.siguienteEstado;
+        const labels = {
+          PAGO_REAL_NO_APROBADO: 'No hay un pago aprobado habilitado para este entorno',
+          SIN_MEDICAMENTOS: 'Solicitud sin medicamentos',
+          VALIDACION_FARMACEUTICA_PENDIENTE: 'Validaci?n farmac?utica pendiente',
+          REQUISITO_FORMULA_DESCONOCIDO: 'Requisito de f?rmula desconocido',
+        };
+        const bloqueos = r.solicitud?.operacion?.bloqueos.map(code => labels[code]).filter(Boolean);
         return [
           '#' + r.id + ' / ' + r.eps.nombre,
           r.afiliado.nombres + ' ' + r.afiliado.apellidos,
@@ -397,7 +466,7 @@ export function mountIntegration(root) {
                 );
                 await load();
               })
-            : 'Sin transicion pendiente',
+            : bloqueos?.length ? bloqueos.join('. ') : 'Sin transici?n pendiente',
         ];
       },
     );

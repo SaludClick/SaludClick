@@ -176,6 +176,26 @@ test('rechaza cantidades fuera de límites y datos de pago inválidos', async t 
     }
 });
 
+test('rechaza cualquier linea con precio invalido en un carrito mixto antes de persistir', async t => {
+    const second = { id: 6, nombre: 'Segundo medicamento', stock: 8, estado: 'DISPONIBLE' };
+    inventory.push(second);
+    const writesBefore = writes.length;
+    try {
+        const prices = [0, '0.00', '-1.00', null, undefined, '', ' ', 'NaN', NaN, Infinity, '1e309', '0x10', true, 0.001];
+        for (const [index, precio] of prices.entries()) {
+            await t.test(`precio invalido ${index + 1}: ${String(precio)}`, async () => {
+                second.precio = precio;
+                await assert.rejects(orderService.crearPedido(12, order({
+                    items: [{ id: 5, cantidad: 2 }, { id: 6, cantidad: 1 }]
+                }), IDEMPOTENCY_KEY), { status: 409, message: /Segundo medicamento.*precio comercial/ });
+                assert.equal(writes.length, writesBefore);
+            });
+        }
+    } finally {
+        inventory.pop();
+    }
+});
+
 test('eliminar pedido delega usuario y pedido al repositorio', async () => {
     deleteCalls.length = 0;
     await orderService.eliminarPedido(12, 99);

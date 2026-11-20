@@ -51,7 +51,7 @@ function createFixture() {
             res.end(JSON.stringify({ok:true,resumen:{total:fixture.inventory.length,disponibles:26,agotados:1,inactivos:0,inconsistentes:0,desconocidos:0},medicamentos:items.slice((pagina-1)*25,pagina*25),paginacion:{pagina,tamano:25,total:items.length,paginas:Math.ceil(items.length/25)}}));
             return true;
         }
-        if (!fixture.enabled || !url.pathname.startsWith('/api/farmacia/pedidos')) return false;
+        if (!fixture.enabled || !/^\/api\/integracion\/farmacia\/(pedidos|solicitudes)(?:\/|$)/.test(url.pathname)) return false;
         res.setHeader('Content-Type', 'application/json');
         if (req.method === 'PATCH') {
             fixture.patches++;
@@ -59,7 +59,7 @@ function createFixture() {
             req.on('data', chunk => { body += chunk; });
             req.on('end', () => {
                 const input = JSON.parse(body);
-                const id = Number(url.pathname.split('/')[4]);
+                const id = Number(url.pathname.split('/')[5]);
                 const pedido = fixture.pedidos.find(p => p.id === id);
                 if (!pedido) throw new Error('Pedido ficticio inexistente');
                 const finish = () => {

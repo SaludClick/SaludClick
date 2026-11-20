@@ -1,5 +1,5 @@
 import { checkAuthGuard, getCurrentUser, getToken, actualizarUsuarioSesion } from "./auth.js";
-import { apiFetch } from "./api.js";
+import { apiFetch, apiUrl } from "./api.js";
 
 if (checkAuthGuard()) document.addEventListener("DOMContentLoaded", () => {
     const summary = document.querySelector(".dashboard-stats");
@@ -37,6 +37,16 @@ if (checkAuthGuard()) document.addEventListener("DOMContentLoaded", () => {
         if (identityStatus) identityStatus.textContent = "Sesión expirada";
         state("expired", "Tu sesión expiró. Inicia sesión nuevamente.");
     }
+    async function comprobarSalud(signal, current) {
+        text("dashboardSaludEstado", "Verificando…");
+        try {
+            const response = await fetch(apiUrl("/api/health"), { signal, cache: "no-store" });
+            const result = await response.json();
+            if (current()) text("dashboardSaludEstado", response.ok && result.ok === true ? "Conexión operativa" : "Conexión no verificada");
+        } catch {
+            if (current()) text("dashboardSaludEstado", "Conexión no verificada");
+        }
+    }
     async function load() {
         const request = ++generation;
         controller?.abort();
@@ -53,6 +63,7 @@ if (checkAuthGuard()) document.addEventListener("DOMContentLoaded", () => {
         state("loading", "Cargando información...");
         const sessionId = user?.id;
         const current = () => request === generation && token === getToken() && sessionId === getCurrentUser()?.id;
+        void comprobarSalud(controller.signal, () => request === generation && token === getToken());
         const [profile, statistics] = await Promise.allSettled([
             apiFetch("/api/auth/profile", { signal: controller.signal }),
             apiFetch("/api/dashboard/me", { signal: controller.signal })

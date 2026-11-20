@@ -4,7 +4,7 @@
 // Descripción: Finalización de pedidos y pago simulado.
 // ============================================================
 
-import { checkAuthGuard, initAuth, getToken } from './auth.js';
+import { checkAuthGuard, initAuth, getToken, getCurrentUser } from './auth.js';
 
 import {
     leerEstado,
@@ -12,6 +12,7 @@ import {
     setCatalogo
 } from './pedido-temporal.js';
 
+import { carritoSesion, cambioDeCarrito } from './carrito-sesion.js';
 import { apiFetch } from './api.js';
 
 const IDEMPOTENCY_STORAGE_KEY = 'saludclick_pedido_idempotencia';
@@ -136,8 +137,10 @@ if (checkAuthGuard()) {
             }
             updateDemo();
 
+            function claveIntento() { return IDEMPOTENCY_STORAGE_KEY + ':' + getCurrentUser()?.id; }
+
             function limpiarClavePedido() {
-                sessionStorage.removeItem(IDEMPOTENCY_STORAGE_KEY);
+                sessionStorage.removeItem(claveIntento());
             }
 
             function obtenerClavePedido(items) {
@@ -147,7 +150,7 @@ if (checkAuthGuard()) {
                         (a, b) => Number(a.id) - Number(b.id)
                     )
                 });
-                const saved = sessionStorage.getItem(IDEMPOTENCY_STORAGE_KEY);
+                const saved = sessionStorage.getItem(claveIntento());
                 if (saved) {
                     try {
                         const attempt = JSON.parse(saved);
@@ -164,7 +167,7 @@ if (checkAuthGuard()) {
 
                 const key = crypto.randomUUID();
                 sessionStorage.setItem(
-                    IDEMPOTENCY_STORAGE_KEY,
+                    claveIntento(),
                     JSON.stringify({ key, fingerprint })
                 );
                 return key;
@@ -222,7 +225,7 @@ if (checkAuthGuard()) {
                 try {
 
                     return leerEstado(
-                        localStorage
+                        carritoSesion
                     );
 
                 } catch (error) {
@@ -668,7 +671,7 @@ if (checkAuthGuard()) {
                     paymentState('approved','El servidor confirmó el registro del pago simulado.');
                     setMensaje('Pago simulado aprobado. Pedido #' + result.solicitudId + ' registrado.');
                     try {
-                        localStorage.setItem(STORAGE_KEY,JSON.stringify({version:1,borrador:[],confirmados:[]}));
+                        carritoSesion.setItem(STORAGE_KEY,JSON.stringify({version:1,borrador:[],confirmados:[]}));
                         limpiarClavePedido();
                     } catch {
                         setMensaje('Pedido #' + result.solicitudId + ' registrado. No se pudo actualizar la selección local; no repitas el pago.',true);
@@ -831,14 +834,17 @@ if (checkAuthGuard()) {
             // ACTUALIZAR SI CAMBIA EL STORAGE
             // =================================================
 
+            const cuentaInicial = getCurrentUser()?.id;
+
             window.addEventListener(
                 'storage',
                 event => {
 
-                    if (
-                        event.key === STORAGE_KEY ||
-                        event.key === null
-                    ) {
+                    if (getCurrentUser()?.id !== cuentaInicial) {
+                        location.reload();
+                        return;
+                    }
+                    if (cambioDeCarrito(event)) {
 
                         renderCart();
                     }

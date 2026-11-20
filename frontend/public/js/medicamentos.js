@@ -1,5 +1,6 @@
 import { checkAuthGuard, initAuth, getToken } from './auth.js';
-import { STORAGE_KEY, MAX_CANTIDAD, IMAGEN_MEDICAMENTO_RESPALDO, setCatalogo, leerEstado, actualizarPedido, totalUnidades } from './pedido-temporal.js';
+import { carritoSesion, cambioDeCarrito } from './carrito-sesion.js';
+import { MAX_CANTIDAD, IMAGEN_MEDICAMENTO_RESPALDO, setCatalogo, leerEstado, actualizarPedido, totalUnidades } from './pedido-temporal.js';
 import { apiFetch } from './api.js';
 
 if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
@@ -80,7 +81,7 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
         confirm.disabled = true;
         $('vaciarPedido').disabled = true;
         try {
-            const saved = leerEstado(localStorage);
+            const saved = leerEstado(carritoSesion);
             $('totalSeleccionado').textContent = totalUnidades(saved.borrador);
             $('vaciarPedido').disabled = !saved.borrador.length;
             for (const button of grid.querySelectorAll('[data-medicamento-id]')) {
@@ -125,11 +126,11 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
         try {
             if (action === 'agregar' || action === 'cantidad') {
                 const med = items.find(item => item.id === id);
-                const saved = leerEstado(localStorage);
+                const saved = leerEstado(carritoSesion);
                 const next = action === 'agregar' ? (saved.borrador.find(line => Number(line.id) === id)?.cantidad || 0) + 1 : quantity;
                 if (!med?.disponible || !Number.isInteger(next) || next < 1 || next > limit(med)) throw new Error('La cantidad debe estar entre 1 y ' + (med ? limit(med) : 0) + ', según las existencias actuales.');
             }
-            actualizarPedido(localStorage, action, id, quantity);
+            actualizarPedido(carritoSesion, action, id, quantity);
             say(action === 'agregar' ? 'Medicamento agregado a tu selección. Continúa a Pedidos para confirmar la solicitud.' : 'Selección actualizada.');
         } catch (error) { say(error.message); }
         renderSelection();
@@ -193,7 +194,7 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
     });
     $('verMasMedicamentos').addEventListener('click', () => { visibleLimit += 24; filter(false); });
     $('reintentarCatalogo').addEventListener('click', loadCatalog);
-    window.addEventListener('storage', event => { if (event.key === STORAGE_KEY || event.key === null) renderSelection(); });
+    window.addEventListener('storage', event => { if (cambioDeCarrito(event)) renderSelection(); });
     window.addEventListener('pageshow', event => { if (event.persisted) loadCatalog(); });
     search.value = new URLSearchParams(location.search).get('buscar') || '';
     loadCatalog();

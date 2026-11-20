@@ -31,6 +31,35 @@ test("socket: valida JWT y restringe roles del handshake", async () => {
   assert.equal(authorized.socket.data.usuario.id, 10);
 });
 
+test("socket: desconecta al paciente inactivo al vencer el JWT", { timeout: 2000 }, async () => {
+  const { io, socket } = setup(jwt.sign({ id: 10, rol: 2 }, process.env.JWT_SECRET, { expiresIn: '1h' }));
+  await new Promise((resolve, reject) => io.middleware(socket, error => error ? reject(error) : resolve()));
+  const disconnect = socket.disconnect;
+  const disconnected = new Promise(resolve => {
+    socket.disconnect = () => { disconnect.call(socket); resolve(); };
+  });
+  socket.data.usuario.exp = Date.now() / 1000 + 0.05;
+  io.connection(socket);
+  const keepAlive = setTimeout(() => {}, 1000);
+  try { await disconnected; }
+  finally { clearTimeout(keepAlive); }
+});
+
+test("socket: el paciente no envia mensajes despues del vencimiento en una conexion abierta", async () => {
+  const { io, socket, emitted } = setup(jwt.sign({ id: 10, rol: 2 }, process.env.JWT_SECRET, { expiresIn: '1h' }));
+  let disconnected = false;
+  const disconnect = socket.disconnect;
+  socket.disconnect = () => { disconnected = true; disconnect.call(socket); };
+  await new Promise((resolve, reject) => io.middleware(socket, error => error ? reject(error) : resolve()));
+  io.connection(socket);
+  socket.data.usuario.exp = Math.floor(Date.now() / 1000) - 1;
+  const result = await new Promise(resolve => socket.handlers['chat:send']({ conversationId: 7, contenido: 'Fixture' }, resolve));
+  assert.equal(result.ok, false);
+  assert.match(result.mensaje, /vencio/);
+  assert.equal(disconnected, true);
+  assert.deepEqual(emitted, []);
+});
+
 test("socket: entrega eventos de mensaje y notifica la conversación", async () => {
   service.autorizada = async () => ({ id: 7 });
   service.enviar = async (_user, id, content) => ({ id: 90, conversacion_id: id, remitente_id: 10, contenido: content });

@@ -1,146 +1,321 @@
-#epsWorkspace {
-  margin-top: 20px;
-}
-#epsWorkspace .eps-toolbar {
+.eps-console .eps-topbar-actions {
   display: flex;
+  align-items: center;
   gap: 12px;
-  align-items: end;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-inline-start: auto;
 }
-#epsWorkspace label,
-#epsDialog label {
-  display: grid;
-  gap: 6px;
-  font-size: 13px;
-  color: #334155;
-}
-#epsWorkspace input,
-#epsWorkspace select,
-#epsDialog input,
-#epsDialog select,
-#epsDialog textarea {
-  padding: 10px;
-  border: 1px solid #cbdad2;
-  border-radius: 8px;
-  background: white;
-  color: #163e2a;
-  max-width: 100%;
-  font: inherit;
-}
-#epsWorkspace .eps-table-scroll {
-  overflow: auto;
-  background: white;
-  border-radius: 12px;
-}
-#epsWorkspace table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-#epsWorkspace th,
-#epsWorkspace td {
-  text-align: left;
-  padding: 14px;
-  border-bottom: 1px solid #e5eee9;
-  vertical-align: top;
-}
-#epsWorkspace th {
-  color: #166534;
-  background: #f0f8f3;
-}
-#epsWorkspace td {
-  max-width: 300px;
-  overflow-wrap: anywhere;
-}
-#epsWorkspace .eps-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-#epsWorkspace .eps-pages {
-  display: flex;
-  gap: 15px;
+
+.eps-console #epsBell {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin: 20px;
+  gap: 8px;
+  min-height: 44px;
+  white-space: nowrap;
 }
-#epsWorkspace .eps-empty {
-  padding: 30px;
-  background: white;
+
+.eps-console #epsUnread {
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #eaf6ef;
+  color: #166534;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.eps-console #epsMain {
+  max-width: 1440px;
+}
+
+.eps-console .admin-page-heading {
+  align-items: center;
+  gap: 16px;
+  margin-block-end: 16px;
+}
+
+.eps-console #epsTitle {
+  overflow-wrap: anywhere;
+}
+
+.eps-console #epsAccess {
+  color: var(--admin-muted, #526a5e);
+  font-size: 13px;
+}
+
+.eps-console #epsWorkspace {
+  min-width: 0;
+  margin-block-start: 16px;
+}
+
+.eps-console #epsWorkspace .admin-stats {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 12px;
+  margin-block-end: 14px;
+}
+
+.eps-console #epsWorkspace .admin-stat {
+  min-height: 104px;
+  align-content: center;
+  padding: clamp(12px, 2vw, 18px);
+}
+
+.eps-console #epsWorkspace .admin-stat strong,
+.eps-console #epsWorkspace .admin-stat span {
+  overflow-wrap: anywhere;
+}
+
+.eps-console .eps-dashboard-note,
+.eps-console .eps-empty {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #e3ebe5;
   border-radius: 12px;
+  background: #fff;
   color: #526a5e;
+  line-height: 1.55;
 }
-#epsDialog {
+
+.eps-console .eps-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+  margin-block-end: 14px;
+  padding: 14px;
+  border: 1px solid #e3ebe5;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.eps-console .eps-toolbar label {
+  flex: 1 1 138px;
+}
+
+.eps-console .eps-toolbar label:first-child {
+  flex-basis: 200px;
+}
+
+.eps-console :is(#epsWorkspace, #epsDialog) label {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.eps-console :is(#epsWorkspace, #epsDialog) :is(input, select, textarea) {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px 10px;
+  border: 1px solid #cbdad2;
+  border-radius: 8px;
+  background: #fff;
+  color: #163e2a;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.eps-console :is(#epsWorkspace, #epsDialog) button {
+  min-height: 40px;
+  white-space: normal;
+  cursor: pointer;
+}
+
+.eps-console :is(#epsWorkspace, #epsDialog) button:disabled {
+  cursor: default;
+  opacity: .6;
+}
+
+.eps-console :is(button, a, input, select, textarea, .eps-table-scroll):focus-visible {
+  outline: 2px solid #31835b;
+  outline-offset: 2px;
+}
+
+.eps-console .eps-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e3ebe5;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.eps-console #epsWorkspace table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.eps-console #epsWorkspace :is(th, td) {
+  padding: 11px 12px;
+  border-bottom: 1px solid #e5eee9;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.eps-console #epsWorkspace th {
+  background: #f0f8f3;
+  color: #166534;
+}
+
+.eps-console #epsWorkspace td {
+  max-width: 28ch;
+  overflow-wrap: anywhere;
+}
+
+.eps-console #epsWorkspace tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.eps-console .eps-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.eps-console .eps-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  margin-block: 14px 0;
+  font-size: 13px;
+}
+
+.eps-console .eps-pages span {
+  text-align: center;
+}
+
+.eps-console #epsDialog {
+  box-sizing: border-box;
+  width: min(100% - 24px, 680px);
+  max-height: min(85vh, 85dvh);
+  margin: auto;
+  padding: clamp(16px, 4vw, 24px);
+  overflow: auto;
   border: 1px solid #cfdfd5;
   border-radius: 16px;
-  max-width: 720px;
-  width: calc(100% - 32px);
-  max-height: 85vh;
-  padding: 24px;
   color: #183e2d;
 }
-#epsDialog::backdrop {
+
+.eps-console #epsDialog::backdrop {
   background: #102d2280;
 }
-#epsDialog form {
+
+.eps-console #epsDialog form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 14px;
 }
-#epsDialog h2 {
-  margin-bottom: 16px;
+
+.eps-console #epsDialog h2 {
+  margin: 0 0 14px;
+  overflow-wrap: anywhere;
 }
-#epsDialog .eps-wide {
-  grid-column: 1/-1;
+
+.eps-console #epsDialog textarea {
+  min-height: 84px;
+  resize: vertical;
 }
-#epsDialog pre {
+
+.eps-console #epsDialog .eps-wide {
+  grid-column: 1 / -1;
+}
+
+.eps-console #epsDialog .eps-wide:empty {
+  display: none;
+}
+
+.eps-console #epsDialog pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-size: 12px;
 }
-#epsDialog button {
-  margin-top: 10px;
+
+.eps-console .eps-dialog-footer {
+  display: flex;
+  justify-content: end;
+  margin-block-start: 14px;
 }
-#epsWorkspace button,
-#epsDialog button {
-  cursor: pointer;
-}
-#epsWorkspace button:disabled,
-#epsDialog button:disabled {
-  cursor: wait;
-  opacity: 0.6;
-}
-#epsWorkspace .eps-alert {
-  color: #9f3b16;
-  font-weight: bold;
-}
-#epsAccess {
-  font-size: 12px;
-  color: #526a5e;
-}
-#epsUnread {
-  font-weight: bold;
-}
-#epsBell {
-  white-space: nowrap;
-}
-#epsWorkspace form.eps-profile {
+
+.eps-console #epsWorkspace form.eps-profile {
   display: grid;
-  gap: 16px;
+  gap: 14px;
   max-width: 640px;
-  padding: 24px;
-  background: white;
+  padding: clamp(14px, 3vw, 24px);
+  border: 1px solid #e3ebe5;
   border-radius: 14px;
+  background: #fff;
 }
-#epsWorkspace dd {
-  margin: 0 0 12px;
+
+.eps-console :is(#epsWorkspace, #epsDialog) dd {
+  margin: 0 0 10px;
   overflow-wrap: anywhere;
 }
-#epsWorkspace dt {
-  font-weight: bold;
+
+.eps-console :is(#epsWorkspace, #epsDialog) dt {
+  overflow-wrap: anywhere;
+  font-weight: 700;
 }
-.admin-console [hidden] {
+
+.eps-console .eps-alert {
+  color: #9f3b16;
+  font-weight: 700;
+}
+
+.eps-console [hidden] {
   display: none !important;
+}
+
+@media (max-width: 620px) {
+  .eps-console .admin-topbar {
+    gap: 10px;
+    padding-inline: 12px;
+  }
+
+  .eps-console .eps-topbar-actions {
+    gap: 8px;
+  }
+
+  .eps-console .admin-topbar-status span {
+    display: none;
+  }
+
+  .eps-console #epsMain {
+    padding: 18px 12px 24px;
+  }
+
+  .eps-console .admin-page-heading {
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .eps-console #epsWorkspace .admin-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .eps-console .eps-toolbar {
+    padding: 10px;
+  }
+
+  .eps-console .eps-toolbar label,
+  .eps-console .eps-toolbar button {
+    flex: 1 1 120px;
+  }
+
+  .eps-console .eps-toolbar label:first-child {
+    flex-basis: 100%;
+  }
+
+  .eps-console :is(#epsWorkspace, #epsDialog) button {
+    min-height: 44px;
+  }
 }

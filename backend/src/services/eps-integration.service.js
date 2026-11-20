@@ -1,3 +1,4 @@
+const { operacion } = require('./farmacia.service');
 const v = require('../validators/eps.validator');
 const pharmacySelect = { id: true, nombre: true, apellido: true, estado: true };
 const ownRole = (c, role) => {
@@ -51,7 +52,7 @@ function createService(
   }
   const pharmacyScope = (c) => ({
     estado: 'APROBADA',
-    farmacia_vinculo: { farmacia_id: c.id, activa: true, eps: { activa: true } },
+    farmacia_vinculo: { farmacia_id: c.id, activa: true, eps: { activa: true }, farmacia: { rol_id: 3, estado: 'ACTIVO' } },
   });
   return {
     entidades(c, input) {
@@ -361,8 +362,17 @@ function createService(
           });
           if (!f) v.fail('Farmacia no vinculada a esta EPS.', 404);
           if (a.farmacia_vinculo_id === f.id) return { id, farmacia_id };
-          if (a.farmacia_vinculo_id && a.solicitud.estado !== 'APROBADA')
-            v.fail('La solicitud ya esta en proceso; no puede reasignarse.', 409);
+          if (a.solicitud.estado !== 'APROBADA')
+            v.fail('La solicitud ya no est? pendiente de preparaci?n.', 409);
+          const otherAssignment = await tx.epsAutorizacion.findFirst({
+            where: {
+              id: { not: id }, solicitud_id: a.solicitud_id, estado: 'APROBADA',
+              farmacia_vinculo_id: { not: null },
+            },
+            select: { id: true },
+          });
+          if (otherAssignment)
+            v.fail('La solicitud ya est? asignada en otra autorizaci?n. Reasigna desde esa autorizaci?n.', 409);
           const changed = await tx.epsAutorizacion.updateMany({
             where: { id, eps_id: c.epsId, version, estado: 'APROBADA' },
             data: { farmacia_vinculo_id: f.id, version: { increment: 1 } },
@@ -376,10 +386,10 @@ function createService(
         { isolationLevel: 'Serializable' },
       );
     },
-    autorizacionesFarmacia(c, input) {
+    async autorizacionesFarmacia(c, input) {
       ownRole(c, 3);
       const q = v.query(input);
-      return page('epsAutorizacion', pharmacyScope(c), q, {
+      const result = await page('epsAutorizacion', pharmacyScope(c), q, {
         id: true,
         estado: true,
         solicitud_id: true,
@@ -390,14 +400,26 @@ function createService(
           select: {
             id: true,
             estado: true,
+            pagos: { select: { estado: true, simulacion: true } },
             detalles: {
-              select: { cantidad: true, medicamento: { select: { id: true, nombre: true } } },
+              select: { cantidad: true, medicamento: { select: { id: true, nombre: true, requiere_formula: true } } },
             },
           },
         },
       });
+      result.datos = result.datos.map(row => {
+        if (!row.solicitud) return row;
+        const { id, estado, detalles } = row.solicitud;
+        return { ...row, solicitud: {
+          id, estado, operacion: operacion(row.solicitud),
+          detalles: detalles.map(({ cantidad, medicamento }) => ({
+            cantidad, medicamento: { id: medicamento.id, nombre: medicamento.nombre },
+          })),
+        } };
+      });
+      return result;
     },
-    async avanzarFarmacia(c, id, input) {
+    async avanzarFarmacia(c, id, input, notify) {
       ownRole(c, 3);
       id = v.id(id);
       const a = await db.epsAutorizacion.findFirst({
@@ -405,7 +427,19 @@ function createService(
         select: { id: true },
       });
       if (!a) v.fail('Solicitud no asignada a esta farmacia.', 404);
-      return advanceOrder(id, input, c.id);
+      return advanceOrder(String(id), input, notify, c.id, a.id);
+    },
+    catalogoFarmacia(c, input) {
+      ownRole(c, 3);
+      const q = v.query(v.object(input, ['buscar', 'pagina']));
+      const where = q.buscar
+        ? { OR: ['nombre', 'principio_activo', 'registro_sanitario'].map(campo => ({
+            [campo]: { contains: q.buscar, mode: 'insensitive' },
+          })) }
+        : {};
+      return page('medicamento', where, q, {
+        id: true, nombre: true, concentracion: true, presentacion: true, registro_sanitario: true,
+      });
     },
     existenciasFarmacia(c, input) {
       ownRole(c, 3);
@@ -413,7 +447,7 @@ function createService(
       return page(
         'epsExistencia',
         {
-          vinculo: { farmacia_id: c.id, activa: true },
+          vinculo: { farmacia_id: c.id, activa: true, eps: { activa: true } },
           ...(q.buscar
             ? { medicamento: { nombre: { contains: q.buscar, mode: 'insensitive' } } }
             : {}),

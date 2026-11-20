@@ -194,6 +194,7 @@ export default function FarmaciaChat({ embedded = false }) {
       <a className="farmacia-chat-brand" href={isStaff ? returnTo : '/pages/dashboard.html'}>SaludClick · {isStaff ? 'Farmacia' : 'Mi cuenta'}</a>
       {isStaff ? <><a href={farmaciaReturnUrl(returnTo, '#panelFarmacia')}>Panel</a><a href={farmaciaReturnUrl(returnTo, '#pedidosFarmacia')}>Pedidos</a><a href={farmaciaReturnUrl(returnTo, '#inventarioFarmacia')}>Inventario</a></> : <a href="/pages/dashboard.html">Mi panel</a>}
       <a href={window.location.pathname + window.location.search} aria-current="page">Chat</a>
+      {!isStaff && <a href="/pages/soporte.html">Atención administrativa</a>}
       <a href="/pages/perfil.html">Perfil</a>
       <button type="button" onClick={logout}>Cerrar sesión</button>
     </nav>}

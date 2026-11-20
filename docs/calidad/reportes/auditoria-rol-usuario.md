@@ -1,0 +1,26 @@
+# Auditoría funcional del rol Usuario
+
+Se revisó la rama local feat/actualizaciones-saludclick. Git no reportó archivos sin fusionar. La copia ya contenía cambios de tareas anteriores. Las pruebas con escrituras utilizaron datos ficticios, base PostgreSQL aislada y un directorio temporal de fórmulas.
+
+## Inventario de controles y conexiones
+
+| Módulo | Controles y operaciones existentes | Conexión revisada | Clasificación |
+|---|---|---|---|
+| Portada y acceso | Consultar medicamentos, buscar con clic o Enter, Solicitar, Ver estado, Cargar fórmula, Ver historial, Contactar; iniciar sesión, recuperar y restablecer; recordar sesión y volver al destino privado | Portada y auth; la creación de cuentas requiere administración | Funcional y verificado con datos de prueba. Registro público deshabilitado por política; Google, reCAPTCHA externo y correo requieren verificación de entorno. |
+| Dashboard | Menú, hamburguesa, cierre de sesión, accesos rápidos, perfil, EPS y atención; identidad y cuatro indicadores con estados de carga, vacío y error | GET /api/auth/profile, GET /api/dashboard/me y GET /api/health | El indicador fijo de disponibilidad quedó conectado a la comprobación real de API y PostgreSQL. La comprobación es general. |
+| Medicamentos | Buscador, categorías, disponibilidad, imágenes, cantidades, selección, eliminar ítem, vaciar y continuar al checkout | GET /api/medicamentos, catálogo y stock de PostgreSQL, carrito del navegador | Funcional y verificado en Edge. El carrito conserva el formato de los datos y los guarda por cuenta. |
+| Pedidos y pago | Entrega con recogida o domicilio, dirección según modalidad, tarjeta ficticia, confirmación, reintento, comprobante y enlaces al historial | GET y POST /api/pedidos, GET /api/pedidos/:id; stock, pago e idempotencia en PostgreSQL | Funcional para simulación aislada. Producción bloquea el medio simulado. |
+| Farmacia | Lectura de pedido asignado y avances de preparación, lista y entrega con condiciones admitidas | /api/integracion/farmacia/pedidos y /api/integracion/farmacia/solicitudes/:id/estado | El pedido de prueba pagado por simulación aparece dentro de su ámbito y el avance se bloquea por política. Se probó el avance con un pago habilitado solo en la base ficticia. |
+| Fórmulas | Seleccionar, cargar, recargar, ver documento y usar el visor del navegador para guardar; estados del documento | GET y POST /api/formulas, GET /api/formulas/:id, almacenamiento privado y propietario | La carga evita envíos simultáneos. Ver abre la ventana en el clic y recupera el archivo con JWT. El acceso a documentos ajenos queda denegado. |
+| Historial | Listado, Ver detalles, cerrar el detalle, cancelar cuando el pedido sea elegible | GET /api/pedidos, GET y DELETE /api/pedidos/:id, pago asociado | Ver detalles ahora muestra estado, medio y referencia de pago cuando están disponibles. Se ignoran respuestas que llegan después de cerrar o cambiar de detalle. La cancelación conserva historial y restituye existencias una vez. No hay filtros en la interfaz actual. |
+| Perfil | Consultar datos, editar campos permitidos, Guardar cambios, Cancelar y cerrar sesión | GET y PUT /api/auth/profile y sesión existente | Funcional y verificado. Correo de solo lectura. El perfil de paciente carece de cambio de contraseña directo y preferencias propias. |
+| EPS del paciente | Cargar afiliación, consultar autorizaciones y solicitudes, paginar, crear solicitud por el catálogo y marcar avisos leídos | /api/integracion/paciente/afiliacion, /autorizaciones y /solicitudes; /api/integracion/notificaciones | Funcional dentro del alcance de la afiliación y la cuenta. Se conservaron las vistas actuales del módulo de operador EPS. |
+| Farmacia y chat | Abrir, seleccionar o crear conversación, enviar, consultar historial y estados de mensaje | /api/chat/conversaciones, /api/chat/conversaciones/:id/mensajes, Socket.IO | Funcional en pruebas de navegador y contratos. La conexión del paciente se cierra al vencer su JWT y los eventos tardíos se rechazan. |
+| Atención y VITALIX | Abrir soporte, volver al dashboard, enviar y consultar respuestas, actualizar, consultar FAQ y notificaciones | /api/administrativo/atenciones, /conversacion, /notificaciones, /faq y canal de administración | Funcional en pruebas con datos ficticios. La autenticación de formularios externos y la infraestructura de producción quedan fuera de esta ejecución. |
+| Recordatorios | El esquema contiene el modelo Recordatorio | No se encontró pantalla ni endpoint del paciente | No implementado como función del paciente. |
+
+## Decisiones pendientes
+
+- El carrito y el intento de checkout se identifican por cuenta. El borrador de la clave común anterior queda sin asociar porque carece de un identificador de titular.
+- El checkout simulado no autoriza dispensación. Permitir entregas con pagos de demostración o habilitar un proveedor real exige una decisión de negocio. Una fórmula pendiente tampoco autoriza dispensar. Vincular y validar fórmulas requiere definir al responsable autorizado.
+- La integración PostgreSQL dedicada requiere TEST_DATABASE_URL para el destino aislado saludclick_test en 127.0.0.1:55434. Esta ejecución verificó el flujo mediante la suite PostgreSQL aislada del repositorio. No se conectó a Neon ni se ejecutaron pruebas con proveedores reales.

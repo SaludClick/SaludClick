@@ -8,7 +8,7 @@ const {
     validarCrearCuenta
 } = require("../validators/admin.validator");
 
-const UPLOAD_DIR = path.resolve(__dirname, "../../private_uploads");
+const { uploadDir: UPLOAD_DIR } = require("../config/formula-storage");
 
 async function listarPedidos() {
     return adminRepository.pedidos();

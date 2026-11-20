@@ -11,6 +11,8 @@ let failQuery;
 let queryRows;
 let medications;
 let pedidoExists;
+let pedidoEstado;
+let pagoReal;
 
 const pool = {
     query: async (sql, params) => query(sql, params),
@@ -28,9 +30,11 @@ async function query(sql, params = []) {
     if (sql.startsWith('SELECT id, nombre, descripcion, categoria_id, precio, stock, imagen, estado')) {
         return { rows: medications };
     }
-    if (sql.startsWith('SELECT id FROM solicitudes') && sql.includes('LIMIT 1')) {
-        return { rows: pedidoExists ? [{ id: 81 }] : [] };
+    if (sql.startsWith('SELECT id, estado FROM solicitudes')) {
+        return { rows: pedidoExists ? [{ id: 81, estado: pedidoEstado }] : [] };
     }
+    if (sql.startsWith('SELECT id FROM pagos WHERE solicitud_id')) return { rows: pagoReal ? [{ id: 1 }] : [] };
+    if (sql.startsWith('SELECT medicamento_id, SUM(cantidad)')) return { rows: [{ medicamento_id: 5, cantidad: 2 }] };
     if (sql.includes('FROM solicitudes s') && sql.includes('LEFT JOIN pagos')) {
         return { rows: storedOrder ? [storedOrder] : [] };
     }
@@ -88,6 +92,8 @@ beforeEach(() => {
     queryRows = [{ id: 81 }];
     medications = [{ id: 5, nombre: 'Medicamento de prueba' }];
     pedidoExists = true;
+    pedidoEstado = 'APROBADA';
+    pagoReal = false;
     medication = {
         id: 5, nombre: 'Medicamento de prueba',
         precio: '12.34', stock: 5, estado: 'DISPONIBLE'
@@ -144,6 +150,30 @@ test('pedido nuevo reclama la clave y persiste detalles, pago y stock en una tra
         paymentWrite.sql,
         /VALUES \(\$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8, TRUE\)/
     );
+});
+
+test('revierte el pedido completo si el precio persistido de una linea cambia a un valor invalido', async t => {
+    const mixed = {
+        ...payload,
+        items: [...payload.items, { medicamento_id: 6, cantidad: 1, precio: 9.50, subtotal: 9.50 }],
+        total: 34.18
+    };
+
+    for (const precio of ['0.00', '-1.00', null, 'NaN', 'Infinity', '0x10']) {
+        await t.test(String(precio), async () => {
+            calls.length = 0;
+            secondMedication = { ...medication, id: 6, nombre: 'Segundo medicamento', precio };
+            await assert.rejects(repository.crearPedidoConPago(mixed), {
+                status: 409, message: /Segundo medicamento.*precio comercial/
+            });
+            assert.deepEqual(
+                calls.filter(({ sql }) => sql.includes('FOR UPDATE')).map(({ params }) => params[0]),
+                [5, 6]
+            );
+            assert.deepEqual(calls.slice(-2).map(({ sql }) => sql), ['ROLLBACK', 'RELEASE']);
+            assert.equal(calls.some(({ sql }) => /^(COMMIT|INSERT INTO detalle_solicitud|INSERT INTO pagos|UPDATE medicamentos)/.test(sql)), false);
+        });
+    }
 });
 
 test('una clave con otra huella revierte sin acceder a inventario', async () => {
@@ -285,10 +315,9 @@ test('consulta historial y detalle de pedido con aislamiento por usuario', async
 test('eliminación de pedido confirma o revierte la transacción según el propietario', async t => {
     await t.test('pedido propio se elimina en orden y confirma', async () => {
         assert.equal(await repository.eliminarPedidoUsuario(12, 81), true);
-        const writes = calls.filter(({ sql }) => sql.startsWith('DELETE FROM'));
-        assert.deepEqual(writes.map(({ sql }) => sql.split(' ')[2]), [
-            'pagos', 'detalle_solicitud', 'solicitudes'
-        ]);
+        assert.deepEqual(calls.filter(({ sql }) => sql.startsWith('UPDATE medicamentos')).map(({ params }) => params), [[2, 5]]);
+        assert.equal(calls.filter(({ sql }) => sql.startsWith('UPDATE solicitudes')).length, 1);
+        assert.equal(calls.some(({ sql }) => sql.startsWith('DELETE FROM')), false);
         assert.ok(calls.some(({ sql }) => sql === 'COMMIT'));
         assert.ok(calls.some(({ sql }) => sql === 'RELEASE'));
     });
@@ -302,7 +331,7 @@ test('eliminación de pedido confirma o revierte la transacción según el propi
     });
 
     await t.test('fallo de base revierte y libera', async () => {
-        failQuery = 'DELETE FROM detalle_solicitud';
+        failQuery = 'UPDATE solicitudes';
         await assert.rejects(repository.eliminarPedidoUsuario(12, 81), /test database failure/);
         assert.ok(calls.some(({ sql }) => sql === 'ROLLBACK'));
         assert.ok(calls.some(({ sql }) => sql === 'RELEASE'));

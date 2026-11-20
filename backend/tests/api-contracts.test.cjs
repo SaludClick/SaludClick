@@ -145,7 +145,8 @@ const fakeModules = new Map([
     ['../repositories/formula.repository', formulaRepository],
     ['fs/promises', {
         mkdir: async () => {},
-        writeFile: async () => {},
+        open: async () => ({ writeFile: async () => {}, close: async () => {} }),
+        rm: async file => { repositoryFailures.cleanedFormula = file; },
         access: async () => {
             if (repositoryFailures.fileAccess) throw repositoryFailures.fileAccess;
         }
@@ -513,7 +514,7 @@ test('controladores de auth y pedidos cubren errores del servicio sin filtrar de
         serviceFailures.eliminarPedido = new Error('storage');
         result = await call('/api/pedidos/81', { method: 'DELETE' });
         assert.equal(result.response.status, 500);
-        assert.deepEqual(result.data, { ok: false, mensaje: 'No se pudo eliminar el pedido.' });
+        assert.deepEqual(result.data, { ok: false, mensaje: 'No se pudo cancelar el pedido.' });
     } finally {
         for (const key of Object.keys(serviceFailures)) delete serviceFailures[key];
         console.error = originalConsoleError;
@@ -560,10 +561,13 @@ test('lectura de fórmula privada limita propietario y no requiere filesystem re
 
             repositoryFailures.formulaCrear = new Error('repository unavailable');
             const failedCreate = await submit(dataUrl('application/pdf', Buffer.from('%PDF-1.4')));
-            assert.equal(failedCreate.response.status, 400);
+            assert.equal(failedCreate.response.status, 500);
+            assert.equal(failedCreate.data.mensaje, 'No se pudo guardar la f?rmula.');
+            assert.match(repositoryFailures.cleanedFormula, /[0-9a-f-]+[.]pdf$/i);
             delete repositoryFailures.formulaCrear;
         } finally {
             delete repositoryFailures.formulaCrear;
+            delete repositoryFailures.cleanedFormula;
             console.error = originalConsoleError;
         }
     });

@@ -433,10 +433,8 @@ test(
             for (const view of [
               'dashboard',
               'afiliados',
-              'pacientes',
               'farmacias',
               'inventario',
-              'autorizaciones',
               'solicitudes',
               'notificaciones',
               'perfil',
@@ -451,6 +449,24 @@ test(
               assert.ok(
                 await evaluate('document.querySelector("#epsWorkspace").textContent.length > 10'),
               );
+            }
+
+            assert.equal(
+              await evaluate('document.querySelectorAll("[data-eps-view=pacientes], [data-eps-view=autorizaciones]").length'),
+              0,
+            );
+            for (const [parent, view, label, action] of [
+              ['afiliados', 'pacientes', 'Pacientes vinculados', 'Ver datos autorizados'],
+              ['solicitudes', 'autorizaciones', 'Autorizaciones', 'Crear autorizacion'],
+            ]) {
+              await navigate(parent);
+              await clickText(label);
+              await until(() =>
+                evaluate('location.hash === "#' + view + '" && document.querySelector("#epsWorkspace").getAttribute("aria-busy") === "false"'),
+              );
+              await clickText(action);
+              await until(() => evaluate('document.querySelector("#epsDialog").open'));
+              await evaluate('document.querySelector("dialog").close()');
             }
 
             async function clickText(text, selector = 'button') {
@@ -528,19 +544,6 @@ test(
             );
             await evaluate('document.querySelector("#epsCloseDialog").click()');
 
-            await navigate('autorizaciones');
-            await clickText('Crear autorizacion');
-            await submit({
-              afiliado_id: created.id,
-              concepto: 'Browser clinical',
-              motivo: 'Documented browser test',
-            });
-            await clickText('Resolver');
-            await submit({ estado: 'RECHAZADA', motivo: 'Documented decision' });
-            assert.equal(
-              (await db.epsAutorizacion.findFirst({ where: { afiliado_id: created.id } })).estado,
-              'RECHAZADA',
-            );
             await navigate('solicitudes');
             const nextOrder = await db.solicitud.create({ data: { usuario_id: 3 } });
             await clickText('Actualizar');
@@ -563,7 +566,58 @@ test(
               ).estado,
               'EN_REVISION',
             );
-            await navigate('inventario');
+            async function inventoryAction(label) {
+              await clickText(label);
+              await until(() => evaluate('document.querySelector("#epsWorkspace").getAttribute("aria-busy") === "false"'));
+            }
+            async function applyInventoryFilters({ buscar = '', estado = '', farmacia = '5' } = {}) {
+              await evaluate('(() => { const fields = document.querySelector(".eps-toolbar").elements; const filters = ' +
+                JSON.stringify({ buscar, estado, farmacia }) +
+                '; for (const [key, value] of Object.entries(filters)) fields.namedItem(key).value = value; })()');
+              await inventoryAction('Buscar');
+            }
+            const inventoryText = () => evaluate('document.querySelector("#epsWorkspace").textContent');
+            await navigate('farmacias');
+            assert.equal(await evaluate('document.querySelector(".eps-toolbar").checkValidity()'), true);
+            await inventoryAction('Buscar');
+            await inventoryAction('Medicamentos');
+            assert.equal(await evaluate('location.hash'), '#inventario');
+            assert.equal(await evaluate('document.querySelector("[name=farmacia]").value'), '5');
+            assert.equal(await evaluate('document.querySelector(".eps-toolbar").checkValidity()'), true);
+            await inventoryAction('Buscar');
+            assert.match(await inventoryText(), /Isolated medicine/);
+            await applyInventoryFilters({ farmacia: '999' });
+            assert.match(await inventoryText(), /todav.*no tiene existencias/);
+            await applyInventoryFilters({ buscar: 'no match' });
+            assert.match(await inventoryText(), /No hay registros para los filtros seleccionados/);
+            await applyInventoryFilters({ estado: 'AGOTADO' });
+            assert.doesNotMatch(await inventoryText(), /Isolated medicine/);
+
+            const link = await db.epsFarmacia.findFirstOrThrow({ where: { eps_id: 'EPS-A', farmacia_id: 5 } });
+            const more = await db.medicamento.createManyAndReturn({
+              data: Array.from({ length: 25 }, (_, i) => ({
+                nombre: 'Pagination fixture ' + (i + 1), categoria_id: category.id, precio: 1,
+              })),
+            });
+            await db.epsExistencia.createMany({
+              data: more.map(item => ({ vinculo_id: link.id, medicamento_id: item.id, stock: 2, minimo: 5 })),
+            });
+            await applyInventoryFilters({ estado: 'BAJO' });
+            assert.match(await inventoryText(), /26 registros \/ Pagina 1 de 2/);
+            await inventoryAction('Siguiente');
+            assert.match(await inventoryText(), /26 registros \/ Pagina 2 de 2/);
+            assert.match(await inventoryText(), /Isolated medicine/);
+            await inventoryAction('Actualizar');
+            assert.match(await inventoryText(), /26 registros \/ Pagina 2 de 2/);
+            assert.equal(await evaluate('document.querySelector("[name=estado]").value'), 'BAJO');
+            assert.equal(await evaluate('document.querySelector("[name=farmacia]").value'), '5');
+            await inventoryAction('Anterior');
+            await inventoryAction('Limpiar filtros');
+            assert.match(await inventoryText(), /26 registros \/ Pagina 1 de 2/);
+            assert.equal(await evaluate('document.querySelector("[name=farmacia]").value'), '');
+            await applyInventoryFilters({ buscar: 'isolated MEDICINE', estado: 'BAJO' });
+            assert.match(await inventoryText(), /1 registros \/ Pagina 1 de 1/);
+
             for (const width of [390, 320]) {
               await send('Emulation.setDeviceMetricsOverride', {
                 width,
@@ -576,6 +630,24 @@ test(
                 'EPS layout at ' + width + 'px',
               );
             }
+            await evaluate('document.querySelector("#menuToggle").click()');
+            assert.equal(await evaluate('document.querySelector("#menuToggle").getAttribute("aria-expanded")'), 'true');
+            await navigate('afiliados');
+            assert.equal(await evaluate('document.querySelector("#menuToggle").getAttribute("aria-expanded")'), 'false');
+            assert.equal(await evaluate('document.activeElement.id'), 'epsTitle');
+            assert.ok(await evaluate(`(() => {
+              const table = document.querySelector('.eps-table-scroll');
+              return table.clientWidth < table.scrollWidth && table.tabIndex === 0
+                && document.documentElement.scrollWidth <= innerWidth;
+            })()`));
+            await clickText('Registrar afiliado');
+            await until(() => evaluate('document.querySelector("#epsDialog").open'));
+            assert.ok(await evaluate(`(() => {
+              const dialog = document.querySelector('#epsDialog');
+              const bounds = dialog.getBoundingClientRect();
+              return bounds.left >= 0 && bounds.right <= innerWidth && dialog.scrollWidth <= dialog.clientWidth;
+            })()`));
+            await evaluate('document.querySelector("#epsCloseDialog").click()');
             await send('Emulation.clearDeviceMetricsOverride');
             await evaluate('document.querySelector("#logout").click()');
             await until(() => evaluate('location.pathname === "/login.html"'));

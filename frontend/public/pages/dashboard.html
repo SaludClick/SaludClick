@@ -17,6 +17,8 @@
         href="../css/style.css"
     >
 
+    <link rel="stylesheet" href="../css/dashboard.css">
+
     <!-- FONT AWESOME -->
     <link
         rel="stylesheet"
@@ -527,6 +529,17 @@
 
                 </a>
 
+                <a href="chat-farmacia.html" class="dashboard-action">
+                    <div class="dashboard-action-icon">
+                        <i class="fa-solid fa-comments" aria-hidden="true"></i>
+                    </div>
+                    <div class="dashboard-action-content">
+                        <strong>Chat</strong>
+                        <span>Comunícate con farmacia y soporte</span>
+                    </div>
+                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </a>
+
             </div>
 
         </section>
@@ -564,7 +577,7 @@
 
                         <span></span>
 
-                        Activo
+                        <strong id="dashboardSaludEstado" role="status">Sin verificar</strong>
 
                     </span>
 
@@ -583,12 +596,11 @@
                     <div>
 
                         <strong>
-                            Plataforma disponible
+                            Conexión con el servidor
                         </strong>
 
                         <p>
-                            Los servicios están funcionando
-                            correctamente.
+                            La comprobación verifica la API y su conexión a PostgreSQL.
                         </p>
 
                     </div>
@@ -608,7 +620,7 @@
                         </span>
 
                         <strong>
-                            Disponible
+                            Catálogo
                         </strong>
 
                     </div>
@@ -623,7 +635,7 @@
                         </span>
 
                         <strong>
-                            Disponible
+                            Estado e historial
                         </strong>
 
                     </div>
@@ -638,7 +650,7 @@
                         </span>
 
                         <strong>
-                            Disponible
+                            Carga y consulta
                         </strong>
 
                     </div>
@@ -710,8 +722,7 @@
 
         </section>
 
-    <section id="integracionEPS" data-eps-integration class="card"><h2>Integracion EPS</h2></section><script type="module" src="/js/eps-integracion.js"></script>
-</main>
+    </main>
 
 
 
@@ -719,7 +730,6 @@
          FOOTER
     ====================================================== -->
 
-    <section class="container" aria-label="Atención administrativa"><h2>Ayuda con tu cuenta</h2><p>Solicitudes, mensajes y notificaciones de Administración.</p><a class="btn-outline" href="/pages/chat-farmacia.html">Chat con farmacia</a> <a class="btn-primary" href="/pages/soporte.html">Abrir atención administrativa</a></section>
     <footer id="contacto" class="footer">
         <div class="container footer-container">
             

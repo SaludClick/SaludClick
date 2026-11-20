@@ -3,7 +3,7 @@ import { apiFetch } from './api.js';
 const labels = { APROBADA: 'Aprobada', PREPARANDO: 'En preparación', LISTA: 'Lista', ENTREGADA: 'Entregada' };
 const actions = { PREPARANDO: 'Iniciar preparación', LISTA: 'Marcar lista', ENTREGADA: 'Confirmar entrega' };
 const reasons = {
-    PAGO_REAL_NO_APROBADO: 'Sin pago real aprobado. Un pago simulado no autoriza la operación.',
+    PAGO_REAL_NO_APROBADO: 'No hay un pago aprobado habilitado para este entorno.',
     VALIDACION_FARMACEUTICA_PENDIENTE: 'Requiere validación farmacéutica autorizada; la operación permanece bloqueada.',
     REQUISITO_FORMULA_DESCONOCIDO: 'Hay medicamentos con requisito de fórmula sin determinar; operación bloqueada.',
     SIN_MEDICAMENTOS: 'La solicitud no tiene medicamentos.'
@@ -30,6 +30,7 @@ export function initFarmaciaSolicitudes({ root = document, request = apiFetch, i
         for (const button of content.querySelectorAll('button')) button.disabled = busy || stale || writing;
     }
     function appendOperation(container, order) {
+        if (order.operacion.simulacion) container.append(node('p', 'Pedido con pago simulado'));
         for (const reason of order.operacion.bloqueos) container.append(node('p', reasons[reason] || 'La operación requiere revisión.', 'farmacia-order-blocked'));
         const next = order.operacion.siguienteEstado;
         if (actions[next]) {
@@ -50,7 +51,7 @@ export function initFarmaciaSolicitudes({ root = document, request = apiFetch, i
         content.replaceChildren(node('p', 'Cargando detalle…')); content.setAttribute('aria-busy', 'true');
         if (!detail.open) detail.showModal();
         try {
-            const { pedido } = await request(`/api/farmacia/pedidos/${id}`);
+            const { pedido } = await request(`/api/integracion/farmacia/pedidos/${id}`);
             if (current !== detailSequence || !detail.open) return;
             content.replaceChildren();
             content.append(node('h3', `Solicitud #${pedido.id} · ${labels[pedido.estado]}`), node('p', date(pedido.fecha)));
@@ -80,7 +81,7 @@ export function initFarmaciaSolicitudes({ root = document, request = apiFetch, i
         try {
             const query = new URLSearchParams({ pagina: String(page), estado: get('estadoFarmacia').value });
             const id = get('buscarSolicitudFarmacia').value.trim(); if (id) query.set('id', id);
-            const result = await request(`/api/farmacia/pedidos?${query}`);
+            const result = await request(`/api/integracion/farmacia/pedidos?${query}`);
             if (current !== sequence) return;
             pages = result.paginacion.paginas;
             if (page > Math.max(1, pages)) { page = Math.max(1, pages); return await load(); }
@@ -153,7 +154,7 @@ export function initFarmaciaSolicitudes({ root = document, request = apiFetch, i
         if (writing || !selected) return;
         const order = selected; writing = true; controls(); confirm.close();
         try {
-            await request(`/api/farmacia/pedidos/${order.id}/estado`, { method: 'PATCH', body: JSON.stringify({ estadoActual: order.estado, estado: order.operacion.siguienteEstado }) });
+            await request(`/api/integracion/farmacia/solicitudes/${order.id}/estado`, { method: 'PATCH', body: JSON.stringify({ estadoActual: order.estado, estado: order.operacion.siguienteEstado }) });
             confirm.close(); const refreshed = await load();
             get('farmaciaMessage').textContent = refreshed ? `Solicitud #${order.id} actualizada.` : `La solicitud #${order.id} se actualizó, pero faltan datos por refrescar. Reintenta la consulta.`;
             if (detail.open && detailId === order.id) await openDetail(order.id);

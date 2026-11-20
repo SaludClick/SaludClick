@@ -6,6 +6,7 @@ if (checkAuthGuard()) {
     initAuth();
 
     const tabla = document.getElementById("tablaHistorial");
+    let detalleSolicitud = 0;
 
     if (!tabla) {
       return;
@@ -163,6 +164,7 @@ if (checkAuthGuard()) {
     }
 
     function cerrarModal() {
+      detalleSolicitud++;
       const modal = document.getElementById("modalDetallePedido");
 
       if (modal) {
@@ -176,6 +178,7 @@ if (checkAuthGuard()) {
     // =================================================
 
     async function verDetallePedido(pedido) {
+      const solicitudActual = ++detalleSolicitud;
       crearModal();
 
       const contenido = document.getElementById("modalPedidoContenido");
@@ -195,7 +198,8 @@ if (checkAuthGuard()) {
       abrirModal();
 
       try {
-        const respuesta = await apiFetch(`/api/pedidos/${pedido.id}`);
+        const respuesta = await apiFetch("/api/pedidos/" + pedido.id);
+        if (solicitudActual !== detalleSolicitud) return;
 
         const detalle = Array.isArray(respuesta.pedido)
           ? respuesta.pedido
@@ -246,13 +250,19 @@ if (checkAuthGuard()) {
           })
           .join("");
 
+        const datos = detalle[0];
+        const pago = [
+          ["Estado del pago", datos.pago_estado ? textoEstado(datos.pago_estado) : null],
+          ["Método", [datos.metodo, datos.marca, datos.ultimos_digitos ? "•••• " + datos.ultimos_digitos : null].filter(Boolean).join(" · ")],
+          ["Referencia", datos.referencia],
+        ].filter(([, valor]) => valor);
         contenido.innerHTML = `
           <div class="detalle-resumen">
 
             <div class="detalle-dato">
               <span>Estado</span>
-              <strong class="${claseEstado(pedido.estado)}">
-                ${escapeHTML(textoEstado(pedido.estado))}
+              <strong class="${claseEstado(datos.estado ?? pedido.estado)}">
+                ${escapeHTML(textoEstado(datos.estado ?? pedido.estado))}
               </strong>
             </div>
 
@@ -262,6 +272,12 @@ if (checkAuthGuard()) {
             </div>
 
           </div>
+
+
+          ${pago.length ? "<h3 class='detalle-titulo'>Pago</h3>" : ""}
+          ${pago.length ? "<div class='detalle-resumen'>" + pago.map(([label, value]) =>
+            "<div class='detalle-dato'><span>" + label + "</span><strong>" + escapeHTML(value) + "</strong></div>"
+          ).join("") + "</div>" : ""}
 
           <h3 class="detalle-titulo">
             Medicamentos
@@ -277,6 +293,7 @@ if (checkAuthGuard()) {
           </div>
         `;
       } catch (error) {
+        if (solicitudActual !== detalleSolicitud) return;
         console.error(
           `Error al consultar el pedido #${pedido.id}:`,
           error
@@ -310,7 +327,7 @@ if (checkAuthGuard()) {
 
     async function eliminarPedido(pedido) {
       const confirmar = window.confirm(
-        `¿Estás seguro de que deseas eliminar el pedido #${pedido.id}?\n\nEsta acción no se puede deshacer.`
+        `¿Estás seguro de que deseas cancelar el pedido #${pedido.id}?\n\nEsta acción no se puede deshacer.`
       );
 
       if (!confirmar) {
@@ -327,12 +344,12 @@ if (checkAuthGuard()) {
         await cargarHistorial();
       } catch (error) {
         console.error(
-          `Error al eliminar el pedido #${pedido.id}:`,
+          `Error al cancelar el pedido #${pedido.id}:`,
           error
         );
 
         alert(
-          `No fue posible eliminar el pedido #${pedido.id}.\n\n${error.message}`
+          `No fue posible cancelar el pedido #${pedido.id}.\n\n${error.message}`
         );
       }
     }
@@ -456,10 +473,10 @@ if (checkAuthGuard()) {
             <button
               type="button"
               class="btn-eliminar-pedido"
-              title="Eliminar pedido"
+              title="Cancelar pedido"
             >
-              <i class="fa-solid fa-trash"></i>
-              <span>Eliminar</span>
+              <i class="fa-solid fa-ban"></i>
+              <span>Cancelar</span>
             </button>
           `;
 
@@ -478,6 +495,10 @@ if (checkAuthGuard()) {
             () => verDetallePedido(pedido)
           );
 
+          if (!['PENDIENTE', 'APROBADA'].includes(pedido.estado) || pedido.pago_simulado === false) {
+            botonEliminar.remove();
+            return;
+          }
           botonEliminar.addEventListener(
             "click",
             () => eliminarPedido(pedido)

@@ -3,7 +3,7 @@ const path = require("path");
 const crypto = require("crypto");
 const repo = require("../repositories/formula.repository");
 
-const UPLOAD_DIR = path.join(__dirname, "../../private_uploads");
+const { uploadDir: UPLOAD_DIR } = require("../config/formula-storage");
 const ALLOWED = new Set(["application/pdf","image/jpeg","image/png","image/webp"]);
 const MAX = 5 * 1024 * 1024;
 
@@ -24,17 +24,33 @@ function parseBase64(input) {
 }
 
 async function crear(req,res) {
+    let storedPath;
     try {
         const { nombre, descripcion, archivo } = req.body || {};
         if (!nombre || !archivo) return res.status(400).json({ok:false,mensaje:"Nombre y archivo son obligatorios."});
-        const {mime,buffer}=parseBase64(archivo);
+        let parsed;
+        try { parsed = parseBase64(archivo); }
+        catch (error) { return res.status(400).json({ ok: false, mensaje: error.message }); }
+        const { mime, buffer } = parsed;
         await fs.mkdir(UPLOAD_DIR,{recursive:true});
         const ext = mime==="application/pdf"?".pdf":mime==="image/png"?".png":mime==="image/webp"?".webp":".jpg";
         const stored = `${crypto.randomUUID()}${ext}`;
-        await fs.writeFile(path.join(UPLOAD_DIR,stored),buffer,{flag:"wx"});
+        const file = path.join(UPLOAD_DIR, stored);
+        const handle = await fs.open(file, "wx", 0o600);
+        storedPath = file;
+        try { await handle.writeFile(buffer); }
+        finally { await handle.close(); }
         const id=await repo.crear({usuarioId:req.usuario.id,nombreArchivo:stored,nombreOriginal:String(nombre).slice(0,180),tipoMime:mime,tamano:buffer.length,descripcion});
+        storedPath = undefined;
         res.status(201).json({ok:true,mensaje:"Fórmula cargada correctamente.",formula:{id,nombre:String(nombre).slice(0,180),estado:"PENDIENTE"}});
-    } catch(e) { console.error(e); res.status(400).json({ok:false,mensaje:e.message}); }
+    } catch (error) {
+        if (storedPath) {
+            try { await fs.rm(storedPath, { force: true }); }
+            catch (cleanupError) { console.error('Error limpiando f?rmula:', cleanupError?.code || cleanupError?.name); }
+        }
+        console.error('Error guardando f?rmula:', error?.code || error?.name);
+        res.status(500).json({ ok: false, mensaje: 'No se pudo guardar la f?rmula.' });
+    }
 }
 async function listar(req,res){ try{res.json({ok:true,formulas:await repo.listarUsuario(req.usuario.id)});}catch(e){res.status(500).json({ok:false,mensaje:"No se pudieron cargar tus fórmulas."});}}
 async function ver(req,res){
@@ -42,6 +58,7 @@ async function ver(req,res){
         const id=Number(req.params.id); if(!Number.isInteger(id)||id<1)return res.status(400).json({ok:false,mensaje:"Fórmula inválida."});
         const f=await repo.buscarPropia(req.usuario.id,id); if(!f)return res.status(404).json({ok:false,mensaje:"Fórmula no encontrada."});
         const file=path.join(UPLOAD_DIR,f.nombre_archivo); await fs.access(file);
+        res.setHeader("Cache-Control", "private, no-store");
         res.setHeader("Content-Type",f.tipo_mime); res.setHeader("Content-Disposition",`inline; filename="${String(f.nombre_original).replace(/["\r\n]/g,"_")}"`);
         res.sendFile(file);
     }catch(e){res.status(404).json({ok:false,mensaje:"No se pudo abrir la fórmula."});}
