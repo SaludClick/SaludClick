@@ -17,7 +17,7 @@ const same = (a, u, p) =>
   p.tipo_documento === a.tipo_documento;
 function createService(
   db,
-  { advanceOrder = (...args) => require('./farmacia.service').avanzarPedido(...args) } = {},
+  { advanceOrder = (id, input, actorId) => require('./farmacia.service').avanzarPedido(id, input, undefined, actorId) } = {},
 ) {
   const event = (tx, c, epsId, tipo, id, titulo, detalle = {}) =>
     tx.epsEvento.create({
@@ -513,13 +513,9 @@ function createService(
         };
         const item = await tx.epsNotificacionCompartida.findFirst({
           where,
-          select: { id: true, clave: true, eps_id: true },
+          select: { id: true, clave: true, leida_at: true },
         });
         if (!item) v.fail('Notificacion no encontrada.', 404);
-        await tx.epsNotificacionCompartida.updateMany({
-          where: { ...where, leida_at: null },
-          data: { leida_at: new Date() },
-        });
         if (c.rol === 4 && /^EPS_EVENTO:[1-9]\d*$/.test(item.clave)) {
           const eventId = Number(item.clave.split(':')[1]);
           const e = await tx.epsEvento.findFirst({
@@ -529,10 +525,14 @@ function createService(
           if (e)
             await tx.epsLectura.upsert({
               where: { evento_id_usuario_id: { evento_id: eventId, usuario_id: c.id } },
-              create: { evento_id: eventId, usuario_id: c.id },
+              create: { evento_id: eventId, usuario_id: c.id, leida_at: item.leida_at ?? new Date() },
               update: {},
             });
         }
+        await tx.epsNotificacionCompartida.updateMany({
+          where: { ...where, leida_at: null },
+          data: { leida_at: new Date() },
+        });
         return { id };
       });
     },

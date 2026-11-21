@@ -14,8 +14,11 @@ test(
   'EPS migration and real-source activation are explicit, scoped, atomic and repeatable',
   { timeout: 120000 },
   async (t) => {
-    const { PGlite } = require('@electric-sql/pglite'),
-      { PGLiteSocketServer } = require('@electric-sql/pglite-socket');
+    const prismaRequire = require('node:module').createRequire(require.resolve('@prisma/dev', {
+      paths: [path.dirname(require.resolve('prisma/package.json'))],
+    }));
+    const { PGlite } = prismaRequire('@electric-sql/pglite');
+    const { PGLiteSocketServer } = prismaRequire('@electric-sql/pglite-socket');
     const memory = await PGlite.create();
     const socket = new PGLiteSocketServer({
       db: memory,

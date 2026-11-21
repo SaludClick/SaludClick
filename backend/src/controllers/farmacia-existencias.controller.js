@@ -10,4 +10,5 @@ function handle(operation) {
 }
 module.exports = { inventario: handle(req => service.listar(req.query)),
     medicamentos: handle(req => service.listar(req.query, true)),
+    detalleMedicamento: handle(req => service.detalle(req.params.id, req.query, true)),
     detalle: handle(req => service.detalle(req.params.id, req.query)) };

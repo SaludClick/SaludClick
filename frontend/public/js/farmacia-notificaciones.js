@@ -85,11 +85,25 @@ export function initFarmaciaNotifications({ root = document, request = apiFetch,
                 item.dataset.unread = String(!notification.leida_at);
                 item.append(node('h3', notification.titulo), node('p', notification.mensaje));
                 const meta = node('div', '', 'farmacia-notification-meta');
-                const type = notification.tipo === 'SOLICITUD_ESTADO' ? 'Cambio de estado de solicitud' : notification.tipo;
+                const type = ['NUEVA_SOLICITUD', 'SOLICITUD_ESTADO'].includes(notification.tipo) ? 'Solicitud' : 'Medicamento';
                 const time = node('time', new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' }).format(new Date(notification.created_at)));
                 time.dateTime = notification.created_at;
                 meta.append(node('span', type), time, node('span', notification.leida_at ? 'Leída' : 'No leída'));
                 item.append(meta);
+                if(notification.solicitud){
+                    item.append(node('p',`Paciente: ${notification.solicitud.paciente}`),node('p',`Solicitud #${notification.solicitud.id} · ${new Intl.DateTimeFormat('es-CO',{dateStyle:'medium',timeStyle:'short',timeZone:'America/Bogota'}).format(new Date(notification.solicitud.fecha))}`));
+                }
+                if (notification.solicitud) {
+                    const link = node('a', 'Ver solicitud autorizada');
+                    link.href = '/pages/farmacia-solicitudes.html?id=' + encodeURIComponent(notification.solicitud.id);
+                    item.append(link);
+                }
+                if (notification.medicamento) {
+                    const link = node('a', 'Ver medicamento');
+                    const page = notification.medicamento.origen === 'inventario' ? 'inventario' : 'medicamentos';
+                    link.href = '/pages/farmacia-' + page + '.html?id=' + encodeURIComponent(notification.medicamento.id);
+                    item.append(link);
+                }
                 if (!notification.leida_at) {
                     const button = node('button', 'Marcar como leída'); button.type = 'button';
                     button.setAttribute('aria-label', `Marcar como leída: ${notification.titulo}`);
@@ -147,6 +161,16 @@ export function initFarmaciaNotifications({ root = document, request = apiFetch,
     listen(window, 'pagehide', dispose);
     void load();
     return { refresh: load, dispose };
+}
+
+export async function initFarmaciaBell() {
+    const badge=document.getElementById('farmaciaNotificationsBadge'),bell=document.getElementById('farmaciaNotificationsBell');
+    let busy=false,disposed=false,stop;
+    async function refresh(){if(busy||disposed)return;busy=true;try{const {noLeidas}=await apiFetch('/api/farmacia/notificaciones/no-leidas/count');if(!Number.isInteger(noLeidas)||noLeidas<0)throw new Error();badge.textContent=noLeidas>99?'99+':String(noLeidas);bell.setAttribute('aria-label',`Notificaciones de farmacia: ${noLeidas} no leídas.`);}catch{badge.textContent='—';bell.setAttribute('aria-label','Notificaciones de farmacia. Contador no disponible.');}finally{busy=false;}}
+    await refresh();
+    try{stop=await connectNotifications(()=>{void refresh();document.dispatchEvent(new Event('farmacia:solicitudes-actualizadas'));},()=>{});}catch{}
+    const poll=setInterval(()=>{if(!document.hidden)void refresh();},60000);
+    window.addEventListener('pagehide',()=>{disposed=true;clearInterval(poll);stop?.();},{once:true});
 }
 
 if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', () => {

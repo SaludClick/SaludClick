@@ -1,5 +1,5 @@
 const prisma = require('../config/prisma');
-const select = { id: true, tipo: true, titulo: true, mensaje: true, created_at: true, leida_at: true };
+const select = { id: true, tipo: true, titulo: true, mensaje: true, referencia_evento:true, created_at: true, leida_at: true };
 
 function createRepository(db = prisma) {
     const owned = destinatario_id => ({ destinatario_id });
@@ -32,9 +32,11 @@ function createRepository(db = prisma) {
             return result.count;
         },
         async registrarCambio(tx, solicitudId, estado) {
-            // The existing pharmacy queue is shared by active pharmacy staff.
+            // Only the persisted assignment identifies the notification recipient.
             // Never copy patient identities, addresses, prescriptions or chat bodies.
-            const destinatarios = await tx.usuario.findMany({ where: { rol_id: 3, estado: 'ACTIVO' }, select: { id: true } });
+            const asignacion=await tx.farmaciaAsignacion.findUnique({where:{solicitud_id:solicitudId},select:{farmacia_id:true,activa:true}});
+            if(!asignacion?.activa)return [];
+            const destinatarios = await tx.usuario.findMany({ where: { id:asignacion.farmacia_id, rol_id: 3, estado: 'ACTIVO' }, select: { id: true } });
             if (!destinatarios.length) return [];
             await tx.notificacionFarmacia.createMany({
                 data: destinatarios.map(({ id }) => ({

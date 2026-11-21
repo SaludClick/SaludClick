@@ -1,9 +1,10 @@
+const { PublicError } = require("../utils/public-error");
 const validarActualizacionPerfil = (data) => {
     const nombre = String(data.nombre || "").trim();
     const apellido = String(data.apellido || "").trim();
 
     if (!nombre || !apellido) {
-        throw new Error("Nombre y apellido son obligatorios.");
+        throw new PublicError("Nombre y apellido son obligatorios.");
     }
 
     const datos = {

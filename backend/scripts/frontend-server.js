@@ -3,8 +3,11 @@ const path = require("path");
 const http = require("http");
 const https = require("https");
 const { URL } = require("url");
+const { resolvePublicFile } = require("../src/utils/public-assets");
+const securityHeaders = require("../src/config/security-headers");
 
-const FRONTEND_ROOT = fs.realpathSync(path.resolve(__dirname, "../../frontend"));
+const buildRoot = path.resolve(__dirname, "../../frontend/dist");
+const FRONTEND_ROOT = fs.existsSync(buildRoot) ? buildRoot : path.resolve(__dirname, "../../frontend/public");
 const BACKEND_URL = new URL(process.env.BACKEND_URL || "http://127.0.0.1:3000");
 const FRONTEND_PORT = Number(process.env.FRONTEND_PORT || 8080);
 const CONTENT_TYPES = {
@@ -23,11 +26,6 @@ const CONTENT_TYPES = {
 const sendJson = (res, status, body) => {
     res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
     res.end(JSON.stringify(body));
-};
-
-const isInsideFrontend = candidate => {
-    const relative = path.relative(FRONTEND_ROOT, candidate);
-    return relative === "" || (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(`..${path.sep}`));
 };
 
 const proxyApi = (req, res) => {
@@ -57,32 +55,25 @@ const serveStatic = async (req, res, pathname) => {
     try { decodedPath = decodeURIComponent(pathname); }
     catch { return sendJson(res, 400, { ok: false, mensaje: "Ruta invÃ¡lida." }); }
 
-    let filePath = path.resolve(FRONTEND_ROOT, `.${decodedPath}`);
-    if (!isInsideFrontend(filePath)) return sendJson(res, 403, { ok: false, mensaje: "Acceso denegado." });
-
     try {
-        let info = await fs.promises.stat(filePath);
-        if (info.isDirectory()) filePath = path.join(filePath, "index.html");
-        filePath = await fs.promises.realpath(filePath);
-        if (!isInsideFrontend(filePath)) return sendJson(res, 403, { ok: false, mensaje: "Acceso denegado." });
-        info = await fs.promises.stat(filePath);
-        if (!info.isFile()) return sendJson(res, 404, { ok: false, mensaje: "Archivo no encontrado." });
-
+        const filePath = await resolvePublicFile(FRONTEND_ROOT, decodedPath);
+        if (!filePath) return sendJson(res, 404, { ok: false, mensaje: "Archivo no encontrado." });
+        const info = await fs.promises.stat(filePath);
         res.writeHead(200, {
             "Content-Type": CONTENT_TYPES[path.extname(filePath).toLowerCase()] || "application/octet-stream",
             "Content-Length": info.size,
-            "X-Content-Type-Options": "nosniff",
-            "X-Frame-Options": "SAMEORIGIN",
-            "Referrer-Policy": "strict-origin-when-cross-origin"
+            ...(path.basename(filePath) === "restablecer.html" ? { "Referrer-Policy": "no-referrer" } : {})
         });
         if (req.method === "HEAD") return res.end();
-        fs.createReadStream(filePath).pipe(res);
+        const stream = fs.createReadStream(filePath);
+        stream.on("error", () => res.destroy());
+        stream.pipe(res);
     } catch {
         sendJson(res, 404, { ok: false, mensaje: "Archivo no encontrado." });
     }
 };
 
-const server = http.createServer((req, res) => {
+const server = http.createServer((req, res) => securityHeaders(req, res, () => {
     let url;
     try { url = new URL(req.url, "http://frontend.local"); }
     catch { return sendJson(res, 400, { ok: false, mensaje: "Solicitud invÃ¡lida." }); }
@@ -93,8 +84,10 @@ const server = http.createServer((req, res) => {
         return sendJson(res, 405, { ok: false, mensaje: "MÃ©todo no permitido." });
     }
     return serveStatic(req, res, url.pathname);
-});
+}));
 
-server.listen(FRONTEND_PORT, process.env.FRONTEND_HOST || "127.0.0.1", () => {
+if (require.main === module) server.listen(FRONTEND_PORT, process.env.FRONTEND_HOST || "127.0.0.1", () => {
     console.log(`Frontend disponible en http://${process.env.FRONTEND_HOST || "127.0.0.1"}:${FRONTEND_PORT}`);
 });
+
+module.exports = server;

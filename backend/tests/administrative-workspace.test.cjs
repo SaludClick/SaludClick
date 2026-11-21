@@ -118,7 +118,7 @@ test('realtime namespace emits invalidations without personal data and disconnec
   const socket={handshake:{auth:{token:jwt.sign({id:42,rol:2},secret,{expiresIn:-1})}},data:{},join:room=>joined.push(room),on:(name,fn)=>{socketEvents[name]=fn;},disconnect(){disconnected=true;socketEvents.disconnect?.();}};
   await new Promise((resolve,reject)=>middleware(socket,e=>e?reject(e):resolve()));
   handlers.connection(socket);callback({caso_id:7,cliente_id:42});assert.deepEqual(emitted,[['administrativo:actualizado',{caso_id:7}]]);
-  assert.deepEqual(rooms,['administrativo:staff','administrativo:cliente:42','administrativo:visitante:7']);assert.deepEqual(joined,['administrativo:cliente:42']);
+  assert.deepEqual(rooms,['administrativo:staff','administrativo:cliente:42']);assert.deepEqual(joined,['administrativo:cliente:42']);
   await new Promise(r=>setTimeout(r,10));assert.equal(disconnected,true);
 });
 
@@ -129,6 +129,54 @@ test('dashboard includes pending historical conversations in request totals',asy
   const sql=calls.find(sql=>sql.includes('FROM administrative_cases'));
   assert.match(sql,/ABIERTA.*EN_ATENCION/);
   assert.doesNotMatch(sql,/tipo=/);
+});
+
+test('Vitalix verifies the visitor session again before each WebSocket notification', async () => {
+  const { attachAdministrativeSocket } = require('../src/sockets/administrative.socket');
+  let middleware, connect, notify, valid = true;
+  const namespace = {
+    use(fn) { middleware = fn; },
+    on(_event, fn) { connect = fn; },
+    to() { return this; },
+    emit() {}
+  };
+  attachAdministrativeSocket({ of: () => namespace }, { set: (_, fn) => { notify = fn; } }, {
+    visitorLookup: async () => valid ? 7 : undefined
+  });
+  const sent = [];
+  let onDisconnect, disconnected = false;
+  const socket = {
+    handshake: { auth: { visitorToken: 'a'.repeat(64) } },
+    data: {},
+    on(_event, fn) { onDisconnect = fn; },
+    disconnect() { disconnected = true; onDisconnect(); },
+    emit(event, payload) { sent.push([event, payload]); }
+  };
+  await new Promise((resolve, reject) => middleware(socket, error => error ? reject(error) : resolve()));
+  connect(socket);
+  notify({ caso_id: 7 });
+  await new Promise(setImmediate);
+  assert.deepEqual(sent, [['administrativo:actualizado', { caso_id: 7 }]]);
+  valid = false;
+  notify({ caso_id: 7 });
+  await new Promise(setImmediate);
+  assert.equal(disconnected, true);
+  assert.equal(sent.length, 1);
+});
+
+test('administrative conversation mutations omit credential metadata', async () => {
+  const { createController } = require('../src/controllers/administrative.controller');
+  const repo = {
+    reopenConversation: async () => ({
+      id: 7, estado: 'ABIERTA', visitante_hash: 'private-fixture', visitante_expira_at: 'test-expiry'
+    })
+  };
+  let body;
+  await createController({ repo }).reopenConversation(
+    { usuario: { id: 1, rol_id: 1 }, params: { id: '7' } },
+    { json: value => { body = value; } }
+  );
+  assert.deepEqual(body, { ok: true, caso: { id: 7, estado: 'ABIERTA' } });
 });
 test('patient filters accept known authorization states and reject unknown ones',()=>{
   const {validarPaginacion}=require('../src/validators/pacientes-autorizados.validator');

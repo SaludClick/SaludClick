@@ -1,5 +1,5 @@
 
-const jwt = require("jsonwebtoken");
+const { verificarToken } = require("../utils/jwt");
 
 const validarJWT = (req, res, next) => {
     try {
@@ -25,10 +25,7 @@ const validarJWT = (req, res, next) => {
             });
         }
 
-        const payload = jwt.verify(
-            partes[1],
-            process.env.JWT_SECRET
-        );
+        const payload = verificarToken(partes[1]);
 
         req.usuario = payload;
 

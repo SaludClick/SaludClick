@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const { verificarToken } = require("../utils/jwt");
 
 // Dependency injection keeps authorization tests independent of real accounts.
 function createSessionGuard({ findUser = async id => {
@@ -6,7 +6,7 @@ function createSessionGuard({ findUser = async id => {
     const rows = await prisma.$queryRawUnsafe(
         `SELECT u.id,u.rol_id,u.estado,p.sesiones_revocadas_at FROM usuarios u LEFT JOIN administrative_preferences p ON p.usuario_id=u.id WHERE u.id=$1`, id);
     return rows[0];
-}, verify = token => jwt.verify(token, process.env.JWT_SECRET) } = {}) {
+}, verify = verificarToken } = {}) {
     return async function administrativeSession(req, res, next) {
         try {
             const match = /^Bearer (\S+)$/.exec(req.headers.authorization || '');

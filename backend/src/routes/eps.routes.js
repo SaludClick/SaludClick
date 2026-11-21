@@ -1,34 +1,27 @@
-const express = require('express');
-const { createEpsSession } = require('../middlewares/eps-session.middleware');
-const { createController } = require('../controllers/eps.controller');
-function createRouter({ controller = createController(), guard = createEpsSession() } = {}) {
-  const r = express.Router();
-  r.use(guard);
-  for (const path of [
-    'dashboard',
-    'afiliados',
-    'pacientes',
-    'farmacias',
-    'inventario',
-    'autorizaciones',
-    'solicitudes',
-    'notificaciones',
-  ])
-    r.get('/' + path, controller[path]);
-  r.get('/verificar-acceso', controller.acceso);
-  r.post('/afiliados', controller.crearAfiliado);
-  r.patch('/afiliados/:id', controller.actualizarAfiliado);
-  r.get('/pacientes/:id', controller.paciente);
-  r.put('/farmacias/vinculo', controller.vincular);
-  r.post('/autorizaciones', controller.crearAutorizacion);
-  r.patch('/autorizaciones/:id', controller.resolverAutorizacion);
-  r.patch('/solicitudes/:id/seguimiento', controller.seguimiento);
-  r.get('/historial/:tipo/:id', controller.historial);
-  r.patch('/notificaciones/:id/leida', controller.leer);
-  r.get('/perfil', controller.perfil);
-  r.put('/perfil', controller.guardarPerfil);
-  r.post('/logout', controller.logout);
-  return r;
-}
-module.exports = createRouter();
-module.exports.createRouter = createRouter;
+const router = require("express").Router();
+const { requireEps } = require("../middlewares/eps.middleware");
+const controller = require("../controllers/eps.controller");
+const afiliados = require("../controllers/eps-afiliados.controller");
+const solicitudes = require("../controllers/eps-solicitudes.controller");
+const farmacias = require("../controllers/eps-farmacias.controller");
+const notificaciones = require("../controllers/eps-notificaciones.controller");
+const perfil = require("../controllers/eps-perfil.controller");
+
+router.get("/verificar-acceso", requireEps, controller.verificarAcceso);
+router.get("/dashboard/resumen", requireEps, solicitudes.resumen);
+router.get("/reportes/resumen", requireEps, solicitudes.reportes);
+router.get("/perfil", requireEps, perfil.obtener);
+router.put("/perfil", requireEps, perfil.guardar);
+router.get("/afiliados", requireEps, afiliados.listar);
+router.get("/afiliados/:id", requireEps, afiliados.detalle);
+router.get("/solicitudes", requireEps, solicitudes.listar);
+router.post("/solicitudes/busqueda", requireEps, solicitudes.buscarDocumento);
+router.get("/solicitudes/:id", requireEps, solicitudes.detalle);
+router.get("/farmacias", requireEps, farmacias.listar);
+router.get("/farmacias/:id", requireEps, farmacias.detalle);
+router.get("/notificaciones", requireEps, notificaciones.listar);
+router.get("/notificaciones/no-leidas/count", requireEps, notificaciones.contar);
+router.patch("/notificaciones/leer-todas", requireEps, notificaciones.leerTodas);
+router.patch("/notificaciones/:id/leida", requireEps, notificaciones.leer);
+
+module.exports = router;

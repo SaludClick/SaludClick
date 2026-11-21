@@ -8,13 +8,18 @@ export function apiUrl(path) {
 }
 
 export async function apiFetch(url, options = {}) {
+    const expected = new URL(apiUrl('/api/health'), window.location.href);
+    const target = new URL(/^https?:\/\//i.test(url) ? url : apiUrl(url), window.location.href);
+    if (target.origin !== expected.origin || target.username || target.password) {
+        throw new Error('La URL no pertenece a la API configurada.');
+    }
     const headers = new Headers(options.headers || {});
     if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
     const token = getToken();
     if (token) headers.set('Authorization', `Bearer ${token}`);
     let response;
     try {
-        response = await fetch(/^https?:\/\//i.test(url) ? url : apiUrl(url), { ...options, headers });
+        response = await fetch(target, { ...options, headers });
     } catch {
         throw new Error('No fue posible conectar con el servidor. Verifica que la API esté disponible.');
     }

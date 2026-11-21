@@ -14,9 +14,9 @@ function setup(token) {
   const io = { middleware: null, connection: null, use(fn) { this.middleware = fn; }, on(name, fn) { if (name === "connection") this.connection = fn; }, to(room) { return { emit: (event, data) => emitted.push({ room, event, data }) }; } };
   const rooms = []; rooms.has = room => rooms.includes(room);
   const socket = { id: 'test-socket', handshake: { auth: { token } }, data: {}, handlers: {}, rooms, on(name, fn) { this.handlers[name] = fn; }, join(room) { this.rooms.push(room); }, leave() {}, disconnect() { this.handlers.disconnect?.(); } };
-  attachChatSocket(io, { authenticateFarmacia: async token => {
+  attachChatSocket(io, { authenticateStaff: async token => {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    return { id: payload.id, rol_id: 3, exp: payload.exp };
+    return { id: payload.id, rol_id: 1, exp: payload.exp };
   } });
   return { io, socket, emitted };
 }
@@ -24,9 +24,9 @@ function setup(token) {
 test("socket: valida JWT y restringe roles del handshake", async () => {
   const invalid = setup("not-a-token");
   await new Promise((resolve) => invalid.io.middleware(invalid.socket, (error) => { assert.ok(error); resolve(); }));
-  const wrongRole = setup(jwt.sign({ id: 4, rol: 1 }, process.env.JWT_SECRET));
+  const wrongRole = setup(jwt.sign({ id: 4, rol: 3 }, process.env.JWT_SECRET, { expiresIn: '1h' }));
   await new Promise((resolve) => wrongRole.io.middleware(wrongRole.socket, (error) => { assert.ok(error); resolve(); }));
-  const authorized = setup(jwt.sign({ id: 10, rol: 2 }, process.env.JWT_SECRET));
+  const authorized = setup(jwt.sign({ id: 10, rol: 2 }, process.env.JWT_SECRET, { expiresIn: '1h' }));
   await new Promise((resolve, reject) => authorized.io.middleware(authorized.socket, (error) => error ? reject(error) : resolve()));
   assert.equal(authorized.socket.data.usuario.id, 10);
 });
@@ -36,7 +36,7 @@ test("socket: entrega eventos de mensaje y notifica la conversación", async () 
   service.enviar = async (_user, id, content) => ({ id: 90, conversacion_id: id, remitente_id: 10, contenido: content });
   service.staffRole = () => false;
   repository.obtenerParticipantes = async () => ({ cliente_id: 10, agente_id: null });
-  const { io, socket, emitted } = setup(jwt.sign({ id: 10, rol: 2 }, process.env.JWT_SECRET));
+  const { io, socket, emitted } = setup(jwt.sign({ id: 10, rol: 2 }, process.env.JWT_SECRET, { expiresIn: '1h' }));
   await new Promise((resolve, reject) => io.middleware(socket, (error) => error ? reject(error) : resolve()));
   io.connection(socket);
   let response;
@@ -51,7 +51,7 @@ test("socket: rechaza unirse a conversaciones sin permiso y devuelve historial a
   service.staffRole = () => false;
   repository.mensajes = async () => [{ id: 1, contenido: "Anterior" }];
   repository.actualizarEstado = async () => ({ count: 0 });
-  const { io, socket } = setup(jwt.sign({ id: 10, rol: 2 }, process.env.JWT_SECRET));
+  const { io, socket } = setup(jwt.sign({ id: 10, rol: 2 }, process.env.JWT_SECRET, { expiresIn: '1h' }));
   await new Promise((resolve, reject) => io.middleware(socket, (error) => error ? reject(error) : resolve()));
   io.connection(socket);
   let forbidden;
@@ -74,7 +74,7 @@ test("socket: une agentes, marca mensajes entregados y notifica al participante"
   };
   repository.obtenerParticipantes = async () => ({ cliente_id: 10, agente_id: 20 });
   service.enviar = async () => ({ id: 91, conversacion_id: 7 });
-  const { io, socket, emitted } = setup(jwt.sign({ id: 20, rol: 3 }, process.env.JWT_SECRET, { expiresIn: '1h' }));
+  const { io, socket, emitted } = setup(jwt.sign({ id: 20, rol: 1 }, process.env.JWT_SECRET, { expiresIn: '1h' }));
   await new Promise((resolve, reject) => io.middleware(socket, (error) => error ? reject(error) : resolve()));
   io.connection(socket);
 
@@ -91,7 +91,7 @@ test("socket: une agentes, marca mensajes entregados y notifica al participante"
 });
 
 test("socket: conserva respuestas de error para join, send y read", async () => {
-  const { io, socket } = setup(jwt.sign({ id: 10, rol: 2 }, process.env.JWT_SECRET));
+  const { io, socket } = setup(jwt.sign({ id: 10, rol: 2 }, process.env.JWT_SECRET, { expiresIn: '1h' }));
   await new Promise((resolve, reject) => io.middleware(socket, (error) => error ? reject(error) : resolve()));
   io.connection(socket);
 
@@ -106,14 +106,14 @@ test("socket: conserva respuestas de error para join, send y read", async () => 
   service.enviar = async () => { throw new Error("mensaje inválido"); };
   let sendFailure;
   await socket.handlers["chat:send"]({ conversationId: 7 }, (result) => { sendFailure = result; });
-  assert.deepEqual(sendFailure, { ok: false, mensaje: "mensaje inválido" });
+  assert.deepEqual(sendFailure, { ok: false, mensaje: "No se pudo enviar el mensaje." });
 });
 
 test("socket: confirma lectura, tolera ausencia de cambio y permite salir", async () => {
   let authorized = { id: 7 };
   service.autorizada = async () => authorized;
   repository.actualizarEstado = async () => ({ count: authorized ? 1 : 0 });
-  const { io, socket, emitted } = setup(jwt.sign({ id: 10, rol: 2 }, process.env.JWT_SECRET));
+  const { io, socket, emitted } = setup(jwt.sign({ id: 10, rol: 2 }, process.env.JWT_SECRET, { expiresIn: '1h' }));
   await new Promise((resolve, reject) => io.middleware(socket, (error) => error ? reject(error) : resolve()));
   io.connection(socket);
 

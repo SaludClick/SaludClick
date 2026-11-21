@@ -12,15 +12,18 @@ const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { Pool } = require('pg');
 const { createService } = require('../src/services/eps.service');
-const { createController } = require('../src/controllers/eps.controller');
+const { createController } = require('../src/controllers/eps-v1.controller');
 const { createEpsSession } = require('../src/middlewares/eps-session.middleware');
-const { createRouter } = require('../src/routes/eps.routes');
+const { createRouter } = require('../src/routes/eps-v1.routes');
 test(
   'EPS complete HTTP workflows and tenant isolation on isolated PostgreSQL',
   { timeout: 180000 },
   async (t) => {
-    const { PGlite } = require('@electric-sql/pglite');
-    const { PGLiteSocketServer } = require('@electric-sql/pglite-socket');
+    const prismaRequire = require('node:module').createRequire(require.resolve('@prisma/dev', {
+      paths: [path.dirname(require.resolve('prisma/package.json'))],
+    }));
+    const { PGlite } = prismaRequire('@electric-sql/pglite');
+    const { PGLiteSocketServer } = prismaRequire('@electric-sql/pglite-socket');
     const memory = await PGlite.create();
     const socket = new PGLiteSocketServer({
       db: memory,

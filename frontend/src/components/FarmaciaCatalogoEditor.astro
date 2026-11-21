@@ -1,0 +1,60 @@
+<div id="farmaciaCatalogoEditor">
+  <button id="farmaciaNuevoMedicamento" type="button" disabled>Agregar medicamento</button>
+  <p id="farmaciaCatalogoPermisos" role="status"></p>
+  <dialog id="farmaciaMedicamentoDialog" aria-labelledby="farmaciaMedicamentoTitle" class="farmacia-orders-dialog">
+    <form id="farmaciaMedicamentoForm" class="farmacia-editor-form">
+      <h2 id="farmaciaMedicamentoTitle">Agregar medicamento</h2>
+      <label>Nombre del medicamento<input name="nombre" required maxlength="150" /></label>
+      <label>Descripción<textarea name="descripcion" required maxlength="2000" rows="3"></textarea></label>
+      <label>Presentación<input name="presentacion" required maxlength="180" placeholder="Ej.: Caja por 20 tabletas" /></label>
+      <label>Categoría<select name="categoria_id" required></select></label>
+      <label>Cantidad disponible<input name="stock" type="number" min="0" max="2147483647" step="1" value="0" required /></label>
+      <label>Stock mínimo<input name="stock_minimo" type="number" min="0" max="2147483647" step="1" value="0" required /></label>
+      <label>Publicación<select name="estado" required><option value="INACTIVO">Sin publicar</option><option value="DISPONIBLE">Publicado</option></select></label>
+      <label>Subir fotografía<input name="foto" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" aria-describedby="farmaciaFotoAyuda farmaciaImagenStatus" /></label>
+      <small id="farmaciaFotoAyuda">JPG, PNG o WebP. Hasta 4 MB.</small>
+      <img id="farmaciaImagenPreview" class="farmacia-med-image" src="/images/medicamentos/default.svg" alt="Vista previa del medicamento" referrerpolicy="no-referrer" />
+      <p id="farmaciaImagenStatus" role="status"></p>
+      <p id="farmaciaMedicamentoStatus" role="status" aria-live="polite"></p>
+      <div class="farmacia-order-actions"><button id="farmaciaMedicamentoGuardar" type="submit">Guardar medicamento</button><button id="farmaciaMedicamentoCancelar" type="button">Cancelar</button></div>
+    </form>
+  </dialog>
+</div>
+<style is:global>
+  #farmaciaCatalogoEditor { margin-bottom: 1rem; }
+  #medicamentos .farmacia-catalogo-identidad {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    min-width: 0;
+  }
+  #medicamentos .farmacia-catalogo-identidad img {
+    width: 48px;
+    height: 48px;
+    margin: 0;
+    flex-shrink: 0;
+  }
+  #medicamentos .farmacia-catalogo-botones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem;
+  }
+  #medicamentos .farmacia-catalogo-acciones button {
+    white-space: normal;
+  }
+  #medicamentos .farmacia-catalogo-retirar {
+    color: #a42b39;
+    background: #fff5f6;
+  }
+  #medicamentos .farmacia-catalogo-caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  #medicamentos [hidden],
+  #farmaciaCatalogoPermisos:empty,
+  #medicamentos [data-existencias-part="estado"]:empty,
+  #farmaciaImagenStatus:empty { display: none; }
+</style>

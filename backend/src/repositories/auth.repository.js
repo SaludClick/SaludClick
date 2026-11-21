@@ -1,3 +1,4 @@
+const { PublicError } = require("../utils/public-error");
 const pool = require("../config/database");
 
 const buscarPorCorreo = async (correo) => {
@@ -68,7 +69,7 @@ const actualizarPassword = async (usuarioId, passwordHash, tokenId) => {
             "DELETE FROM tokens_recuperacion WHERE id = $1 AND usuario_id = $2 AND expira_en > NOW() RETURNING id",
             [tokenId, usuarioId]
         );
-        if (!consumed.rows.length) throw new Error("El enlace es inválido o ya expiró.");
+        if (!consumed.rows.length) throw new PublicError("El enlace es inválido o ya expiró.");
         await connection.query(
             `UPDATE usuarios SET password = $1,
              estado = CASE WHEN password = '!ACTIVACION_PENDIENTE' THEN 'ACTIVO' ELSE estado END

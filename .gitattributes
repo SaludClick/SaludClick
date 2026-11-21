@@ -1,0 +1,6 @@
+# Conservar bytes históricos comprobados contra _prisma_migrations (LF/CRLF).
+# No normalizar estos SQL al hacer checkout en otros sistemas.
+backend/prisma/migrations/**/migration.sql -text
+# El hash histórico de Chat incluye CRLF; revisar espacios sin convertir sus bytes.
+backend/prisma/migrations/20261106000000_add_chat/migration.sql whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/calidad/activacion-farmacia-2026-11-17/** -text

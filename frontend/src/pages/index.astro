@@ -1,5 +1,6 @@
 ---
 import VitalixWidget from "../components/VitalixWidget.jsx";
+import '../styles/chat.css';
 ---
 <!DOCTYPE html>
 <html lang="es">
@@ -55,7 +56,7 @@ import VitalixWidget from "../components/VitalixWidget.jsx";
                 <p>Consulta medicamentos, envía tus solicitudes y sigue cada paso desde un mismo lugar.</p>
 
                 <div class="buscador home-search" role="search" aria-label="Buscar medicamentos">
-                    <input id="busquedaInicio" type="text" placeholder="Buscar medicamento..." aria-label="Buscar medicamento">
+                    <input id="busquedaInicio" type="search" maxlength="150" placeholder="Buscar medicamento..." aria-label="Buscar medicamento">
                     <button id="buscarInicio" type="button">
                         <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                         Buscar
@@ -148,6 +149,16 @@ import VitalixWidget from "../components/VitalixWidget.jsx";
         </div>
     </section>
 
+    <section id="catalogo-publico" class="container catalogo-publico" aria-labelledby="catalogo-publico-titulo" tabindex="-1">
+        <h2 id="catalogo-publico-titulo">Catálogo de medicamentos</h2>
+        <p id="catalogo-publico-estado" role="status">Cargando medicamentos…</p>
+        <div id="catalogo-publico-lista" class="catalogo-publico-lista" aria-busy="true"></div>
+        <nav class="catalogo-publico-paginacion" aria-label="Páginas del catálogo">
+            <button id="catalogo-publico-anterior" type="button" class="btn-outline" disabled>Anterior</button>
+            <button id="catalogo-publico-siguiente" type="button" class="btn-outline" disabled>Siguiente</button>
+        </nav>
+    </section>
+
     <section id="beneficios" class="beneficios">
         <div class="container">
             <h2>Beneficios de SaludClick</h2>
@@ -208,12 +219,40 @@ import VitalixWidget from "../components/VitalixWidget.jsx";
 
     <script is:inline type="module" src="/js/menu.js"></script>
     <script is:inline type="module" src="/js/main.js"></script>
+    <script is:inline type="module" src="/js/catalogo-publico.js"></script>
     <VitalixWidget client:load />
 </body>
 
 </html>
 
-<!-- Estilos exclusivos de la portada; no alteran componentes ni hojas compartidas. -->
+<style>
+    .catalogo-publico { padding-block: 3rem; }
+    .catalogo-publico-lista {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+        gap: 1rem;
+    }
+    .catalogo-publico :global(article) {
+        display: grid;
+        align-content: start;
+        gap: .5rem;
+        padding: 1rem;
+        border: 1px solid #dce6ee;
+        border-radius: 1rem;
+        background: white;
+        color: #163044;
+        overflow-wrap: anywhere;
+    }
+    .catalogo-publico :global(img) {
+        width: 100%;
+        height: 8rem;
+        object-fit: contain;
+    }
+    .catalogo-publico-paginacion { display: flex; justify-content: center; gap: 1rem; margin-block-start: 1rem; }
+    .catalogo-publico-paginacion button { color: #163044; border: 1px solid #aabfcc; }
+    .catalogo-publico-paginacion button:disabled { opacity: .55; cursor: default; }
+</style>
+
 <style is:global>
     body.home-page {
         --public-ink: #163d32;

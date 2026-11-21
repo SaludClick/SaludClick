@@ -8,7 +8,7 @@ function handle(operation, changed = false) {
             res.json({ ok: true, ...result });
         } catch (error) {
             const schema = ['P2021', 'P2022', '42P01', '42703'].includes(error.code);
-            const status = schema ? 503 : [400, 404, 503].includes(error.status) ? error.status : 500;
+            const status = schema ? 503 : [400, 403, 404, 409, 503].includes(error.status) ? error.status : 500;
             res.status(status).json({ ok: false,
                 codigo: status === 503 ? 'FARMACIA_NOTIFICACIONES_NO_DISPONIBLES' : undefined,
                 mensaje: status === 503 ? 'Las notificaciones de Farmacia aún no están disponibles.' : status === 500 ? 'No se pudo completar la operación de notificaciones.' : error.message

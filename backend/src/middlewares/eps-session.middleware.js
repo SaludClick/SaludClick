@@ -1,9 +1,9 @@
-const jwt = require('jsonwebtoken');
+const { verificarToken } = require('../utils/jwt');
 const { databaseFailure, safeDiagnostic } = require('../services/eps-errors');
 function createEpsSession({
   db,
   report = (diagnostic) => console.error('EPS access check:', diagnostic),
-  verify = (token) => jwt.verify(token, process.env.JWT_SECRET),
+  verify = verificarToken,
 } = {}) {
   return async (req, res, next) => {
     res.set('Cache-Control', 'no-store');

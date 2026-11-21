@@ -1,3 +1,4 @@
+const { publicMessage } = require("../utils/public-error");
 const authService = require("../services/auth.service");
 const userService = require("../services/user.service");
 
@@ -14,7 +15,7 @@ const register = async (req, res) => {
     } catch (error) {
         return res.status(400).json({
             ok: false,
-            mensaje: error.message
+            mensaje: publicMessage(error, "No se pudo registrar la cuenta.")
         });
     }
 };
@@ -32,7 +33,7 @@ const login = async (req, res) => {
     } catch (error) {
         return res.status(400).json({
             ok: false,
-            mensaje: error.message
+            mensaje: publicMessage(error, "No se pudo iniciar sesión.")
         });
     }
 };
@@ -59,10 +60,7 @@ const googleLogin = async (req, res) => {
         return res.status(200).json(respuesta);
 
     } catch (error) {
-        console.error(
-            "Error en login con Google:",
-            error.message
-        );
+        console.error("Error en login con Google.");
 
         return res.status(401).json({
             ok: false,
@@ -77,13 +75,9 @@ const googleLogin = async (req, res) => {
 
 const solicitarRecuperacion = async (req, res) => {
     try {
-        const correo = String(
-            req.body.correo || ""
-        )
-            .trim()
-            .toLowerCase();
+        const correo = typeof req.body?.correo === "string" ? req.body.correo.trim().toLowerCase() : "";
 
-        if (!correo) {
+        if (!correo || correo.length > 254) {
             throw new Error(
                 "El correo es obligatorio."
             );
@@ -100,10 +94,7 @@ const solicitarRecuperacion = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(
-            "Error en recuperación:",
-            error.message
-        );
+        console.error("Error en recuperación.");
 
         /*
          * Respuesta genérica para evitar
@@ -137,7 +128,7 @@ const restablecerPassword = async (req, res) => {
     } catch (error) {
         return res.status(400).json({
             ok: false,
-            mensaje: error.message
+            mensaje: publicMessage(error, "No se pudo restablecer la contraseña.")
         });
     }
 };
@@ -160,7 +151,7 @@ const updateProfile = async (req, res) => {
         res.json({ ok: true, mensaje: "Perfil actualizado correctamente.", usuario });
     } catch (error) {
         if (req.farmacia) return res.status(500).json({ ok: false, mensaje: 'No se pudo actualizar el perfil. Revisa los datos e inténtalo nuevamente.' });
-        res.status(400).json({ ok: false, mensaje: error.message });
+        res.status(400).json({ ok: false, mensaje: publicMessage(error, "No se pudo actualizar el perfil.") });
     }
 };
 

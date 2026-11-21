@@ -6,7 +6,7 @@ async function pedidos(req, res) {
         const pedidos = await adminService.listarPedidos();
         res.json({ ok: true, pedidos });
     } catch (error) {
-        console.error(error);
+        console.error("Error interno de la operación.");
         res.status(500).json({
             ok: false,
             mensaje: "No se pudieron cargar los pedidos."
@@ -43,7 +43,7 @@ async function cuentas(req, res) {
         const cuentas = await adminService.listarCuentas();
         res.json({ ok: true, cuentas });
     } catch (error) {
-        console.error("Error al listar cuentas:", error);
+        console.error("Error al listar cuentas.");
         res.status(500).json({
             ok: false,
             mensaje: "No se pudieron cargar las cuentas."
@@ -105,7 +105,7 @@ async function eliminarCuenta(req, res) {
             cuentaId: resultado.id
         });
     } catch (error) {
-        console.error("Error al eliminar cuenta:", error);
+        console.error("Error al eliminar cuenta.");
 
         if (error.code === "CUENTA_PROPIA") {
             return res.status(403).json({

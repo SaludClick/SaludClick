@@ -3,6 +3,10 @@ const medicationService = require("../services/medication.service");
 const verificarAcceso = (req, res) => {
     res.json({
         ok: true,
+        operacionHabilitada: require('../config/farmacia-operacion').habilitada(),
+        ...(process.env.FARMACIA_SOLICITUDES_ENABLED === 'true' && { solicitudesHabilitadas: true }),
+        inventarioPropioHabilitado: require('../config/farmacia-stock').habilitado(),
+        notificacionesHabilitadas: require('../config/farmacia-notificaciones').habilitadas(),
         mensaje: "Acceso autorizado al panel de farmacia."
     });
 };
@@ -23,7 +27,7 @@ async function dashboard(req, res) {
             }
         });
     } catch (error) {
-        console.error(error);
+        console.error("Error interno de la operación.");
         res.status(500).json({
             ok: false,
             mensaje: "No se pudo cargar el dashboard de farmacia."
@@ -61,6 +65,8 @@ module.exports = {
             res.status(status).json({ ok: false, mensaje: status === 500 ? 'No se pudo actualizar el pedido.' : error.message });
         }
     },
-    pedidos: handle(service.listarPedidos, 'No se pudieron cargar los pedidos de farmacia.'),
+    pedidos(req,res) {
+        return handle(service.listarPedidos, 'No se pudieron cargar los pedidos de farmacia.')(req,res);
+    },
     inventario: handle(service.listarInventario, 'No se pudo cargar el inventario.')
 };

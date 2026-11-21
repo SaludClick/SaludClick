@@ -7,7 +7,7 @@ const title = "Dashboard EPS | SaludClick";
 <Layout title={title} bodyClass="admin-console">
   <div class="admin-app">
     <aside class="admin-sidebar" id="menu" aria-label="Navegación EPS">
-      <a href="/pages/eps.html" class="admin-brand" aria-label="SaludClick, dashboard EPS">
+      <a href="#dashboard" class="admin-brand" aria-label="SaludClick, dashboard EPS">
         <span class="admin-brand-mark">
           <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
         </span>
@@ -16,21 +16,36 @@ const title = "Dashboard EPS | SaludClick";
 
       <span class="admin-nav-caption">MENÚ PRINCIPAL</span>
       <nav class="admin-side-nav" aria-label="Secciones EPS">
-        <a class="admin-side-link active" href="#dashboard" data-eps-view="dashboard" aria-current="page">
+        <a id="epsNavDashboard" class="admin-side-link active" href="#dashboard" aria-current="page">
           <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
           <span>Dashboard</span>
         </a>
-        <a class="admin-side-link" href="#afiliados" data-eps-view="afiliados"><i class="fa-solid fa-users" aria-hidden="true"></i><span>Afiliados</span></a>
-        <a class="admin-side-link" href="#farmacias" data-eps-view="farmacias"><i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i><span>Farmacias</span></a>
-        <a class="admin-side-link" href="#autorizaciones" data-eps-view="autorizaciones"><i class="fa-solid fa-file-circle-check" aria-hidden="true"></i><span>Autorizaciones</span></a>
-        <a class="admin-side-link" href="#solicitudes" data-eps-view="solicitudes"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i><span>Solicitudes</span></a>
-        <a class="admin-side-link" href="#pacientes" data-eps-view="pacientes"><i class="fa-solid fa-user-group" aria-hidden="true"></i><span>Pacientes</span></a>
-<a class="admin-side-link" href="#inventario" data-eps-view="inventario"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i><span>Inventario</span></a>
-<a class="admin-side-link" href="#notificaciones" data-eps-view="notificaciones"><i class="fa-solid fa-bell" aria-hidden="true"></i><span>Notificaciones</span></a>
-<a class="admin-side-link" href="#perfil" data-eps-view="perfil">
+        <a id="epsNavAfiliados" class="admin-side-link" href="#afiliados">
+          <i class="fa-solid fa-users" aria-hidden="true"></i>
+          <span>Afiliados</span>
+        </a>
+        <a id="epsNavFarmacias" class="admin-side-link" href="#farmacias">
+          <i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i>
+          <span>Farmacias vinculadas</span>
+        </a>
+        <a id="epsNavSolicitudes" class="admin-side-link" href="#solicitudes">
+          <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
+          <span>Solicitudes</span>
+        </a>
+        <a id="epsNavNotificaciones" class="admin-side-link" href="#notificaciones">
+          <i class="fa-solid fa-bell" aria-hidden="true"></i>
+          <span>Notificaciones</span>
+          <small id="epsAvisosContador" aria-live="polite" hidden></small>
+        </a>
+        <a id="epsNavReportes" class="admin-side-link" href="#reportes">
+          <i class="fa-solid fa-chart-column" aria-hidden="true"></i>
+          <span>Reportes</span>
+        </a>
+        <a id="epsNavPerfil" class="admin-side-link" href="#perfil">
           <i class="fa-solid fa-user" aria-hidden="true"></i>
           <span>Perfil</span>
         </a>
+        <a class="admin-side-link" href="/pages/eps-v1.html"><span>Gestión EPS</span></a>
       </nav>
 
       <div class="admin-sidebar-bottom">
@@ -61,24 +76,362 @@ const title = "Dashboard EPS | SaludClick";
           <span>SaludClick</span>
           <strong>Panel EPS</strong>
         </div>
-        <button id="epsBell" type="button" class="btn-outline" aria-label="Ver notificaciones"><i class="fa-solid fa-bell" aria-hidden="true"></i> <span id="epsUnread">--</span></button>
-<div class="admin-topbar-status">
+        <div class="admin-topbar-status">
           <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
           Acceso EPS
         </div>
       </header>
 
       <main class="admin-content" id="epsMain">
-<section class="admin-page-heading"><div><span class="admin-eyebrow">OPERACION EPS</span><h1 id="epsTitle">Dashboard</h1><p id="epsDescription">Gestion de la entidad EPS autenticada.</p></div><button id="refreshEps" class="btn-outline admin-refresh" type="button">Actualizar</button></section>
-<div id="epsMessage" class="admin-message" role="status" aria-live="polite"></div>
-<div id="epsAccess" aria-live="polite" aria-busy="true">Verificando permisos...</div>
-<div id="epsWorkspace" aria-busy="true"></div>
-<dialog id="epsDialog" aria-labelledby="epsDialogTitle"><div id="epsDialogContent"></div><button id="epsCloseDialog" type="button" class="btn-outline">Cerrar</button></dialog>
-</main>
+        <div id="epsDashboard">
+        <section class="admin-page-heading">
+          <div>
+            <span class="admin-eyebrow">OPERACIÓN EPS</span>
+            <h1>Dashboard</h1>
+            <p id="epsDashboardEntidad">Resumen de la entidad</p>
+          </div>
+          <button id="refreshEps" class="btn-outline admin-refresh" type="button">
+            <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+            Actualizar
+          </button>
+        </section>
+
+        <p id="epsDashboardEstado" role="status"></p>
+        <div id="epsDashboardDatos" hidden>
+          <section class="eps-dash-metricas" aria-label="Estadísticas de la EPS" id="epsDashboardMetricas"></section>
+          <nav class="eps-dash-accesos" aria-label="Accesos rápidos">
+            <a class="btn-outline" href="#afiliados"><i class="fa-solid fa-users" aria-hidden="true"></i> Afiliados</a>
+            <a class="btn-outline" href="#solicitudes"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i> Solicitudes</a>
+            <a class="btn-outline" href="#farmacias"><i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i> Farmacias vinculadas</a>
+            <a class="btn-outline" href="#notificaciones"><i class="fa-solid fa-bell" aria-hidden="true"></i> Notificaciones</a>
+          </nav>
+          <div class="eps-dash-graficos">
+            <section class="card admin-dashboard-card"><h2>Solicitudes por estado</h2><div id="epsGraficoEstados"></div></section>
+            <section class="card admin-dashboard-card"><h2>Solicitudes por mes</h2><div id="epsGraficoMeses"></div></section>
+            <section class="card admin-dashboard-card"><h2>Distribución de afiliados</h2><div id="epsGraficoAfiliados"></div></section>
+          </div>
+          <div class="eps-dash-actividad">
+            <section class="card admin-dashboard-card">
+              <h2>Solicitudes recientes</h2>
+              <div id="epsDashboardRecientes" class="eps-tabla"></div>
+            </section>
+            <section class="card admin-dashboard-card">
+              <h2>Últimos avisos</h2>
+              <div id="epsDashboardAvisos" aria-live="polite"><p>Consultando avisos…</p></div>
+              <a href="#notificaciones">Ver notificaciones</a>
+            </section>
+            <section class="card admin-dashboard-card">
+              <h2>Farmacias vinculadas</h2>
+              <div id="epsDashboardFarmacias"></div>
+              <a href="#farmacias">Ver farmacias vinculadas</a>
+            </section>
+          </div>
+        </div>
+        </div>
+        <section id="afiliados" class="card admin-dashboard-card eps-afiliados" aria-labelledby="epsAfiliadosTitulo" hidden>
+          <h2 id="epsAfiliadosTitulo">Afiliados</h2>
+          <form id="epsAfiliadosBuscar">
+            <label for="epsBuscar">Buscar por nombre, documento o correo</label>
+            <div>
+              <input id="epsBuscar" type="search" maxlength="150" />
+              <button class="btn-outline" type="submit">Buscar</button>
+            </div>
+          </form>
+          <p id="epsAfiliadosEstado" role="status"></p>
+          <div class="eps-tabla" id="epsAfiliadosTabla" tabindex="0" role="region" aria-label="Resultados de afiliados" hidden>
+            <table>
+              <thead><tr><th scope="col">ID</th><th scope="col">Nombres</th><th scope="col">Apellidos</th><th scope="col">Documento</th><th scope="col">Estado</th><th scope="col">Detalle</th></tr></thead>
+              <tbody id="epsAfiliadosFilas"></tbody>
+            </table>
+          </div>
+          <div id="epsAfiliadosPaginacion" aria-label="Paginación de afiliados" hidden>
+            <button class="btn-outline" id="epsAnterior" type="button">Anterior</button>
+            <span id="epsPagina"></span>
+            <button class="btn-outline" id="epsSiguiente" type="button">Siguiente</button>
+          </div>
+          <dialog id="epsAfiliadoDetalle" aria-labelledby="epsDetalleTitulo">
+            <h3 id="epsDetalleTitulo">Detalle del afiliado</h3>
+            <p id="epsDetalleEstado" role="status"></p>
+            <dl id="epsDetalleDatos"></dl>
+            <form method="dialog"><button class="btn-outline" type="submit">Cerrar</button></form>
+          </dialog>
+        </section>
+        <section id="farmacias" class="card admin-dashboard-card eps-farmacias" aria-labelledby="epsFarmaciasTitulo" hidden>
+          <h2 id="epsFarmaciasTitulo">Farmacias vinculadas</h2>
+          <form id="epsFarmaciasBuscar">
+            <label for="epsFarmaciaNombre">Buscar por nombre</label>
+            <input id="epsFarmaciaNombre" type="search" maxlength="150" />
+            <button class="btn-outline" type="submit">Buscar</button>
+          </form>
+          <p id="epsFarmaciasEstado" role="status"></p>
+          <div id="epsFarmaciasTabla" class="eps-tabla" tabindex="0" role="region" aria-label="Resultados de farmacias" hidden>
+            <table>
+              <thead><tr><th scope="col">Farmacia</th><th scope="col">Convenio</th><th scope="col">Detalle</th></tr></thead>
+              <tbody id="epsFarmaciasFilas"></tbody>
+            </table>
+          </div>
+          <div id="epsFarmaciasPaginacion" aria-label="Paginación de farmacias" hidden>
+            <button id="epsFarmaciasAnterior" class="btn-outline" type="button">Anterior</button>
+            <span id="epsFarmaciasPagina"></span>
+            <button id="epsFarmaciasSiguiente" class="btn-outline" type="button">Siguiente</button>
+          </div>
+          <dialog id="epsFarmaciaDetalle" aria-labelledby="epsFarmaciaDetalleTitulo">
+            <h3 id="epsFarmaciaDetalleTitulo">Detalle de farmacia</h3>
+            <p id="epsFarmaciaDetalleEstado" role="status"></p>
+            <dl id="epsFarmaciaDatos"></dl>
+            <form method="dialog"><button class="btn-outline" type="submit">Cerrar</button></form>
+          </dialog>
+        </section>
+        <section id="solicitudes" class="card admin-dashboard-card eps-solicitudes" aria-labelledby="epsSolicitudesTitulo" hidden>
+          <h2 id="epsSolicitudesTitulo">Solicitudes</h2>
+          <form id="epsSolicitudesFiltros">
+            <label>Número de solicitud<input name="numero" inputmode="numeric" pattern="[0-9]{1,10}" maxlength="10" /></label>
+            <label>Tipo de documento<input name="tipo_documento" placeholder="CC" pattern="[a-zA-Z]{1,10}" maxlength="10" /></label>
+            <label>Documento del afiliado<input name="documento" type="search" maxlength="30" autocomplete="off" /></label>
+            <label>Estado
+              <select name="estado">
+                <option value="">Todos</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="APROBADA">Aprobada</option>
+                <option value="PREPARANDO">Preparando</option>
+                <option value="LISTA">Lista</option>
+                <option value="ENTREGADA">Entregada</option>
+                <option value="CANCELADA">Cancelada</option>
+              </select>
+            </label>
+            <button class="btn-outline" type="submit">Buscar</button>
+            <button class="btn-outline" type="reset">Limpiar</button>
+          </form>
+          <p id="epsSolicitudesEstado" role="status" aria-live="polite"></p>
+          <div id="epsSolicitudesTabla" class="eps-tabla" tabindex="0" role="region" aria-label="Resultados de solicitudes" hidden>
+            <table>
+              <thead><tr><th scope="col">Solicitud</th><th scope="col">Paciente</th><th scope="col">Documento</th><th scope="col">EPS</th><th scope="col">Farmacia</th><th scope="col">Fecha</th><th scope="col">Estado</th><th scope="col">Medicamentos</th><th scope="col">Fórmula médica</th><th scope="col">Detalle</th></tr></thead>
+              <tbody id="epsSolicitudesFilas"></tbody>
+            </table>
+          </div>
+          <div id="epsSolicitudesPaginacion" aria-label="Paginación de solicitudes" hidden>
+            <button id="epsSolicitudesAnterior" class="btn-outline" type="button">Anterior</button>
+            <span id="epsSolicitudesPagina"></span>
+            <button id="epsSolicitudesSiguiente" class="btn-outline" type="button">Siguiente</button>
+          </div>
+          <dialog id="epsSolicitudDetalle" aria-labelledby="epsSolicitudTitulo">
+            <h3 id="epsSolicitudTitulo">Detalle de solicitud</h3>
+            <p id="epsSolicitudDetalleEstado" role="status"></p>
+            <div id="epsSolicitudDatos" hidden>
+              <p id="epsSolicitudResumen"></p>
+              <p id="epsSolicitudPaciente"></p>
+              <h4>Medicamentos y cantidades</h4>
+              <ul id="epsSolicitudMedicamentos"></ul>
+              <h4>Fórmula médica</h4>
+              <p id="epsSolicitudFormula"></p>
+              <h4>Historial de estados</h4>
+              <ul id="epsSolicitudHistorial"></ul>
+            </div>
+            <form method="dialog"><button class="btn-outline" type="submit">Cerrar</button></form>
+          </dialog>
+        </section>
+        <section id="notificaciones" class="card admin-dashboard-card eps-notificaciones" aria-labelledby="epsAvisosTitulo" hidden>
+          <h2 id="epsAvisosTitulo">Notificaciones</h2>
+          <div class="eps-avisos-controles">
+            <label>Mostrar
+              <select id="epsAvisosFiltro">
+                <option value="todas">Todas</option>
+                <option value="no_leidas">No leídas</option>
+                <option value="leidas">Leídas</option>
+              </select>
+            </label>
+            <button class="btn-outline" id="epsAvisosLeerTodas" type="button" disabled>Marcar todas como leídas</button>
+          </div>
+          <p id="epsAvisosEstado" role="status"></p>
+          <ul id="epsAvisosLista" class="eps-avisos-lista"></ul>
+          <div class="eps-avisos-controles" id="epsAvisosPaginacion" aria-label="Paginación de notificaciones" hidden>
+            <button class="btn-outline" id="epsAvisosAnterior" type="button">Anterior</button>
+            <span id="epsAvisosPagina"></span>
+            <button class="btn-outline" id="epsAvisosSiguiente" type="button">Siguiente</button>
+          </div>
+        </section>
+        <section id="reportes" class="card admin-dashboard-card eps-cierre" aria-labelledby="epsReportesTitulo" hidden>
+          <h2 id="epsReportesTitulo">Reportes</h2>
+          <form id="epsReportesFiltro" class="eps-cierre-campos">
+            <label>Desde <input name="desde" type="date" /></label>
+            <label>Hasta <input name="hasta" type="date" /></label>
+            <button type="submit" class="btn-outline">Consultar</button>
+            <button type="button" id="epsReportesCSV" class="btn-outline" disabled>Exportar CSV</button>
+          </form>
+          <p>El período filtra las solicitudes. Afiliados y convenios muestran la situación vigente.</p>
+          <p id="epsReportesEstado" role="status"></p>
+          <div id="epsReportesDatos" class="eps-dash-graficos" hidden></div>
+        </section>
+        <section id="perfil" class="card admin-dashboard-card eps-cierre" aria-labelledby="epsPerfilTitulo" hidden>
+          <h2 id="epsPerfilTitulo">Perfil EPS</h2>
+          <p id="epsPerfilEstado" role="status"></p>
+          <div id="epsPerfilDatos" hidden>
+            <div class="eps-dash-graficos">
+              <section>
+                <h3 id="epsPerfilEntidad"></h3>
+                <dl id="epsPerfilInstitucional"></dl>
+              </section>
+              <section>
+                <h3>Cuenta autenticada</h3>
+                <dl id="epsPerfilCuenta"></dl>
+                <a href="/recuperar.html">Restablecer contraseña por correo</a>
+              </section>
+            </div>
+            <form id="epsPerfilForm" class="eps-cierre-campos">
+              <label>Nombre <input name="nombre" autocomplete="given-name" maxlength="100" required /></label>
+              <label>Apellido <input name="apellido" autocomplete="family-name" maxlength="100" required /></label>
+              <label>Teléfono <input name="telefono" type="tel" autocomplete="tel" maxlength="20" /></label>
+              <label>Ciudad <input name="ciudad" autocomplete="address-level2" maxlength="100" /></label>
+              <button type="submit" class="btn-outline">Guardar perfil</button>
+            </form>
+          </div>
+        </section>
+      </main>
     </div>
   </div>
 
-  <link rel="stylesheet" href="/css/eps.css" />
-<script is:inline type="module" src="/js/menu.js"></script>
+  <script is:inline type="module" src="/js/menu.js"></script>
   <script is:inline type="module" src="/js/eps.js"></script>
 </Layout>
+
+<style>
+  .eps-cierre { margin-top: 20px; }
+  .eps-cierre-campos {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 12px;
+    margin: 14px 0;
+  }
+  .eps-cierre-campos label { display: grid; gap: 4px; max-width: 100%; }
+  .eps-cierre-campos input {
+    min-width: 0;
+    max-width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #91aa9c;
+    border-radius: 6px;
+  }
+  #perfil :global(dd) { margin: 0 0 8px; overflow-wrap: anywhere; }
+  #epsReportesDatos > :global(section) { min-width: 0; }
+  #epsReportesDatos :global(tbody th) { font-weight: 500; }
+  .eps-dash-metricas, .eps-dash-graficos, .eps-dash-actividad {
+    display: grid;
+    gap: 14px;
+    margin: 16px 0;
+  }
+  .eps-dash-metricas { grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); }
+  .eps-dash-graficos { grid-template-columns: repeat(auto-fit, minmax(min(100%, 265px), 1fr)); }
+  .eps-dash-actividad { grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); }
+  .eps-dash-metricas > *, .eps-dash-graficos > *, .eps-dash-actividad > * { min-width: 0; }
+  .eps-dash-accesos { display: flex; flex-wrap: wrap; gap: 8px; }
+  #epsDashboard :global(h2) { font-size: 16px; margin: 0 0 10px; }
+  #epsDashboard :global(.eps-dash-total) { display: block; font-size: 28px; font-weight: 700; }
+  #epsDashboard :global(.eps-dash-dato) { margin: 6px 0; }
+  #epsDashboard :global(.eps-dash-barra) { display: block; width: 100%; height: 10px; accent-color: #20805d; }
+  #epsDashboard :global(.eps-dash-series) { list-style: none; margin: 0; padding: 0; }
+  #epsDashboard :global(.eps-dash-series li) { margin: 10px 0; }
+  #epsDashboard :global(.eps-dash-series span) { display: block; margin-bottom: 3px; }
+  #epsDashboard :global(.eps-dash-lista) { margin: 0 0 12px; padding-inline-start: 18px; }
+  #epsDashboard :global(.eps-dash-lista li) { margin: 8px 0; }
+  #epsDashboard :global(table) { width: 100%; min-width: 430px; border-collapse: collapse; }
+  #epsDashboard :global(th), #epsDashboard :global(td) { text-align: left; padding: 8px; border-bottom: 1px solid #dce8e0; }
+  #epsAvisosContador {
+    margin-left: auto;
+    background: #d9efdf;
+    color: #153d29;
+    border-radius: 99px;
+    padding: 1px 6px;
+  }
+
+  .eps-afiliados, .eps-farmacias, .eps-solicitudes, .eps-notificaciones {
+    margin-top: 20px;
+  }
+  .eps-solicitudes > form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 10px;
+    margin: 12px 0;
+  }
+  .eps-solicitudes label {
+    display: grid;
+    gap: 4px;
+    max-width: 100%;
+  }
+  .eps-farmacias input, .eps-solicitudes input, .eps-solicitudes select {
+    width: min(168px, 100%);
+    min-height: 36px;
+    padding: 4px 8px;
+    border: 1px solid #91aa9c;
+    border-radius: 6px;
+    background: white;
+  }
+  .eps-farmacias form > label {
+    display: block;
+    margin: 12px 0 4px;
+  }
+  .eps-farmacia-id {
+    display: block;
+    color: var(--admin-muted);
+    margin-top: 3px;
+  }
+  #epsFarmaciasEstado, #epsFarmaciasPaginacion {
+    margin: 12px 0;
+  }
+  .eps-afiliados form > label {
+    display: block;
+    margin: 12px 0 4px;
+  }
+  .eps-tabla {
+    overflow-x: auto;
+  }
+  .eps-tabla table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .eps-tabla :is(th, td) {
+    text-align: left;
+    padding: 10px;
+    border-bottom: 1px solid #dce8e0;
+  }
+  #epsAfiliadosPaginacion, #epsAfiliadosEstado, #epsSolicitudesPaginacion, #epsSolicitudesEstado {
+    margin: 12px 0;
+  }
+  dialog {
+    margin: auto;
+    padding: 20px;
+    max-width: min(480px, 90vw);
+    max-height: 85vh;
+    border: 1px solid #dce8e0;
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+  }
+  dialog dd {
+    margin: 0 0 8px;
+  }
+
+  .eps-avisos-controles:not([hidden]) {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 12px 0;
+  }
+  .eps-avisos-controles select {
+    border: 1px solid #91aa9c;
+    border-radius: 6px;
+    background: white;
+    padding: 5px;
+  }
+  .eps-avisos-lista {
+    padding: 0;
+    list-style: none;
+  }
+  .eps-avisos-lista > li {
+    border-bottom: 1px solid #dce8e0;
+    padding: 12px 0;
+  }
+  .eps-avisos-lista h3, .eps-avisos-lista p {
+    margin: 0 0 6px;
+  }
+</style>

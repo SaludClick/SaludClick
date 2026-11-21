@@ -26,9 +26,9 @@ test('rutas personales rechazan administrador, farmacia, EPS y sesiones ausentes
     ];
     for (const [method, route] of routes) for (const role of [null, 1, 3, 4, 99]) {
         await t.test(`${method} ${route}, rol ${role}`, async () => {
-            const headers = role === null ? {} : { Authorization: `Bearer ${jwt.sign({ id: 10, rol: role }, process.env.JWT_SECRET)}` };
+            const headers = role === null ? {} : { Authorization: `Bearer ${jwt.sign({ id: 10, rol: role }, process.env.JWT_SECRET, { expiresIn: '1h' })}` };
             const response = await fetch(base + route, { method, headers });
-            assert.equal(response.status, role === null ? 401 : 403);
+            assert.equal(response.status, role === null || role === 99 ? 401 : 403);
             assert.equal((await response.json()).ok, false);
         });
     }

@@ -1,4 +1,5 @@
 const express = require('express');
+const { disponible } = require('../config/farmacia-operacion');
 const { createGuard } = require('../middlewares/eps-integration.middleware');
 const { createService } = require('../services/eps-integration.service');
 const { databaseFailure, safeDiagnostic } = require('../services/eps-errors');
@@ -98,7 +99,10 @@ function createRouter({ db, guard, service } = {}) {
   r.patch(
     '/farmacia/solicitudes/:id/estado',
     allow(3),
-    handle(async (s, r) => ({ pedido: await s.avanzarFarmacia(r.actor, r.params.id, r.body) })),
+    handle(async (s, r) => {
+      disponible();
+      return { pedido: await s.avanzarFarmacia(r.actor, r.params.id, r.body) };
+    }),
   );
   r.get(
     '/farmacia/convenios',
@@ -113,7 +117,10 @@ function createRouter({ db, guard, service } = {}) {
   r.put(
     '/farmacia/existencias',
     allow(3),
-    handle(async (s, r) => ({ existencia: await s.stock(r.actor, r.body) })),
+    handle(async (s, r) => {
+      disponible();
+      return { existencia: await s.stock(r.actor, r.body) };
+    }),
   );
   r.get(
     '/notificaciones',

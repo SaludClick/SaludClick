@@ -225,16 +225,16 @@ async function testWorkspace({t,evaluate,go,click,value,until,send,fixture}){
         await until(()=>evaluate(`location.pathname==='/login.html'`));assert.equal(fixture.passwordChanges,before+1);
         assert.equal(await evaluate(`sessionStorage.getItem('saludclick_token')||localStorage.getItem('saludclick_token')`),null);
     });
-    await t.test('Farmacia and EPS retain the local VITALIX assistant and never relay their messages',async()=>{
+    await t.test('Farmacia y EPS no pueden utilizar Chat ni VITALIX y conservan sus inicios',async()=>{
         const count=fixture.messages.length;
         for(const role of [3,4]){
-            await session(role);await go('/pages/chat.html');
-            await until(()=>evaluate(`document.querySelector('.vitalix-composer input')?.disabled===false`));
-            assert.match(await evaluate(`document.querySelector('.vitalix-mode').textContent`),/respuestas programadas/);
-            await evaluate(`const input=document.querySelector('.vitalix-composer input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'hola');input.dispatchEvent(new Event('input',{bubbles:true}));`);
-            await until(()=>evaluate(`document.querySelector('.vitalix-composer button').disabled===false`));
-            await click('.vitalix-composer button');await until(()=>evaluate(`document.querySelector('.vitalix-typing')===null&&[...document.querySelectorAll('.vitalix-message-assistant')].at(-1)?.textContent.includes('Hola')`));
+            await session(role);
+            await evaluate("location.assign('/pages/chat.html')");
+            await until(()=>evaluate(`location.pathname==='${role===3?'/pages/farmacia.html':'/pages/eps.html'}'`));
             assert.equal(fixture.messages.length,count);
+            await go('/index.html');
+            await until(()=>evaluate(`!!document.querySelector('astro-island[component-url]')`));
+            assert.equal(await evaluate(`document.querySelectorAll('.vitalix-composer').length`),0);
         }
     });
 }

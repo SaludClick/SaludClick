@@ -1,0 +1,34 @@
+{
+  "destino": {
+    "identidad": [
+      {
+        "id": 901,
+        "nombre": "Actor Sintetico",
+        "apellido": "Fixture",
+        "documento": "DOC-FIXTURE-901",
+        "correo": "actor@fixture.invalid",
+        "rol_id": 1
+      },
+      {
+        "id": 904,
+        "nombre": "Operador Sintetico",
+        "apellido": "Fixture",
+        "documento": "DOC-FIXTURE-904",
+        "correo": "operador@fixture.invalid",
+        "rol_id": 3
+      }
+    ],
+    "eps": {
+      "id": "901",
+      "nombre": "EPS Sintetica",
+      "activa": true
+    },
+    "historial": [
+      {
+        "migration_name": "20261016220827_init",
+        "finished_at": "2000-01-01T00:00:00.000Z",
+        "rolled_back_at": null
+      }
+    ]
+  }
+}

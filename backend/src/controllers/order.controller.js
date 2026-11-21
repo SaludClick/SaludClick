@@ -21,15 +21,17 @@ async function crearPedido(req, res) {
             req.body,
             idempotencyKey
         );
+        const {destinatarios,...publico}=resultado;
+        if(destinatarios?.length)try{await req.app.get('farmaciaNotificationEvents')?.(destinatarios);}catch{}
 
         res.status(201).json({
             ok: true,
             mensaje: "Pedido creado y pago simulado aprobado.",
-            ...resultado
+            ...publico
         });
 
     } catch (error) {
-        console.error("Error al crear pedido:", error);
+        console.error("Error al crear pedido.");
 
         const status = [400, 409].includes(error.status)
             ? error.status
@@ -59,7 +61,7 @@ async function listarPedidos(req, res) {
         });
 
     } catch (error) {
-        console.error("Error al listar pedidos:", error);
+        console.error("Error al listar pedidos.");
 
         res.status(500).json({
             ok: false,
@@ -104,7 +106,7 @@ async function detallePedido(req, res) {
         });
 
     } catch (error) {
-        console.error("Error al consultar pedido:", error);
+        console.error("Error al consultar pedido.");
 
         res.status(500).json({
             ok: false,
@@ -142,15 +144,18 @@ async function eliminarPedido(req, res) {
         });
 
     } catch (error) {
-        console.error("Error al eliminar pedido:", error);
-
         if (error.message === "Pedido no encontrado.") {
             return res.status(404).json({
                 ok: false,
                 mensaje: error.message
             });
         }
+        if (error.code === '23503' && ['farmacia_asignaciones_solicitud_id_fkey',
+            'farmacia_solicitud_eventos_solicitud_id_fkey', 'farmacia_formulas_autorizadas_solicitud_id_fkey'].includes(error.constraint)) {
+            return res.status(409).json({ ok: false, mensaje: 'El pedido conserva un registro de Farmacia y no se puede eliminar.' });
+        }
 
+        console.error("Error al eliminar pedido.");
         res.status(500).json({
             ok: false,
             mensaje: "No se pudo eliminar el pedido."

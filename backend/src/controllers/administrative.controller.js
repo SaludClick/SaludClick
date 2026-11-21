@@ -9,7 +9,14 @@ function createController({repo=getRepository(),emit=()=>{},directory}={}) {
         try {
             const result=await fn(req,res);
             if(mutation&&!result?.mensaje?.repetido) { try{emit(req,result?.evento||{caso_id:result?.caso?.id??result?.mensaje?.caso_id,cliente_id:result?.caso?.cliente_id??result?.mensaje?.cliente_id,actor_id:actor(req)});}catch{/* notifications persist even if realtime is unavailable */} }
-            if(!res.headersSent){const {evento,...response}=result||{};res.json({ok:true,...response});}
+            if(!res.headersSent){
+                const {evento,...response}=result||{};
+                if(response.caso){
+                    const {visitante_hash,visitante_expira_at,...caso}=response.caso;
+                    response.caso=caso;
+                }
+                res.json({ok:true,...response});
+            }
         }catch(error){
             if(mutation && req.usuario) {try{await repo.recordFailure(actor(req),'OPERACION_RECHAZADA');}catch{/* No secret logging or fallback writes */}}
             const schema=['P2021','P2022','42P01','42703'].includes(error.code)||['42P01','42703'].includes(error.meta?.code);

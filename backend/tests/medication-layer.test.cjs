@@ -69,6 +69,11 @@ test('catálogo conserva la delegación controlador → servicio → repositorio
     shouldFail = false;
     let body;
     const response = {
+        set(name, value) {
+            assert.equal(name, 'Cache-Control');
+            assert.equal(value, 'no-store');
+            return this;
+        },
         json(value) {
             body = value;
             return this;
@@ -87,6 +92,11 @@ test('fallo del repositorio conserva HTTP 500 y el mensaje actual del catálogo'
     let statusCode;
     let body;
     const response = {
+        set(name, value) {
+            assert.equal(name, 'Cache-Control');
+            assert.equal(value, 'no-store');
+            return this;
+        },
         status(code) {
             statusCode = code;
             return this;

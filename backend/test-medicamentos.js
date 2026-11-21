@@ -20,7 +20,6 @@ async function main() {
         console.dir(medicamentos, { depth: 2 });
     } catch (error) {
         console.error("Error consultando medicamentos:");
-        console.error(error.message);
         process.exitCode = 1;
     } finally {
         await prisma.$disconnect();

@@ -1,0 +1,2 @@
+.formula-card .formula-share{grid-column:1/-1;display:flex;align-items:end;flex-wrap:wrap;gap:.75rem;border-top:1px solid #e2ebe6;padding-top:1rem;}
+.formula-share label{display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;color:#244a37;}.formula-share input[type=number]{max-width:180px;min-height:42px;border:1px solid #aac7b8;border-radius:6px;padding:.5rem;font:inherit;}.formula-share button{border:0;border-radius:6px;padding:.75rem;background:#176b46;color:white;font:inherit;cursor:pointer;}.formula-share button:disabled{opacity:.55;}.formula-share p{flex-basis:100%;}

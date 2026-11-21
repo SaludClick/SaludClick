@@ -1,7 +1,7 @@
-const jwt = require('jsonwebtoken');
+const { verificarToken } = require('../utils/jwt');
 const { createEpsSession } = require('./eps-session.middleware');
 const { databaseFailure, safeDiagnostic } = require('../services/eps-errors');
-function createGuard({ db, verify = (t) => jwt.verify(t, process.env.JWT_SECRET) } = {}) {
+function createGuard({ db, verify = verificarToken } = {}) {
   return (...allowed) =>
     async (req, res, next) => {
       res.set('Cache-Control', 'no-store');

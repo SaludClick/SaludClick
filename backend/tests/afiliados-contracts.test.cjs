@@ -29,7 +29,7 @@ before(async()=>{
 });
 after(async()=>{await new Promise(r=>server.close(r));if(secretoAnterior===undefined)delete process.env.JWT_SECRET;else process.env.JWT_SECRET=secretoAnterior;});
 beforeEach(()=>{cuentas=[];autorizado=true;rol='PACIENTE';errorOrigen=undefined;errorAutorizacion=undefined;lecturas=0;cambio=false;version=0;});
-async function pedir(ruta='',role=1,body){const headers={};if(role)headers.Authorization=`Bearer ${jwt.sign({id:17,rol_id:role},process.env.JWT_SECRET)}`;if(body)headers['Content-Type']='application/json';const r=await fetch(origin+ruta,{headers,method:body?'POST':'GET',body:body?JSON.stringify(body):undefined});return{status:r.status,headers:r.headers,data:await r.json()};}
+async function pedir(ruta='',role=1,body){const headers={};if(role)headers.Authorization=`Bearer ${jwt.sign({id:17,rol_id:role},process.env.JWT_SECRET, { expiresIn: '1h' })}`;if(body)headers['Content-Type']='application/json';const r=await fetch(origin+ruta,{headers,method:body?'POST':'GET',body:body?JSON.stringify(body):undefined});return{status:r.status,headers:r.headers,data:await r.json()};}
 function cuentaDe(a,extras={}){return{id:100,nombre:a.nombres,apellido:a.apellidos,cedula:a.documento,tipo_documento:a.tipo_documento,correo:a.correo,estado:'ACTIVO',rol_id:2,...extras};}
 test('JWT y rol administrador protegen lista, ficha, diagnóstico y creación antes de leer el origen',async()=>{
     for(const role of [null,2,3,4])for(const [ruta,body]of [['',undefined],['/1',undefined],['/diagnostico/conexion',undefined],['/1/cuenta',{verificado:true,password:'password-test'}]])assert.equal((await pedir(ruta,role,body)).status,role?403:401);

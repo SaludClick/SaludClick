@@ -115,6 +115,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.querySelectorAll("[data-action]").forEach(btn => btn.addEventListener("click", () => {
         const action = btn.dataset.action;
+        const publicCatalog = document.getElementById("catalogo-publico");
+        if (action === "medicamentos" && publicCatalog) {
+            publicCatalog.focus();
+            publicCatalog.scrollIntoView();
+            return;
+        }
         if (action === "contacto") { 
             window.location.href = "/pages/chat.html";
             return; 
@@ -128,6 +134,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (searchBtn && searchInput) {
         searchBtn.addEventListener("click", () => {
             const q = searchInput.value.trim();
+            const publicCatalog = document.getElementById("catalogo-publico");
+            if (publicCatalog) {
+                publicCatalog.dispatchEvent(new CustomEvent("buscar-medicamentos", { detail: q }));
+                publicCatalog.focus();
+                publicCatalog.scrollIntoView();
+                return;
+            }
             navegarPrivado(`/pages/medicamentos.html${q ? `?buscar=${encodeURIComponent(q)}` : ""}`);
         });
     }

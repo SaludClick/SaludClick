@@ -12,25 +12,33 @@ if (!process.env.DATABASE_URL) {
     );
 }
 
-// pg-connection-string advierte que estos modos serán alias de semántica
-// libpq. Normalizarlos evita el cambio futuro a una validación más débil y
-// deja la comprobación del certificado habilitada sin opciones SSL inseguras.
-const databaseUrl = new URL(process.env.DATABASE_URL);
-const sslmode = databaseUrl.searchParams.get("sslmode")?.toLowerCase();
-if (["prefer", "require", "verify-ca"].includes(sslmode)) {
+let databaseUrl;
+try {
+    databaseUrl = new URL(process.env.DATABASE_URL);
+} catch {
+    throw new Error("DATABASE_URL no es una conexión PostgreSQL válida.");
+}
+const overrides = new Set(["host", "hostaddr", "port", "user", "password", "database", "dbname", "service", "servicefile"]);
+if (!["postgres:", "postgresql:"].includes(databaseUrl.protocol) || !databaseUrl.hostname ||
+    [...databaseUrl.searchParams.keys()].some(key => overrides.has(key.toLowerCase()))) {
+    throw new Error("DATABASE_URL no es una conexión PostgreSQL válida.");
+}
+const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(databaseUrl.hostname);
+if (!loopback) {
     databaseUrl.searchParams.set("sslmode", "verify-full");
-    process.env.DATABASE_URL = databaseUrl.toString();
+} else if (["prefer", "require", "verify-ca"].includes(databaseUrl.searchParams.get("sslmode"))) {
+    databaseUrl.searchParams.set("sslmode", "verify-full");
 }
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: databaseUrl.toString(),
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000
 });
 
-pool.on("error", (error) => {
-    console.error("Error en la conexión con Neon:", error.message);
+pool.on("error", () => {
+    console.error("Error en la conexión con Neon.");
 });
 
 module.exports = pool;

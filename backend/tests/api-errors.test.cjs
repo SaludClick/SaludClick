@@ -23,7 +23,7 @@ test('una API desconocida responde JSON 404 sin rutas internas', async () => {
 });
 test('un rechazo async no capturado no filtra stack, proveedor ni rutas del servidor', async () => {
     const response = await fetch(base + '/api/auth/profile', { headers: {
-        Authorization: `Bearer ${jwt.sign({ id: 2, rol: 2 }, process.env.JWT_SECRET)}`
+        Authorization: `Bearer ${jwt.sign({ id: 2, rol: 2 }, process.env.JWT_SECRET, { expiresIn: '1h' })}`
     } });
     assert.equal(response.status, 500);
     assert.deepEqual(await response.json(), { ok: false, mensaje: 'No se pudo completar la operación. Inténtalo nuevamente.' });

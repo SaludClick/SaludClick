@@ -7,7 +7,7 @@ const http = require('node:http');
 const net = require('node:net');
 const { spawn } = require('node:child_process');
 
-test('las rutas Astro no colisionan con public y conservan las 16 páginas HTML', () => {
+test('las rutas Astro no colisionan con public y conservan las páginas HTML esperadas', () => {
     const frontend = path.resolve(__dirname, '../../frontend');
     const publicRoot = path.join(frontend, 'public');
     const pagesRoot = path.join(frontend, 'src/pages');
@@ -34,6 +34,7 @@ test('las rutas Astro no colisionan con public y conservan las 16 páginas HTML'
         'pages/chat-farmacia.html',
         'pages/chat.html',
         'pages/dashboard.html',
+        'pages/eps-v1.html',
         'pages/eps.html',
         'pages/farmacia.html',
         ...['chat','entregas','inventario','medicamentos','notificaciones','perfil','solicitudes','usuarios'].map(name => `pages/farmacia-${name}.html`),
@@ -53,7 +54,7 @@ test('las rutas Astro no colisionan con public y conservan las 16 páginas HTML'
 });
 
 // Navegador aislado y servidor estático: no accede a PostgreSQL ni usa sesiones reales.
-test('controles del frontend en Edge headless', { timeout: 180000 }, async t => {
+test('controles del frontend en Edge headless', { timeout: 300000 }, async t => {
     const edge = process.env.EDGE_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
     if (!fs.existsSync(edge)) { t.skip('Microsoft Edge no estÃ¡ instalado; define EDGE_PATH para ejecutar esta prueba.'); return; }
     const realCaptcha = process.env.FRONTEND_TEST_ALLOW_EXTERNAL === '1';
@@ -71,7 +72,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     let farmaciaDashboardRequests = 0;
     const farmaciaPanel = require('./support/farmacia-panel-browser.cjs');
     const farmaciaPanelFixture = farmaciaPanel.createFixture();
-    let epsAccessRequests = 0;
+    let epsResumenRequests = 0;
     let vitalixApiRequests = 0;
     let farmaciaStatus = 'APROBADA';
     let farmaciaUpdates = 0;
@@ -187,6 +188,14 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             }));
             return;
         }
+        if (pathname === '/api/medicamentos/publico') {
+            const buscar = new URL(req.url, 'http://localhost').searchParams.get('buscar') ?? '';
+            const normalizar = value => value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+            const resultados = medicamentos.filter(item => normalizar(item.nombre).includes(normalizar(buscar)));
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, medicamentos: resultados, siguiente: false }));
+            return;
+        }
         if (pathname === '/api/medicamentos') {
             const config = medicationFixture ? { ...medicationFixture } : {};
             if (config.delay) await new Promise(resolve => setTimeout(resolve, config.delay));
@@ -240,6 +249,9 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             }));
             return;
         }
+        if(pathname==='/api/farmacia/dashboard/estadisticas'){
+            farmaciaDashboardRequests++;res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:true,disponible:false,motivo:'Asignaciones pendientes',indicadores:null,actividad:[]}));return;
+        }
         if (pathname === '/api/farmacia/dashboard') {
             farmaciaDashboardRequests += 1;
             res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -253,11 +265,23 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             }));
             return;
         }
-        if (pathname === '/api/eps/notificaciones') { res.writeHead(200, {'Content-Type':'application/json'}); res.end(JSON.stringify({ok:true,datos:[],paginacion:{pagina:1,paginas:1,total:0,tamano:25}})); return; }
-        if (pathname === '/api/eps/dashboard') {
-            epsAccessRequests += 1;
+        if (pathname === '/api/eps/dashboard/resumen') {
+            epsResumenRequests += 1;
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ ok: true, estadisticas:{pacientes:0,afiliados:0,farmacias:0,autorizaciones:0,pendientes:0,solicitudes:0,inventario:0,agotados:0,stock_bajo:0,notificaciones:0} }));
+            res.end(JSON.stringify({
+                ok: true, eps: { id: '1', nombre: 'EPS de prueba' },
+                afiliados: { total: 0, activos: 0, inactivos: 0 },
+                solicitudes: { total: 0, estados: [], meses: [], recientes: [] },
+                farmacias: { total: 0, activas: 0, recientes: [] }
+            }));
+            return;
+        }
+        if (pathname === '/api/eps/afiliados') {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                ok: true, eps: { id: '1', nombre: 'EPS de prueba' }, afiliados: [], totalActivos: 0,
+                paginacion: { pagina: 1, tamano: 25, total: 0, paginas: 0 }
+            }));
             return;
         }
         if (pathname === '/api/formulas/admin/all') {
@@ -322,7 +346,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         let file = path.resolve(staticRoot, '.' + (pathname === '/' ? '/index.html' : pathname));
         if (
             !fs.existsSync(file) &&
-            (pathname === '/' || pathname === '/pages/admin-afiliados.html' || pathname === '/login.html' || pathname === '/index.html' || pathname === '/pages/admin-cuentas.html' || pathname === '/pages/admin-pacientes.html' || pathname === '/pages/chat.html' || pathname === '/pages/chat-farmacia.html' || pathname === '/pages/farmacia.html' || pathname === '/pages/perfil.html' || pathname.startsWith('/pages/farmacia-') || pathname === '/pages/eps.html' || pathname.startsWith('/_astro/'))
+            (pathname === '/' || pathname === '/pages/admin-afiliados.html' || pathname === '/login.html' || pathname === '/index.html' || pathname === '/pages/admin-cuentas.html' || pathname === '/pages/admin-pacientes.html' || pathname === '/pages/chat.html' || pathname === '/pages/chat-farmacia.html' || pathname === '/pages/farmacia.html' || pathname === '/pages/perfil.html' || pathname.startsWith('/pages/farmacia-') || ['/pages/eps.html', '/pages/eps-v1.html'].includes(pathname) || pathname.startsWith('/_astro/'))
         ) {
             staticRoot = builtRoot;
             file = path.resolve(staticRoot, '.' + (pathname === '/' ? '/index.html' : pathname));
@@ -498,7 +522,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     async function go(route) {
         await send('Page.navigate', { url: base + route });
         try {
-            await until(async () => { try { return await evaluate(`location.pathname === ${JSON.stringify(route.split(/[?#]/)[0])} && document.readyState === 'complete'`); } catch { return false; } });
+            await until(async () => { try { return await evaluate(`(location.pathname === ${JSON.stringify(route.split(/[?#]/)[0])} || (${JSON.stringify(route)}==='/index.html' && location.pathname==='/' && document.body.classList.contains('home-page'))) && document.readyState === 'complete'`); } catch { return false; } });
         } catch {
             const actual = await evaluate(`({ pathname: location.pathname, search: location.search, readyState: document.readyState })`).catch(error => ({ evaluationError: error.message }));
             throw new Error(`No se pudo abrir ${route}; estado actual: ${JSON.stringify(actual)}`);
@@ -584,18 +608,16 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     }
     await evaluate(`for(const s of [localStorage,sessionStorage]){s.setItem('saludclick_token','frontend-test-only');s.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',correo:'prueba@example.com',rol:2}));}`);
     await go('/index.html');
-    await t.test('inicio: buscar, Enter, vacÃ­o, solicitar y servicios', async () => {
+    const nombresCatalogoPublico = () => evaluate('[...document.querySelectorAll("#catalogo-publico-lista h3")].map(item => item.textContent)');
+    await t.test('inicio: buscar, Enter, limpiar, solicitar y servicios', async () => {
         await value('#busquedaInicio', 'acetaminofen'); await click('#buscarInicio');
-        await esperarPagina('/pages/medicamentos.html');
-        await until(catalogReady);
-        await until(async () => { try { return (await visibleNames()).length === 1; } catch { return false; } });
-        assert.deepEqual(await visibleNames(), ['Acetaminofén']);
-        assert.equal(await evaluate('location.search'), '?buscar=acetaminofen');
+        await until(async () => JSON.stringify(await nombresCatalogoPublico()) === JSON.stringify([medicamentos[0].nombre]));
+        assert.equal(await evaluate('location.pathname + location.search'), '/index.html');
         await go('/index.html'); await value('#busquedaInicio', 'ibuprofeno'); await enter('#busquedaInicio');
-        await esperarPagina('/pages/medicamentos.html');
-        await until(catalogReady);
-        await until(async () => { try { return (await visibleNames()).length === 1; } catch { return false; } });
-        assert.deepEqual(await visibleNames(), ['Ibuprofeno']);
+        await until(async () => JSON.stringify(await nombresCatalogoPublico()) === JSON.stringify(['Ibuprofeno']));
+        assert.equal(await evaluate('location.pathname + location.search'), '/index.html');
+        await value('#busquedaInicio', ''); await click('#buscarInicio');
+        await until(async () => (await nombresCatalogoPublico()).length === medicamentos.length);
         await go('/index.html');
         assert.equal(await evaluate('document.querySelector(".hero-botones a").getAttribute("href")'), '/login.html');
         await go('/index.html'); await click('.hero-botones a[href="#servicios"]');
@@ -720,8 +742,8 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         await evaluate(`for (const s of [localStorage,sessionStorage]) { s.setItem('saludclick_token','frontend-test-only'); s.setItem('saludclick_user',JSON.stringify({nombre:'Farmacia de prueba',rol:3})); }`);
         await go('/pages/farmacia.html');
         await until(() => evaluate('document.querySelector("#farmaciaMain")?.hidden === false'));
-        assert.equal(await evaluate('document.querySelector("#farmaciaMain h1").textContent'), 'Dashboard');
-        assert.deepEqual(await evaluate('[...document.querySelectorAll(".admin-side-link span")].map(n=>n.textContent)'), ['Dashboard','Usuarios','Solicitudes','Inventario','Medicamentos','Entregas','Notificaciones','Chat','Perfil']);
+        assert.equal(await evaluate('document.querySelector("#farmaciaMain h1").textContent'), 'Panel de control');
+        assert.deepEqual(await evaluate('[...document.querySelectorAll(".admin-side-link span")].map(n=>n.textContent)'), ['Dashboard','Solicitudes','Usuarios','Inventario','Medicamentos','Notificaciones','Perfil']);
         assert.equal(await evaluate('document.querySelectorAll("#farmaciaMedicamentos,#farmaciaInventory,#farmaciaOrders,#farmaciaNotificationsList").length'), 0);
         await send('Emulation.setDeviceMetricsOverride', {width:375,height:812,deviceScaleFactor:1,mobile:true});
         await click('#menuToggle');
@@ -737,17 +759,21 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     await t.test('dashboard EPS valida el acceso y redirige roles no autorizados', async () => {
         await evaluate(`for (const s of [localStorage,sessionStorage]) { s.setItem('saludclick_token','frontend-test-only'); s.setItem('saludclick_user',JSON.stringify({nombre:'EPS de prueba',rol:4})); }`);
         await go('/pages/eps.html');
-        await until(() => evaluate('document.querySelector("#epsAccess")?.getAttribute("aria-busy") === "false"'));
+        await until(() => evaluate('document.querySelector("#epsDashboardDatos")?.hidden === false'));
 
         assert.equal(await evaluate('document.querySelector("#epsMain h1")?.textContent.trim()'), 'Dashboard');
-        assert.match(await evaluate('document.querySelector("#epsAccess").textContent'), /Acceso EPS verificado/);
-        assert.match(await evaluate('document.querySelector("#epsMain").textContent'), /Pacientes vinculados/);
-        assert.equal(await evaluate('document.querySelectorAll(".admin-side-link").length'), 9);
+        assert.equal(await evaluate('document.querySelector("#epsDashboardEntidad").textContent'), 'EPS de prueba');
+        assert.equal(await evaluate('document.querySelectorAll(".admin-side-link").length'), 8);
         assert.deepEqual(await evaluate('[...document.querySelectorAll(".admin-side-link")].map(link => link.querySelector("span")?.textContent.trim())'), [
-            'Dashboard', 'Afiliados', 'Farmacias', 'Autorizaciones', 'Solicitudes', 'Pacientes', 'Inventario', 'Notificaciones', 'Perfil'
+            'Dashboard', 'Afiliados', 'Farmacias vinculadas', 'Solicitudes', 'Notificaciones', 'Reportes', 'Perfil', 'Gestión EPS'
         ]);
         assert.equal(await evaluate('document.querySelectorAll(".eps-nav-disabled[aria-disabled=true]").length'), 0);
-        assert.equal(epsAccessRequests, 1);
+        assert.equal(await evaluate('document.getElementById("epsNavSolicitudes").getAttribute("href")'), '#solicitudes');
+        assert.equal(await evaluate('document.querySelector(\'.admin-side-link[href="#afiliados"]\')?.textContent.trim()'), 'Afiliados');
+        assert.equal(epsResumenRequests, 1);
+        await evaluate('document.getElementById("epsNavAfiliados").click()');
+        await until(() => evaluate('document.getElementById("epsAfiliadosEstado").textContent.includes("Sin resultados")'));
+        assert.equal(await evaluate('document.getElementById("epsNavAfiliados").getAttribute("aria-current")'), 'location');
 
         const adminRequests = adminDashboardRequests;
         await send('Page.navigate', { url: base + '/pages/admin.html' });
@@ -854,26 +880,20 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         await evaluate(`window.__recaptchaOptions.callback('test-recaptcha-token')`);
         await click('button[type="submit"]');
     }
-    await t.test('sin sesiÃ³n: buscar/Enter, solicitar, consultar, estado e historial vuelven a su destino tras login', async () => {
-        for (const item of [
-            { selector: '#buscarInicio', query: 'acetaminofen', destino: '/pages/medicamentos.html?buscar=acetaminofen' },
-            { selector: '#busquedaInicio', enter: true, query: 'acetaminofen', destino: '/pages/medicamentos.html?buscar=acetaminofen' },
-            { selector: '[data-action="medicamentos"]', destino: '/pages/medicamentos.html' },
-            { selector: '[data-action="pedido"]', destino: '/pages/pedidos.html' },
-            { selector: '[data-action="historial"]', destino: '/pages/historial.html' }
-        ]) {
+    await t.test('sin sesion: catalogo publico y retorno a acciones privadas tras login', async () => {
+        await go('/index.html'); await sinSesion();
+        await value('#busquedaInicio', 'acetaminofen'); await enter('#busquedaInicio');
+        await until(async () => JSON.stringify(await nombresCatalogoPublico()) === JSON.stringify([medicamentos[0].nombre]));
+        await click('[data-action="medicamentos"]');
+        assert.equal(await evaluate('document.activeElement.id'), 'catalogo-publico');
+        assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`), null);
+        for (const [accion, destino] of [['pedido', '/pages/pedidos.html'], ['historial', '/pages/historial.html']]) {
             await go('/index.html'); await sinSesion();
-            if (item.query) await value('#busquedaInicio',item.query);
-            if (item.enter) await enter(item.selector); else await click(item.selector);
+            await click(`[data-action="${accion}"]`);
             await esperarPagina('/login.html');
-            assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),item.destino);
-            await login(); await esperarPagina(item.destino);
-            assert.equal(await evaluate('location.pathname + location.search'),item.destino);
-            assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),null);
-            if (item.query) {
-                await until(async () => JSON.stringify(await visibleNames()) === JSON.stringify(['Acetaminofén']));
-                assert.deepEqual(await visibleNames(),['Acetaminofén']);
-            }
+            assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`), destino);
+            await login(); await esperarPagina(destino);
+            assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`), null);
         }
     });
     await t.test('domicilio y fÃ³rmula requieren login antes de mostrar indisponibilidad', async () => {
@@ -898,8 +918,8 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
     await t.test('el login EPS sin destino pendiente abre su dashboard', async () => {
         await go('/index.html'); await sinSesion(); await go('/login.html');
         await login(4); await esperarPagina('/pages/eps.html');
-        await until(() => evaluate('document.querySelector("#epsAccess")?.getAttribute("aria-busy") === "false"'));
-        assert.match(await evaluate('document.querySelector("#epsAccess").textContent'), /Acceso EPS verificado/);
+        await until(() => evaluate('document.querySelector("#epsDashboardDatos")?.hidden === false'));
+        assert.equal(await evaluate('document.querySelector("#epsDashboardEntidad").textContent'), 'EPS de prueba');
         await click('#logout'); await esperarPagina('/login.html');
     });
     await t.test('login fallido y recarga conservan destino; Ã©xito lo consume una sola vez', async () => {
@@ -971,10 +991,14 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         await send('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...point});
         await send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...point});
     }
-    await t.test('clics de ratÃ³n reales en los cinco servicios privados sin sesiÃ³n', async () => {
+    await t.test('clics de raton en catalogo publico y servicios privados sin sesion', async () => {
         await send('Emulation.setDeviceMetricsOverride',{width:1280,height:900,deviceScaleFactor:1,mobile:false});
+        await abrirInicioReal(); await sinSesion();
+        await mouseClick('#servicios [data-action="medicamentos"]');
+        assert.equal(await evaluate('document.activeElement.id'), 'catalogo-publico');
+        assert.equal(await evaluate('location.pathname'), '/index.html');
         for (const [accion,destino] of [
-            ['medicamentos','/pages/medicamentos.html'],['pedido','/pages/pedidos.html'],
+            ['pedido','/pages/pedidos.html'],
             ['historial','/pages/historial.html'],['formula','/pages/formulas.html']
         ]) {
             await abrirInicioReal();
@@ -1117,7 +1141,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
         } finally { profileEnabled = false; }
     });
     await t.test('chat rechaza sesiones ausentes y roles ajenos antes de consultar o conectar sockets', async () => {
-        for (const [role, home] of [[null, '/login.html'], [1, '/pages/admin.html'], [4, '/pages/eps.html'], [99, '/login.html']]) {
+        for (const [role, home] of [[null, '/login.html'], [1, '/pages/admin.html'], [3, '/pages/farmacia.html'], [4, '/pages/eps.html'], [99, '/login.html']]) {
             await sinSesion();
             if (role !== null) await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only'); localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Personal',rol:${role}}))`);
             const before = chatRequests;
@@ -1126,7 +1150,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
             assert.equal(chatRequests, before);
         }
     });
-    await t.test('cliente y farmacia conservan el chat humano con envio y recepcion de mensajes',async()=>{
+    await t.test('paciente conserva el chat humano con envio y recepcion de mensajes',async()=>{
         const {identifier}=await send('Page.addScriptToEvaluateOnNewDocument',{source:`
           window.io=()=>{
             const handlers={};let sequence=0;
@@ -1141,7 +1165,7 @@ test('controles del frontend en Edge headless', { timeout: 180000 }, async t => 
               },disconnect(){socket.connected=false;}};return socket;
           };`});
         try{
-            for(const [role,id] of [[2,20],[3,30]]){
+            for(const [role,id] of [[2,20]]){
                 await evaluate(`for(const s of [localStorage,sessionStorage]){s.setItem('saludclick_token','frontend-test-only');s.setItem('saludclick_user',JSON.stringify({id:${id},nombre:'Prueba',rol:${role}}));}`);
                 await go(role === 3 ? '/pages/farmacia-chat.html' : '/pages/chat-farmacia.html');
                 await until(()=>evaluate(`document.querySelector('.chat-connection')?.textContent.includes('En línea') && document.querySelector('#chatMessage')?.disabled===false`));

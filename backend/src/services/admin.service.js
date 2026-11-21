@@ -131,7 +131,7 @@ async function eliminarCuenta(idEntrada, idAdministrador) {
             if (error.code !== "ENOENT") {
                 // La cuenta ya fue eliminada; registrar el archivo pendiente
                 // de limpieza sin convertir la respuesta en un falso fracaso.
-                console.error("No se pudo eliminar un archivo de fórmula:", error.message);
+                console.error("No se pudo eliminar un archivo de fórmula.");
             }
         }
     }

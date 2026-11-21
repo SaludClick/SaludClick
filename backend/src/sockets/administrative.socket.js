@@ -2,11 +2,17 @@ const jwt=require('jsonwebtoken');
 const {createSessionGuard}=require('../middlewares/administrative-session.middleware');
 function attachAdministrativeSocket(io,app,{guard=createSessionGuard(),visitorLookup=hash=>require('../repositories/administrative.repository').getRepository().visitorCaseId(hash)}={}) {
     const namespace=io.of('/administrativo');
+    const visitors = new Map();
     namespace.use((socket,next)=>{
         if(socket.handshake.auth?.visitorToken){
             const hash=require('../middlewares/administrative-visitor.middleware').visitorHash(socket.handshake.auth.visitorToken);
             if(!hash)return next(new Error('Acceso no vigente.'));
-            return Promise.resolve().then(()=>visitorLookup(hash)).then(id=>{if(!id)return next(new Error('Acceso no vigente.'));socket.data.visitorCase=id;next();}).catch(()=>next(new Error('Acceso no vigente.')));
+            return Promise.resolve().then(()=>visitorLookup(hash)).then(id=>{
+                if(!id)return next(new Error('Acceso no vigente.'));
+                socket.data.visitorCase=id;
+                socket.data.visitorHash=hash;
+                next();
+            }).catch(()=>next(new Error('Acceso no vigente.')));
         }
         const token=socket.handshake.auth?.token;
         const req={headers:{authorization:`Bearer ${token}`},allowedRoles:[1,2]};
@@ -15,9 +21,18 @@ function attachAdministrativeSocket(io,app,{guard=createSessionGuard(),visitorLo
     });
     namespace.on('connection',socket=>{
         if(socket.data.visitorCase){
-            socket.join(`administrativo:visitante:${socket.data.visitorCase}`);
+            const id = socket.data.visitorCase;
+            const peers = visitors.get(id) || new Set();
+            peers.add(socket);
+            visitors.set(id, peers);
             const expiry=setTimeout(()=>socket.disconnect(true),3600000);
-            socket.on('disconnect',()=>clearTimeout(expiry));return;
+            expiry.unref?.();
+            socket.on('disconnect',()=>{
+                clearTimeout(expiry);
+                peers.delete(socket);
+                if (!peers.size) visitors.delete(id);
+            });
+            return;
         }
         const user=socket.data.usuario;
         socket.join(user.rol_id===1?'administrativo:staff':`administrativo:cliente:${user.id}`);
@@ -31,8 +46,14 @@ function attachAdministrativeSocket(io,app,{guard=createSessionGuard(),visitorLo
         let target=namespace.to('administrativo:staff');
         const client=event.cliente_id||event.actor_id;
         if(Number.isSafeInteger(client)&&client>0)target=target.to(`administrativo:cliente:${client}`);
-        if(event.caso_id)target=target.to(`administrativo:visitante:${event.caso_id}`);
-        target.emit('administrativo:actualizado',event.caso_id?{caso_id:event.caso_id}:{});
+        const payload=event.caso_id?{caso_id:event.caso_id}:{};
+        target.emit('administrativo:actualizado',payload);
+        for (const socket of visitors.get(event.caso_id) || []) {
+            Promise.resolve().then(()=>visitorLookup(socket.data.visitorHash)).then(id=>{
+                if (id !== event.caso_id) return socket.disconnect(true);
+                socket.emit('administrativo:actualizado',payload);
+            }).catch(()=>socket.disconnect(true));
+        }
     });
 }
 module.exports={attachAdministrativeSocket};

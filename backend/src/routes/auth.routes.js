@@ -6,8 +6,10 @@ const { validarJWT } = require("../middlewares/auth.middleware");
 const { farmaciaVigenteSiCorresponde } = require('../middlewares/farmacia-session.middleware');
 const { validarPerfilFarmaciaSiCorresponde } = require('../validators/farmacia-perfil.validator');
 const { requireAdmin } = require("../middlewares/admin.middleware");
+const { protegerPerfilCompartido } = require("../controllers/eps-perfil.controller");
 
 const authController = require("../controllers/auth.controller");
+const { recoveryRateLimit } = require("../middlewares/recovery-rate-limit.middleware");
 const {createController:createAdministrativeController}=require('../controllers/administrative.controller');
 const {
     verificarRecaptcha
@@ -17,19 +19,20 @@ const {
 router.post("/register", requireAdmin, (req,res)=>createAdministrativeController().createUser(req,res));
 
 // Inicio de sesión
-router.post("/login", verificarRecaptcha, authController.login);
+const limitarInicio = recoveryRateLimit(30);
+router.post("/login", limitarInicio, verificarRecaptcha, authController.login);
 
 // Inicio de sesión con Google
-router.post("/google", verificarRecaptcha, authController.googleLogin);
+router.post("/google", limitarInicio, verificarRecaptcha, authController.googleLogin);
 
 // Recuperación de contraseña
-router.post("/recuperar", authController.solicitarRecuperacion);
+router.post("/recuperar", recoveryRateLimit(20), authController.solicitarRecuperacion);
 
 // Restablecimiento de contraseña
-router.post("/restablecer", authController.restablecerPassword);
+router.post("/restablecer", recoveryRateLimit(30), authController.restablecerPassword);
 
 // Perfil protegido
-router.get("/profile", validarJWT, farmaciaVigenteSiCorresponde, authController.profile);
-router.put("/profile", validarJWT, farmaciaVigenteSiCorresponde, validarPerfilFarmaciaSiCorresponde, authController.updateProfile);
+router.get("/profile", validarJWT, protegerPerfilCompartido, farmaciaVigenteSiCorresponde, authController.profile);
+router.put("/profile", validarJWT, protegerPerfilCompartido, farmaciaVigenteSiCorresponde, validarPerfilFarmaciaSiCorresponde, authController.updateProfile);
 
 module.exports = router;

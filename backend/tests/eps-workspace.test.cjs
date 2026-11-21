@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');
 const v = require('../src/validators/eps.validator');
 const { createEpsSession } = require('../src/middlewares/eps-session.middleware');
-const { createController } = require('../src/controllers/eps.controller');
+const { createController } = require('../src/controllers/eps-v1.controller');
 const { createService } = require('../src/services/eps.service');
 const secret = 'isolated-eps-test-secret';
 function response() {

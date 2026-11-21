@@ -29,12 +29,33 @@ model Rol {
 }
 
 model Usuario {
-  avisos_integrados EpsNotificacionCompartida[]
-  autorizaciones_responsable_eps EpsAutorizacion[]
-  seguimientos_responsable_eps EpsSeguimiento[]
-  eventos_actor_eps EpsEvento[]
-  acceso_eps EpsAcceso?
   vinculos_eps EpsFarmacia[]
+  acceso_eps EpsAcceso?
+  eventos_actor_eps EpsEvento[]
+  seguimientos_responsable_eps EpsSeguimiento[]
+  autorizaciones_responsable_eps EpsAutorizacion[]
+  avisos_integrados EpsNotificacionCompartida[]
+  farmacia_existencias FarmaciaExistencia[]
+  farmacia_stock_eventos FarmaciaStockEvento[] @relation("StockFarmacia")
+  farmacia_stock_actor FarmaciaStockEvento[] @relation("StockActor")
+  identidad_afiliado_origen AfiliadoCuentaOrigen? @relation("CuentaOrigen")
+  identidades_origen_verificadas AfiliadoCuentaOrigen[] @relation("VerificadorOrigen")
+  solicitudes_ocultas SolicitudOcultaPaciente[]
+  farmacia_asignaciones FarmaciaAsignacion[] @relation("FarmaciaAsignada")
+  farmacia_asignaciones_creadas FarmaciaAsignacion[] @relation("AsignadorSolicitud")
+  farmacia_eventos FarmaciaSolicitudEvento[] @relation("FarmaciaEvento")
+  farmacia_eventos_actor FarmaciaSolicitudEvento[] @relation("ActorEvento")
+  farmacia_formulas_consentidas FarmaciaFormulaAutorizada[] @relation("AutorizadorFormula")
+  farmacia_catalogo_permiso FarmaciaCatalogoAutorizacion? @relation("FarmaciaPermisoCatalogo")
+  farmacia_catalogo_permisos_creados FarmaciaCatalogoAutorizacion[] @relation("AutorizadorCatalogo")
+  farmacia_catalogo_ambitos FarmaciaCatalogoAmbito[] @relation("FarmaciaAmbitoCatalogo")
+  farmacia_catalogo_ambitos_creados FarmaciaCatalogoAmbito[] @relation("AutorizadorAmbito")
+  farmacia_catalogo_auditoria FarmaciaCatalogoAuditoria[]
+  farmacia_sesion FarmaciaSesion?
+  farmacia_rutas FarmaciaRutaEps[] @relation("FarmaciaRuta")
+  farmacia_rutas_creadas FarmaciaRutaEps[] @relation("AutorRuta")
+  farmacia_permisos_actor FarmaciaAutorizacionEvento[] @relation("ActorAutorizacion")
+  farmacia_permisos_destino FarmaciaAutorizacionEvento[] @relation("DestinoAutorizacion")
   notificaciones_farmacia NotificacionFarmacia[]
   atenciones_administrativas AtencionAdministrativa[] @relation("ClienteAdministrativo")
   atenciones_asignadas AtencionAdministrativa[] @relation("ResponsableAdministrativo")
@@ -74,9 +95,10 @@ model Usuario {
 
 // Los 13 valores del CSV se conservan como texto, sin normalización.
 model Afiliado {
-  eps_version Int @default(1)
+  @@index([eps_id, usuario_id], map:"eps_affiliate_patient")
+  @@index([eps_id, estado, id], map:"eps_affiliate_scope")
   autorizaciones_eps EpsAutorizacion[]
-
+  eps_version Int @default(1)
   id String @id
   nombres String
   apellidos String
@@ -96,20 +118,22 @@ model Afiliado {
   usuario Usuario? @relation("CuentaAfiliado", fields: [usuario_id], references: [id], onDelete: Restrict)
   verificador Usuario? @relation("VerificadorAfiliado", fields: [verificado_por], references: [id], onDelete: Restrict)
 
-  @@index([eps_id, estado, id], map:"eps_affiliate_scope")
-  @@index([eps_id, usuario_id], map:"eps_affiliate_patient")
   @@map("afiliados")
 }
 
 model Medicamento {
   existencias_eps EpsExistencia[]
-
+  farmacia_existencias FarmaciaExistencia[]
+  farmacia_stock_eventos FarmaciaStockEvento[]
+  farmacia_ambito FarmaciaCatalogoAmbito?
+  farmacia_auditoria FarmaciaCatalogoAuditoria[]
   id                         Int                 @id @default(autoincrement())
   nombre                     String              @db.VarChar(150)
   descripcion                String?
   categoria_id               Int
   precio                     Decimal             @db.Decimal(10, 2)
   stock                      Int                 @default(0)
+  stock_minimo               Int                 @default(0)
   imagen                     String?             @db.VarChar(255)
   estado                     EstadoMedicamento?  @default(DISPONIBLE)
   created_at                 DateTime?           @default(now()) @db.Timestamp(0)
@@ -179,7 +203,11 @@ model ObservacionPrecio {
 model Solicitud {
   autorizaciones_eps EpsAutorizacion[]
   seguimientos_eps EpsSeguimiento[]
-
+  farmacia_stock_eventos FarmaciaStockEvento[]
+  ocultaciones_paciente SolicitudOcultaPaciente[]
+  farmacia_asignacion FarmaciaAsignacion?
+  farmacia_eventos FarmaciaSolicitudEvento[]
+  farmacia_formulas FarmaciaFormulaAutorizada[]
   id               Int                @id @default(autoincrement())
   usuario_id       Int
   fecha            DateTime?          @default(now()) @db.Timestamp(0)
@@ -358,6 +386,7 @@ model AuditoriaPacienteAutorizado {
 }
 
 model FormulaMedica {
+  farmacia_autorizaciones FarmaciaFormulaAutorizada[]
   id              Int      @id @default(autoincrement())
   usuario_id      Int
   nombre_archivo  String   @db.VarChar(255)
@@ -515,6 +544,171 @@ model PreferenciaAdministrativa {
   sesiones_revocadas_at DateTime? @db.Timestamptz
   usuario Usuario @relation(fields:[usuario_id],references:[id],onDelete:Restrict)
   @@map("administrative_preferences")
+}
+
+// Relaciones protegidas por FK/RESTRICT en la migración aditiva revisada.
+// La operación se mantiene desactivada hasta aplicar y verificar el esquema.
+model FarmaciaAsignacion {
+  solicitud_id Int @id
+  farmacia_id Int
+  asignado_por Int
+  asignada_at DateTime @default(now()) @db.Timestamptz
+  activa Boolean @default(true)
+  version Int @default(1)
+  solicitud Solicitud @relation(fields:[solicitud_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  farmacia Usuario @relation("FarmaciaAsignada",fields:[farmacia_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  asignador Usuario @relation("AsignadorSolicitud",fields:[asignado_por],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  @@index([farmacia_id,activa,solicitud_id],map:"farmacia_asignaciones_ambito_idx")
+  @@map("farmacia_asignaciones")
+}
+model FarmaciaSolicitudEvento {
+  id Int @id @default(autoincrement())
+  solicitud_id Int
+  farmacia_id Int
+  actor_id Int
+  estado_anterior String @db.VarChar(20)
+  estado String @db.VarChar(20)
+  clave String @db.Uuid
+  huella String @db.Char(64)
+  recepcion String? @db.VarChar(500)
+  observaciones String? @db.VarChar(500)
+  cantidades Json @default("[]")
+  created_at DateTime @default(now()) @db.Timestamptz
+  solicitud Solicitud @relation(fields:[solicitud_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  farmacia Usuario @relation("FarmaciaEvento",fields:[farmacia_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  actor Usuario @relation("ActorEvento",fields:[actor_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  @@unique([farmacia_id,clave])
+  @@unique([solicitud_id,estado],map:"farmacia_evento_estado_key")
+  @@index([solicitud_id,id],map:"farmacia_eventos_solicitud_idx")
+  @@index([farmacia_id,created_at],map:"farmacia_eventos_fecha_idx")
+  @@map("farmacia_solicitud_eventos")
+}
+model FarmaciaFormulaAutorizada {
+  solicitud_id Int
+  formula_id Int
+  autorizado_por Int
+  activa Boolean @default(true)
+  permite_descarga Boolean @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz
+  solicitud Solicitud @relation(fields:[solicitud_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  formula FormulaMedica @relation(fields:[formula_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  autorizador Usuario @relation("AutorizadorFormula",fields:[autorizado_por],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  @@id([solicitud_id,formula_id])
+  @@map("farmacia_formulas_autorizadas")
+}
+model FarmaciaCatalogoAutorizacion {
+  farmacia_id Int @id
+  autorizado_por Int
+  puede_crear Boolean @default(false)
+  activa Boolean @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz
+  farmacia Usuario @relation("FarmaciaPermisoCatalogo",fields:[farmacia_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  autorizador Usuario @relation("AutorizadorCatalogo",fields:[autorizado_por],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  @@map("farmacia_catalogo_autorizaciones")
+}
+model FarmaciaCatalogoAmbito {
+  medicamento_id Int @id
+  farmacia_id Int
+  autorizado_por Int
+  version Int @default(1)
+  activa Boolean @default(true)
+  medicamento Medicamento @relation(fields:[medicamento_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  farmacia Usuario @relation("FarmaciaAmbitoCatalogo",fields:[farmacia_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  autorizador Usuario @relation("AutorizadorAmbito",fields:[autorizado_por],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  @@index([farmacia_id,activa],map:"farmacia_catalogo_ambito_idx")
+  @@map("farmacia_catalogo_ambitos")
+}
+model FarmaciaCatalogoAuditoria {
+  id Int @id @default(autoincrement())
+  farmacia_id Int
+  medicamento_id Int
+  accion String @db.VarChar(20)
+  campos String[]
+  created_at DateTime @default(now()) @db.Timestamptz
+  farmacia Usuario @relation(fields:[farmacia_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  medicamento Medicamento @relation(fields:[medicamento_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  @@map("farmacia_catalogo_auditoria")
+}
+model FarmaciaSesion {
+  usuario_id Int @id
+  revocadas_at DateTime @default(now()) @db.Timestamptz
+  usuario Usuario @relation(fields:[usuario_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  @@map("farmacia_sesiones")
+}
+model FarmaciaRutaEps {
+  eps_id String @id
+  farmacia_id Int
+  autorizado_por Int
+  activa Boolean @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz
+  farmacia Usuario @relation("FarmaciaRuta",fields:[farmacia_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  autorizador Usuario @relation("AutorRuta",fields:[autorizado_por],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  @@map("farmacia_rutas_eps")
+}
+model FarmaciaAutorizacionEvento {
+ id Int @id @default(autoincrement())
+ actor_id Int
+ farmacia_id Int
+ tipo String @db.VarChar(30)
+ detalle Json
+ created_at DateTime @default(now()) @db.Timestamptz
+ actor Usuario @relation("ActorAutorizacion",fields:[actor_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ farmacia Usuario @relation("DestinoAutorizacion",fields:[farmacia_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ @@map("farmacia_autorizacion_eventos")
+}
+model SolicitudOcultaPaciente {
+ usuario_id Int
+ solicitud_id Int
+ created_at DateTime @default(now()) @db.Timestamptz
+ usuario Usuario @relation(fields:[usuario_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ solicitud Solicitud @relation(fields:[solicitud_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ @@id([usuario_id,solicitud_id])
+ @@map("solicitudes_ocultas_paciente")
+}
+model AfiliadoCuentaOrigen {
+ usuario_id Int @id
+ afiliado_id String @unique
+ eps_id String
+ verificado_por Int
+ verificado_at DateTime @default(now()) @db.Timestamptz
+ usuario Usuario @relation("CuentaOrigen",fields:[usuario_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ verificador Usuario @relation("VerificadorOrigen",fields:[verificado_por],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ @@map("afiliado_cuentas_origen")
+}
+
+model FarmaciaExistencia {
+ farmacia_id Int
+ medicamento_id Int
+ cantidad Int @default(0)
+ reservado Int @default(0)
+ updated_at DateTime @default(now()) @db.Timestamptz
+ farmacia Usuario @relation(fields:[farmacia_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ medicamento Medicamento @relation(fields:[medicamento_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ eventos FarmaciaStockEvento[]
+ @@id([farmacia_id,medicamento_id])
+ @@map("farmacia_existencias")
+}
+model FarmaciaStockEvento {
+ id Int @id @default(autoincrement())
+ farmacia_id Int
+ medicamento_id Int
+ solicitud_id Int?
+ actor_id Int
+ tipo String @db.VarChar(12)
+ cantidad Int
+ clave String @db.Uuid
+ huella String @db.Char(64)
+ referencia String @db.VarChar(200)
+ created_at DateTime @default(now()) @db.Timestamptz
+ farmacia Usuario @relation("StockFarmacia",fields:[farmacia_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ actor Usuario @relation("StockActor",fields:[actor_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ medicamento Medicamento @relation(fields:[medicamento_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ solicitud Solicitud? @relation(fields:[solicitud_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ existencia FarmaciaExistencia @relation(fields:[farmacia_id,medicamento_id],references:[farmacia_id,medicamento_id],onDelete:Restrict,onUpdate:NoAction)
+ @@unique([farmacia_id,clave,medicamento_id])
+ @@unique([solicitud_id,medicamento_id,tipo])
+ @@index([farmacia_id,created_at],map:"farmacia_stock_eventos_fecha_idx")
+ @@map("farmacia_stock_eventos")
 }
 
 // EPS: aislamiento explicito. No se asignan entidades ni cuentas automaticamente.

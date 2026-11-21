@@ -5,6 +5,13 @@ router.use(requireAdmin);
 const farmaciaEps = require('../controllers/farmacia-eps.controller');
 router.get('/farmacias/:id/eps',farmaciaEps.administrar);
 router.put('/farmacias/:id/eps',farmaciaEps.vincular);
+// Administración de asignaciones y permisos; no consulta ni revisión clínica.
+const operacionFarmacia=require('../controllers/farmacia-operacion.controller');
+router.post('/farmacias/:farmaciaId/existencias/ingresos',require('../controllers/farmacia-stock.controller').ingresar);
+router.post('/farmacias/solicitudes/:id/asignacion',operacionFarmacia.asignar);
+router.put('/farmacias/:farmaciaId/catalogo-autorizaciones',operacionFarmacia.autorizarCatalogo);
+router.put('/farmacias/rutas-eps/:epsId',operacionFarmacia.ruta);
+router.put('/farmacias/:farmaciaId/identidades/:usuarioId',operacionFarmacia.identidad);
 const handle=name=>(req,res)=>createController()[name](req,res);
 router.get('/cuentas',handle('localUsers'));
 router.post('/cuentas',handle('createUser'));

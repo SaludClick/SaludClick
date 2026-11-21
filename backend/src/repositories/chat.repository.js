@@ -9,7 +9,7 @@ const conversationSelect = {
 
 async function esStaff(id) {
     const usuario = await prisma.usuario.findUnique({ where: { id }, select: { rol_id: true, estado: true } });
-    return usuario?.rol_id === 3 && usuario.estado === "ACTIVO";
+    return usuario?.rol_id === 1 && usuario.estado === "ACTIVO";
 }
 async function listar(id, staff) {
     return prisma.conversacion.findMany({

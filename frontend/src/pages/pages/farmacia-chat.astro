@@ -1,6 +1,10 @@
 ---
-import FarmaciaLayout from '../../layouts/FarmaciaLayout.astro';
-import FarmaciaChat from '../../components/FarmaciaChat.jsx';
-import '../../styles/farmacia-chat.css';
+import Layout from '../../layouts/Layout.astro';
 ---
-<FarmaciaLayout modulo="chat" titulo="Chat" descripcion="Conversaciones autorizadas con pacientes."><a id="farmaciaChatReturn" href="/pages/farmacia.html">Volver a la pantalla anterior</a><FarmaciaChat embedded client:only="react" /></FarmaciaLayout>
+<Layout title="Módulo retirado | SaludClick">
+  <main><h1>Módulo retirado</h1><p>Este módulo ya no está disponible en el panel de Farmacia.</p><a href="/pages/farmacia.html">Volver al Dashboard</a></main>
+  <script is:inline type="module">
+    import { checkAuthGuard } from '/js/auth.js';
+    checkAuthGuard();
+  </script>
+</Layout>

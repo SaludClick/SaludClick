@@ -9,7 +9,7 @@ async function abrirEdge() {
     const puerto = await new Promise(resolve => probe.listen(0, '127.0.0.1', () => { const port = probe.address().port; probe.close(() => resolve(port)); }));
     const proceso = spawn(process.env.EDGE_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', ['--headless=new', '--disable-gpu', '--no-first-run', `--remote-debugging-port=${puerto}`, `--user-data-dir=${carpeta}`, 'about:blank'], { windowsHide: true, stdio:'ignore' });
     let socket, sequence = 0;
-    const pendientes = new Map(), errores = [], respuestas = [];
+    const pendientes = new Map(), errores = [], respuestas = [], listeners=new Map();
     const until = async (fn, timeout = 15000) => { const limite = Date.now() + timeout; while (Date.now() < limite) { try { if (await fn()) return; } catch {} await new Promise(r => setTimeout(r, 70)); } throw new Error('Tiempo de espera agotado en navegador de Afiliados.'); };
     async function cerrar() {
         socket?.close();
@@ -29,13 +29,15 @@ async function abrirEdge() {
             if (m.id) { const p = pendientes.get(m.id); pendientes.delete(m.id); if (p) { clearTimeout(p.timer); m.error ? p.reject(new Error(m.error.message)) : p.resolve(m.result); } }
             if (m.method === 'Runtime.exceptionThrown') errores.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text);
             if (m.method === 'Network.responseReceived' && m.params.response.url.includes('/api/admin/afiliados')) respuestas.push(m.params.response.status);
+            for(const fn of listeners.get(m.method)||[])fn(m.params);
         });
         const send = (method, params = {}) => new Promise((resolve,reject) => { const id = ++sequence; const timer = setTimeout(() => { pendientes.delete(id); reject(new Error(`DevTools no respondió: ${method}`)); }, 15000); pendientes.set(id,{ resolve,reject,timer }); socket.send(JSON.stringify({ id,method,params })); });
         const evaluate = async expression => { const r = await send('Runtime.evaluate',{ expression, returnByValue:true, awaitPromise:true }); if (r.exceptionDetails) throw new Error(r.exceptionDetails.text); return r.result.value; };
         await send('Runtime.enable'); await send('Page.enable'); await send('Network.enable');
         // La prueba es local y no depende de tipografías o servicios externos.
         await send('Network.setBlockedURLs',{ urls:['*://cdnjs.cloudflare.com/*'] });
-        return { send,evaluate,until,cerrar,errores,respuestas };
+        const onEvent=(method,fn)=>{if(!listeners.has(method))listeners.set(method,new Set());listeners.get(method).add(fn);return()=>listeners.get(method)?.delete(fn);};
+        return { send,evaluate,until,cerrar,errores,respuestas,onEvent };
     } catch(e) { await cerrar(); throw e; }
 }
 module.exports = { abrirEdge };

@@ -12,14 +12,8 @@ function pagination(query) {
 function pageInfo(options, total) {
     return { pagina: options.pagina, tamano: options.take, total, paginas: Math.ceil(total / options.take) };
 }
-function operacion(pedido) {
-    const bloqueos = [];
-    if (!pedido.pagos.some(pago => pago.estado === 'APROBADO' && pago.simulacion === false)) bloqueos.push('PAGO_REAL_NO_APROBADO');
-    if (!pedido.detalles.length) bloqueos.push('SIN_MEDICAMENTOS');
-    if (pedido.detalles.some(item => item.medicamento.requiere_formula === true)) bloqueos.push('VALIDACION_FARMACEUTICA_PENDIENTE');
-    if (pedido.detalles.some(item => item.medicamento.requiere_formula !== true && item.medicamento.requiere_formula !== false)) bloqueos.push('REQUISITO_FORMULA_DESCONOCIDO');
-    return { siguienteEstado: bloqueos.length ? null : SIGUIENTE[pedido.estado] || null, bloqueos };
-}
+const {operacion}=require('./farmacia-operacion.rules');
+
 function presentar(pedido) {
     const { pagos, direccion, ...publico } = pedido;
     return { ...publico, ...(direccion !== undefined && pedido.tipo_entrega === 'DOMICILIO' ? { direccion } : {}), operacion: operacion(pedido) };

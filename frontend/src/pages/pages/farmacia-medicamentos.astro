@@ -1,5 +1,8 @@
 ---
 import FarmaciaLayout from '../../layouts/FarmaciaLayout.astro';
 import FarmaciaExistencias from '../../components/FarmaciaExistencias.astro';
+import FarmaciaCatalogoEditor from '../../components/FarmaciaCatalogoEditor.astro';
 ---
-<FarmaciaLayout modulo="medicamentos" titulo="Medicamentos" descripcion="Catálogo, disponibilidad y requisito de fórmula. La consulta no autoriza una dispensación."><FarmaciaExistencias tipo="catalogo" /></FarmaciaLayout>
+<FarmaciaLayout modulo="medicamentos" titulo="Medicamentos">
+  <FarmaciaExistencias tipo="catalogo"><FarmaciaCatalogoEditor /></FarmaciaExistencias>
+</FarmaciaLayout>
