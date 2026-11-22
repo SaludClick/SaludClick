@@ -619,7 +619,8 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
         await value('#busquedaInicio', ''); await click('#buscarInicio');
         await until(async () => (await nombresCatalogoPublico()).length === medicamentos.length);
         await go('/index.html');
-        assert.equal(await evaluate('document.querySelector(".hero-botones a").getAttribute("href")'), '/login.html');
+        await click('.hero-botones a[href="#catalogo-publico"]');
+        await until(() => evaluate('location.hash === "#catalogo-publico"'));
         await go('/index.html'); await click('.hero-botones a[href="#servicios"]');
         await until(() => evaluate('scrollY > 0'));
         assert.ok(['smooth', 'auto'].includes(await evaluate('getComputedStyle(document.documentElement).scrollBehavior')));
@@ -841,22 +842,42 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
         // SesiÃ³n ficticia Ãºnicamente en el perfil aislado de esta prueba.
         await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only')`);
         for (const route of routes) {
-            if (route === '/pages/admin.html' || route === '/pages/admin-cuentas.html') {
-                await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Admin de prueba',rol:1}))`);
-            } else if (route === '/pages/farmacia.html') {
-                await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Farmacia',rol:3}))`);
+            const access = await evaluate(`(async () => {
+                const { puedeAcceder, PAGINAS_PRIVADAS } = await import('/js/roles.js');
+                const route = ${JSON.stringify(route)};
+                return { role: [2, 1, 3, 4].find(rol => puedeAcceder(route, { rol })),
+                    restricted: PAGINAS_PRIVADAS.has(route) };
+            })()`);
+            assert.equal((await fetch(base + route)).status, 200, route);
+            const user = { id: 42, nombre: 'Prueba', rol: access.role ?? 2 };
+            await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user', JSON.stringify(${JSON.stringify(user)}))`);
+            if (access.restricted && !access.role) {
+                await send('Page.navigate', { url: base + route });
+                await esperarPagina('/pages/dashboard.html');
+            } else if (['/pages/admin-cuentas.html', '/pages/admin-pacientes.html'].includes(route)) {
+                await send('Page.navigate', { url: base + route });
+                await esperarPagina('/pages/admin.html');
+                await until(() => evaluate('location.hash === "#usuarios"'));
+            } else if (route === '/restablecer.html') {
+                await go(route + '?token=frontend-test-only');
             } else {
-                await evaluate(`for (const s of [localStorage,sessionStorage]) s.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',rol:2}))`);
+                await go(route);
             }
-            if(route==='/pages/soporte.html')await evaluate(`for(const s of [localStorage,sessionStorage])s.setItem('saludclick_user',JSON.stringify({id:42,nombre:'Cliente',rol:2}))`);
-            if(route==='/pages/admin-cuentas.html'){await go('/pages/admin.html#usuarios');}
-            else if (route === '/restablecer.html') await go(route+'?token=frontend-test-only');
-            else await go(route);
             const controls = await evaluate(`({ links:[...document.querySelectorAll('a[href],script[src]')].map(e=>e.href||e.src), empty:[...document.querySelectorAll('a[href]')].filter(e=>e.getAttribute('href')==='#').length, buttons:[...document.querySelectorAll('button')].every(e=>e.hasAttribute('type')) })`);
             assert.equal(controls.empty,0,route); assert.equal(controls.buttons,true,route);
             for (const link of controls.links.filter(link=>link.startsWith(base))) {
                 const url = new URL(link);
                 assert.equal((await fetch(url)).status,200,link);
+                const fragment = decodeURIComponent(url.hash.slice(1));
+                if (route === '/pages/eps-v1.html' && url.pathname === route && fragment) {
+                    const selector = `[data-eps-view=${JSON.stringify(fragment)}]`;
+                    if (await evaluate(`!!document.querySelector(${JSON.stringify(selector)})`)) {
+                        await click(selector);
+                        await until(() => evaluate(`location.hash === ${JSON.stringify(url.hash)} &&
+                            document.querySelector(${JSON.stringify(selector)})?.getAttribute('aria-current') === 'page'`));
+                        continue;
+                    }
+                }
                 if (url.hash && url.pathname === route && !/^#(dashboard|usuarios|solicitudes|mensajes|notificaciones|informes|auditoria|configuracion)(\/\d+)?$/.test(url.hash)) assert.equal(await evaluate(`!!document.getElementById(${JSON.stringify(decodeURIComponent(url.hash.slice(1)))})`),true,link);
             }
         }
@@ -983,6 +1004,7 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
     async function abrirInicioReal() {
         await send('Page.navigate',{url:nativeBase+'/index.html'});
         await esperarPagina('/index.html');
+        await until(() => evaluate('document.querySelector("#catalogo-publico-lista").getAttribute("aria-busy") === "false"'));
     }
     async function mouseClick(selector) {
         await evaluate(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({behavior:'instant',block:'center'})`);
@@ -1009,6 +1031,11 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
             assert.equal(await evaluate('location.pathname'),'/login.html',accion);
             assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`),destino);
             t.diagnostic(`${accion}: clic real -> ${await evaluate('location.href')}`);
+            if (accion === 'formula') {
+                await login();
+                await esperarPagina(destino);
+                assert.equal(await evaluate(`sessionStorage.getItem('${destinoKey}')`), null);
+            }
         }
     });
     await t.test('clic real en Contactar sin autenticacion abre VITALIX sin correo', async () => {
@@ -1031,7 +1058,9 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
         await go('/index.html');
         assert.equal(await evaluate('document.querySelectorAll("#servicios [data-action]").length'),6);
         assert.equal(await evaluate('getComputedStyle(document.querySelector(".grid-servicios")).display'),'grid');
-        assert.equal(await evaluate('document.querySelectorAll("#servicios button[type=button]").length'),6);
+        assert.equal(await evaluate('getComputedStyle(document.querySelector("#servicios .grid-servicios")).gridTemplateColumns.split(" ").length'),1);
+        assert.deepEqual(await evaluate(`[...document.querySelectorAll('#servicios a[data-action]')].map(link => link.getAttribute('href'))`),
+            ['#catalogo-publico', '/pages/pedidos.html', '/pages/historial.html', '/pages/formulas.html', '/pages/historial.html', '/pages/chat.html']);
     });
     await t.test('imágenes locales del catálogo de medicamentos cargan', async () => {
         await evaluate(`localStorage.setItem('saludclick_token','frontend-test-only'); localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',rol:2}))`);

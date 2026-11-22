@@ -6496,14 +6496,18 @@ a {
 }
 
 .home-page {
-    padding-top: 78px;
+    --home-header-height: 7.375rem;
+    padding-top: 0;
     background: #f8fbf9;
     color: var(--public-ink);
 }
 
 .home-page .home-navbar {
-    height: 78px;
-    min-height: 78px;
+    position: sticky;
+    inset-block-start: 0;
+    display: block;
+    height: auto;
+    min-height: 0;
     padding: 0;
     border-bottom: 1px solid rgba(220, 233, 225, .9);
     background: rgba(255, 255, 255, .94);
@@ -6513,8 +6517,12 @@ a {
 .home-page .nav-container {
     width: min(1220px, calc(100% - 48px));
     max-width: none;
-    min-height: 78px;
+    min-height: 68px;
     gap: clamp(18px, 3vw, 40px);
+}
+
+.home-page :is(#inicio, #servicios, #beneficios, #contacto, #catalogo-publico) {
+    scroll-margin-block-start: calc(var(--home-header-height) + 1rem);
 }
 
 .home-page .home-logo {
@@ -6540,13 +6548,11 @@ a {
 .home-page nav#menu {
     position: static;
     display: flex !important;
-    flex: 1;
     align-items: center;
-    justify-content: space-between;
-    gap: clamp(16px, 2.5vw, 32px);
-    width: auto;
+    width: 100%;
     padding: 0;
     border: 0;
+    border-top: 1px solid var(--public-border);
     border-radius: 0;
     background: transparent;
     box-shadow: none;
@@ -6558,10 +6564,12 @@ a {
 
 .home-page .home-nav-links {
     display: flex;
-    flex: 1;
+    width: min(1220px, calc(100% - 48px));
+    max-width: none;
+    min-height: 48px;
     align-items: center;
-    justify-content: center;
-    gap: clamp(8px, 1.6vw, 22px);
+    justify-content: flex-start;
+    gap: clamp(6px, 1.4vw, 18px);
 }
 
 .home-page nav#menu .home-nav-links a {
@@ -6584,8 +6592,9 @@ a {
     color: var(--public-green);
 }
 
-.home-page nav#menu .home-login-link {
+.home-page .home-header-row .home-login-link {
     flex-shrink: 0;
+    margin-inline-start: auto;
     padding: 12px 20px;
     border: 1px solid var(--public-green);
     border-radius: 12px;
@@ -6599,8 +6608,8 @@ a {
     transition: background .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 
-.home-page nav#menu .home-login-link:hover,
-.home-page nav#menu .home-login-link:focus-visible {
+.home-page .home-header-row .home-login-link:hover,
+.home-page .home-header-row .home-login-link:focus-visible {
     border-color: var(--public-green-dark);
     background: var(--public-green-dark) !important;
     box-shadow: 0 7px 18px rgba(8, 95, 67, .2);
@@ -6617,8 +6626,8 @@ a {
     position: relative;
     isolation: isolate;
     overflow: hidden;
-    padding: clamp(48px, 7vw, 88px) 0 74px;
-    border-radius: 0 0 34px 34px;
+    padding: clamp(2rem, 5vw, 4.5rem) 0;
+    border-radius: 0;
     background: radial-gradient(circle at 82% 18%, rgba(166, 219, 188, .31), transparent 27rem),
         linear-gradient(135deg, #f4faf6 0%, #fbfdfb 54%, #eef8f1 100%);
 }
@@ -6646,6 +6655,7 @@ a {
 
 .home-page .hero-texto {
     min-width: 0;
+    text-align: start;
 }
 
 .home-page .home-eyebrow {
@@ -6665,7 +6675,7 @@ a {
     max-width: 660px;
     margin: 22px 0 18px;
     color: var(--public-ink);
-    font-size: clamp(42px, 5vw, 66px);
+    font-size: clamp(2.25rem, 4.5vw, 3.75rem);
     font-weight: 800;
     letter-spacing: -.055em;
     line-height: 1.06;
@@ -6705,7 +6715,11 @@ a {
 }
 
 .home-page .home-search button {
+    display: inline-flex;
     flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
     padding: 12px 18px;
     border-radius: 10px;
     background: var(--public-green);
@@ -6868,12 +6882,12 @@ a {
 }
 
 .home-page .nosotros {
-    padding: 62px 0 18px;
-    text-align: center;
+    padding-block: clamp(2rem, 5vw, 3.75rem);
 }
 
 .home-page .nosotros .container {
-    max-width: 800px;
+    border-block-start: 1px solid var(--public-border);
+    padding-block-start: var(--sc-section-gap);
 }
 
 .home-page .nosotros h2,
@@ -6886,6 +6900,7 @@ a {
 }
 
 .home-page .nosotros p {
+    max-width: 70ch;
     margin: 13px 0 0;
     color: var(--public-muted);
     font-size: 16px;
@@ -6893,76 +6908,12 @@ a {
 }
 
 .home-page .servicios {
-    padding: 60px 0 72px;
+    padding-block: clamp(2rem, 5vw, 3.75rem);
 }
 
-.home-page .servicios h2,
-.home-page .beneficios h2 {
-    margin-bottom: 30px;
-    text-align: center;
-}
-
-.home-page .grid-servicios {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 18px;
-}
-
-.home-page .grid-servicios .card {
-    display: flex;
-    min-height: 230px;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 24px;
-    border: 1px solid #e4ede7;
-    border-radius: 18px;
-    box-shadow: 0 8px 26px rgba(24, 72, 48, .045);
-    text-align: left;
-    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
-}
-
-.home-page .grid-servicios .card:hover {
-    transform: translateY(-4px);
-    border-color: #c9e2d2;
-    box-shadow: 0 16px 34px rgba(24, 72, 48, .09);
-}
-
-.home-page .grid-servicios .card i {
-    display: grid;
-    width: 48px;
-    height: 48px;
-    place-items: center;
-    margin-bottom: 19px;
-    border-radius: 14px;
-    background: var(--public-green-soft);
-    color: var(--public-green);
-    font-size: 20px;
-}
-
-.home-page .grid-servicios .card h3 {
-    color: var(--public-ink);
-    font-size: 17px;
-    font-weight: 750;
-}
-
-.home-page .grid-servicios .card p {
-    flex: 1;
-    color: var(--public-muted);
-    font-size: 14px;
-    line-height: 1.55;
-}
-
-.home-page .grid-servicios .card button {
-    padding: 9px 13px;
-    border-radius: 9px;
-    background: transparent;
-    color: var(--public-green);
-    font-size: 13px;
-    font-weight: 750;
-}
-
-.home-page .grid-servicios .card button:hover {
-    background: var(--public-green-soft);
-    color: var(--public-green-dark);
+.home-page :is(.servicios, .beneficios) h2 {
+    margin-block-end: var(--sc-section-gap);
+    text-align: start;
 }
 
 .home-page .beneficios {
@@ -7368,10 +7319,6 @@ a {
         gap: 34px;
     }
 
-    .home-page .grid-servicios {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
     .auth-layout {
         grid-template-columns: minmax(0, .9fr) minmax(360px, 1.1fr);
         gap: 34px;
@@ -7380,11 +7327,11 @@ a {
 
 @media (max-width: 760px) {
     .home-page {
-        padding-top: 70px;
+        --home-header-height: 4.375rem;
     }
 
     .home-page .home-navbar {
-        height: 70px;
+        height: auto;
         min-height: 70px;
     }
 
@@ -7431,8 +7378,9 @@ a {
 
     .home-page nav#menu {
         position: absolute;
-        top: calc(100% + 8px);
-        right: 0;
+        top: 100%;
+        left: auto;
+        right: var(--sc-page-gutter);
         z-index: 2100;
         display: none !important;
         width: min(340px, calc(100vw - 30px));
@@ -7463,6 +7411,8 @@ a {
 
     .home-page .home-nav-links {
         width: 100%;
+        min-height: 0;
+        margin: 0;
         flex: none;
         align-items: stretch;
         flex-direction: column;
@@ -7481,26 +7431,23 @@ a {
         background: #f0f8f3;
     }
 
-    .home-page nav#menu .home-login-link {
-        width: 100%;
-        justify-content: center;
-        margin-top: 2px;
+    .home-page .home-header-row .home-login-link {
+        padding-inline: .75rem;
     }
 
     .home-page .home-hero {
-        padding: 48px 0 56px;
-        border-radius: 0 0 24px 24px;
+        padding-block: 2rem;
     }
 
     .home-page .home-hero .hero-content {
         width: calc(100% - 36px);
         grid-template-columns: 1fr;
-        gap: 36px;
+        gap: var(--sc-section-gap);
     }
 
     .home-page .hero-texto h1 {
         max-width: 600px;
-        font-size: clamp(38px, 9vw, 54px);
+        font-size: clamp(2rem, 7vw, 3.375rem);
     }
 
     .home-page .hero-texto p {
@@ -7580,6 +7527,26 @@ a {
         flex-direction: column;
     }
 
+    .home-page .home-header-row {
+        gap: .375rem;
+    }
+
+    .home-page .home-logo {
+        gap: .375rem;
+        font-size: 1rem;
+    }
+
+    .home-page .home-logo i {
+        width: 2rem;
+        height: 2rem;
+        font-size: 1rem;
+    }
+
+    .home-page .home-header-row .home-login-link {
+        padding-inline: .6rem;
+        font-size: .8125rem;
+    }
+
     .home-page .home-search input,
     .home-page .home-search button {
         width: 100%;
@@ -7613,13 +7580,8 @@ a {
         align-items: flex-start;
     }
 
-    .home-page .grid-servicios,
     .home-page .beneficios-grid {
         grid-template-columns: 1fr;
-    }
-
-    .home-page .grid-servicios .card {
-        min-height: 210px;
     }
 
     .auth-shell,

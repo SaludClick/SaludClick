@@ -1,6 +1,15 @@
 ---
 import VitalixWidget from "../components/VitalixWidget.jsx";
 import '../styles/chat.css';
+
+const servicios = [
+    { nombre: 'Consultar Medicamentos', descripcion: 'Consulta disponibilidad en farmacias afiliadas.', accion: 'medicamentos', destino: '#catalogo-publico', etiqueta: 'Consultar', icono: 'prescription-bottle-medical' },
+    { nombre: 'Solicitar Domicilio', descripcion: 'Recibe tus medicamentos en tu hogar.', accion: 'pedido', destino: '/pages/pedidos.html', etiqueta: 'Solicitar', icono: 'house' },
+    { nombre: 'Seguimiento Pedido', descripcion: 'Consulta el estado de tu solicitud.', accion: 'historial', destino: '/pages/historial.html', etiqueta: 'Ver Estado', icono: 'clipboard-list' },
+    { nombre: 'Cargar Fórmula', descripcion: 'Adjunta tu fórmula médica.', accion: 'formula', destino: '/pages/formulas.html', etiqueta: 'Cargar', icono: 'file-medical' },
+    { nombre: 'Historial', descripcion: 'Consulta solicitudes anteriores.', accion: 'historial', destino: '/pages/historial.html', etiqueta: 'Ver Historial', icono: 'clock-rotate-left' },
+    { nombre: 'Soporte', descripcion: 'Atención al cliente.', accion: 'contacto', destino: '/pages/chat.html', etiqueta: 'Contactar', icono: 'headset' },
+];
 ---
 <!DOCTYPE html>
 <html lang="es">
@@ -12,12 +21,13 @@ import '../styles/chat.css';
 
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="/css/portada-publica.css">
 </head>
 
 <body class="home-page">
 
     <header class="navbar home-navbar">
-        <div class="container nav-container">
+        <div class="container nav-container home-header-row">
             <a class="logo home-logo" href="#inicio" aria-label="SaludClick, Inicio">
                 <i class="fa-solid fa-heart-pulse"></i>
                 <span>SaludClick</span>
@@ -25,12 +35,13 @@ import '../styles/chat.css';
             <nav id="menu" aria-label="Navegación principal">
                 <div class="home-nav-links">
                     <a href="#inicio">Inicio</a>
+                    <a href="#catalogo-publico">Medicamentos</a>
                     <a href="#servicios">Servicios</a>
-                    <a href="#beneficios">Beneficios</a>
+                    <a href="#preguntas-frecuentes">Preguntas Frecuentes</a>
                     <a href="#contacto">Contacto</a>
                 </div>
-                <a href="/login.html" class="btn-primary home-login-link">Iniciar sesión</a>
             </nav>
+            <a href="/login.html" class="btn-primary home-login-link">Iniciar Sesión</a>
             <button
                 class="menu-toggle home-menu-toggle"
                 id="menuToggle"
@@ -48,126 +59,81 @@ import '../styles/chat.css';
     <section id="inicio" class="hero home-hero">
         <div class="container hero-content">
             <div class="hero-texto">
-                <span class="badge home-eyebrow">
-                    <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
-                    Atención farmacéutica más simple
-                </span>
                 <h1>Tu bienestar, a un solo clic</h1>
                 <p>Consulta medicamentos, envía tus solicitudes y sigue cada paso desde un mismo lugar.</p>
-
-                <div class="buscador home-search" role="search" aria-label="Buscar medicamentos">
-                    <input id="busquedaInicio" type="search" maxlength="150" placeholder="Buscar medicamento..." aria-label="Buscar medicamento">
-                    <button id="buscarInicio" type="button">
-                        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-                        Buscar
-                    </button>
-                </div>
-
                 <div class="hero-botones">
-                    <a href="/login.html" class="btn-primary btn-lg">Solicitar medicamentos</a>
-                    <a href="#servicios" class="btn-outline btn-lg">Conocer servicios</a>
+                    <a href="#catalogo-publico" class="btn-primary btn-lg">Consultar Medicamentos</a>
+                    <a href="#servicios" class="btn-outline btn-lg">Conocer Servicios</a>
                 </div>
             </div>
-
-            <div class="hero-imagen home-visual" role="group" aria-label="Cómo funciona SaludClick">
-                <div class="home-visual-card">
-                    <div class="home-visual-brand">
-                        <span class="home-visual-icon">
-                            <i class="fa-solid fa-pills" aria-hidden="true"></i>
-                        </span>
-                        <div>
-                            <span>SaludClick</span>
-                            <strong>Tu cuidado, más simple</strong>
-                        </div>
-                        <span class="home-visual-check" aria-hidden="true">
-                            <i class="fa-solid fa-check"></i>
-                        </span>
-                    </div>
-                    <div class="home-visual-message">
-                        <span class="home-visual-label">Desde donde estés</span>
-                        <strong>Organiza tus solicitudes de medicamentos</strong>
-                        <p>Información clara para acompañar tu proceso.</p>
-                    </div>
-                    <div class="home-visual-steps" role="group" aria-label="Pasos">
-                        <span><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Consulta</span>
-                        <span><i class="fa-solid fa-file-medical" aria-hidden="true"></i> Solicita</span>
-                        <span><i class="fa-solid fa-route" aria-hidden="true"></i> Haz seguimiento</span>
-                    </div>
-                </div>
-            </div>
+            <img class="home-hero-photo" src="/images/portada-farmacia.jpg" alt="Profesional en una farmacia" width="1536" height="1024" fetchpriority="high">
         </div>
     </section>
 
-    <section class="nosotros">
-        <div class="container">
-            <h2>¿Qué es SaludClick?</h2>
-            <p>SaludClick es una plataforma web diseñada para optimizar la gestión y entrega de medicamentos entre usuarios y farmacias afiliadas.</p>
-        </div>
-    </section>
-
-    <section id="servicios" class="servicios">
-        <div class="container">
-            <h2>Servicios Disponibles</h2>
-            <div class="grid-servicios">
-                <div class="card">
-                    <i class="fa-solid fa-pills"></i>
-                    <h3>Consultar Medicamentos</h3>
-                    <p>Consulta disponibilidad en farmacias afiliadas.</p>
-                    <button type="button" data-action="medicamentos">Consultar</button>
-                </div>
-                <div class="card">
-                    <i class="fa-solid fa-truck"></i>
-                    <h3>Solicitar Domicilio</h3>
-                    <p>Recibe tus medicamentos en tu hogar.</p>
-                    <button type="button" data-action="pedido">Solicitar</button>
-                </div>
-                <div class="card">
-                    <i class="fa-solid fa-location-dot"></i>
-                    <h3>Seguimiento Pedido</h3>
-                    <p>Consulta el estado de tu solicitud.</p>
-                    <button type="button" data-action="historial">Ver Estado</button>
-                </div>
-                <div class="card">
-                    <i class="fa-solid fa-file-medical"></i>
-                    <h3>Cargar Fórmula</h3>
-                    <p>Adjunta tu fórmula médica.</p>
-                    <button type="button" data-action="formula">Cargar</button>
-                </div>
-                <div class="card">
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                    <h3>Historial</h3>
-                    <p>Consulta solicitudes anteriores.</p>
-                    <button type="button" data-action="historial">Ver Historial</button>
-                </div>
-                <div class="card">
-                    <i class="fa-solid fa-headset"></i>
-                    <h3>Soporte</h3>
-                    <p>Atención al cliente.</p>
-                    <button type="button" data-action="contacto">Contactar</button>
-                </div>
-            </div>
+    <section class="container portada-busqueda" role="search" aria-label="Buscar medicamentos">
+        <label for="busquedaInicio">Buscar medicamentos</label>
+        <div class="buscador home-search">
+            <input id="busquedaInicio" type="search" maxlength="150" placeholder="Escribe el nombre del medicamento">
+            <button id="buscarInicio" type="button"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Buscar</button>
         </div>
     </section>
 
     <section id="catalogo-publico" class="container catalogo-publico" aria-labelledby="catalogo-publico-titulo" tabindex="-1">
-        <h2 id="catalogo-publico-titulo">Catálogo de medicamentos</h2>
+        <h2 id="catalogo-publico-titulo">Medicamentos disponibles</h2>
         <p id="catalogo-publico-estado" role="status">Cargando medicamentos…</p>
         <div id="catalogo-publico-lista" class="catalogo-publico-lista" aria-busy="true"></div>
         <nav class="catalogo-publico-paginacion" aria-label="Páginas del catálogo">
             <button id="catalogo-publico-anterior" type="button" class="btn-outline" disabled>Anterior</button>
             <button id="catalogo-publico-siguiente" type="button" class="btn-outline" disabled>Siguiente</button>
         </nav>
+        <a id="catalogo-publico-completo" class="btn-outline" href="/index.html#catalogo-publico">Ver catálogo completo</a>
     </section>
 
-    <section id="beneficios" class="beneficios">
-        <div class="container">
-            <h2>Beneficios de SaludClick</h2>
-            <div class="beneficios-grid">
-                <div class="beneficio">Menos Filas</div>
-                <div class="beneficio">Entrega Rápida</div>
-                <div class="beneficio">Seguimiento en Tiempo Real</div>
-                <div class="beneficio">Información Segura</div>
+    <section id="servicios" class="servicios" aria-labelledby="servicios-titulo">
+        <div class="container servicios-panel">
+            <header class="servicios-encabezado">
+                <h2 id="servicios-titulo">Servicios Disponibles</h2>
+                <p>Accede a las principales funcionalidades de SaludClick</p>
+            </header>
+            <div class="grid-servicios">
+                {servicios.map(({ nombre, descripcion, accion, destino, etiqueta, icono }) => (
+                    <article class="servicio-tarjeta">
+                        <span class="servicio-icono" aria-hidden="true">
+                            <i class={`fa-solid fa-${icono}`}></i>
+                        </span>
+                        <h3>{nombre}</h3>
+                        <p>{descripcion}</p>
+                        <a href={destino} data-action={accion} aria-label={`${etiqueta}: ${nombre}`} title={etiqueta}>
+                            {etiqueta}
+                        </a>
+                    </article>
+                ))}
             </div>
+        </div>
+    </section>
+
+    <section id="preguntas-frecuentes" class="container portada-faq">
+        <h2>Preguntas frecuentes</h2>
+        <details>
+            <summary>¿Cómo consulto un medicamento?</summary>
+            <p>Escribe su nombre en el buscador o revisa el catálogo público y su estado de disponibilidad.</p>
+        </details>
+        <details>
+            <summary>¿Cómo adjunto una fórmula o reviso una solicitud?</summary>
+            <p>Inicia sesión y usa los accesos de fórmulas o historial desde tu cuenta.</p>
+        </details>
+        <details>
+            <summary>¿Dónde puedo pedir ayuda?</summary>
+            <p><a href="/pages/chat.html">Atención directa desde VITALIX</a></p>
+        </details>
+    </section>
+
+    <section id="beneficios" class="beneficios" aria-label="Beneficios de SaludClick">
+        <div class="container beneficios-grid">
+            <div class="beneficio"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Seguridad y confianza</div>
+            <div class="beneficio"><i class="fa-solid fa-laptop" aria-hidden="true"></i> Gestión en línea</div>
+            <div class="beneficio"><i class="fa-solid fa-truck" aria-hidden="true"></i> Entrega a domicilio</div>
+            <div class="beneficio"><i class="fa-solid fa-headset" aria-hidden="true"></i> Soporte y acompañamiento</div>
         </div>
     </section>
     </main>
@@ -224,303 +190,3 @@ import '../styles/chat.css';
 </body>
 
 </html>
-
-<style>
-    .catalogo-publico { padding-block: 3rem; }
-    .catalogo-publico-lista {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
-        gap: 1rem;
-    }
-    .catalogo-publico :global(article) {
-        display: grid;
-        align-content: start;
-        gap: .5rem;
-        padding: 1rem;
-        border: 1px solid #dce6ee;
-        border-radius: 1rem;
-        background: white;
-        color: #163044;
-        overflow-wrap: anywhere;
-    }
-    .catalogo-publico :global(img) {
-        width: 100%;
-        height: 8rem;
-        object-fit: contain;
-    }
-    .catalogo-publico-paginacion { display: flex; justify-content: center; gap: 1rem; margin-block-start: 1rem; }
-    .catalogo-publico-paginacion button { color: #163044; border: 1px solid #aabfcc; }
-    .catalogo-publico-paginacion button:disabled { opacity: .55; cursor: default; }
-</style>
-
-<style is:global>
-    body.home-page {
-        --public-ink: #163d32;
-        --public-muted: #526c62;
-        background: #fff;
-    }
-    .home-page .container {
-        width: min(1160px, calc(100% - 48px));
-        max-width: 1160px;
-        margin-inline: auto;
-    }
-    .home-page section[id], .home-page footer[id] { scroll-margin-top: 96px; }
-    .home-page .home-navbar {
-        box-shadow: 0 4px 24px #163d3208;
-        backdrop-filter: blur(16px);
-    }
-    .home-page .nav-container { justify-content: space-between; }
-    .home-page .home-logo { letter-spacing: -.045em; }
-    .home-page .home-logo i { border: 1px solid #d7ecdf; }
-    .home-page nav#menu .home-login-link { border-radius: 999px; padding-inline: 24px; }
-    .home-page .home-hero {
-        padding: clamp(56px, 7vw, 100px) 0;
-        border-radius: 0;
-        border-bottom: 1px solid #dfede5;
-        background: radial-gradient(ellipse at 90% 40%, #ddefe3 0, transparent 52%), linear-gradient(110deg, #fbfdfb, #f0f8f3);
-    }
-    .home-page .home-hero .hero-content {
-        width: min(1160px, calc(100% - 48px));
-        grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
-        gap: clamp(32px, 5vw, 72px);
-    }
-    .home-page .home-eyebrow { font-size: 12px; letter-spacing: .025em; background: #fff9; }
-    .home-page .hero-texto h1 {
-        max-width: 610px;
-        margin-block: 24px 20px;
-        font-size: clamp(40px, 4.7vw, 64px);
-        line-height: 1.08;
-        letter-spacing: -.055em;
-        text-wrap: balance;
-    }
-    .home-page .hero-texto > p { max-width: 490px; margin-bottom: 30px; line-height: 1.8; }
-    .home-page .home-search {
-        display: flex;
-        max-width: 540px;
-        border-radius: 16px;
-        box-shadow: 0 8px 30px #163d320a;
-    }
-    .home-page .home-search input { flex: 1; width: 0; min-height: 48px; }
-    .home-page .home-search:focus-within { border-color: #087f59; box-shadow: 0 0 0 4px #087f5912; }
-    .home-page .home-search button { min-height: 48px; }
-    .home-page .hero-botones { display: flex; flex-wrap: wrap; margin-top: 20px; }
-    .home-page .hero-botones a { min-height: 48px; border-radius: 12px; font-weight: 700; }
-    .home-page .hero-botones .btn-primary { box-shadow: 0 6px 16px #087f591a; }
-    .home-page .hero-botones .btn-outline:hover { background: #e5f2e9; border-color: #087f59; }
-    .home-page .home-visual-card {
-        padding: clamp(24px, 2.7vw, 36px);
-        border: 1px solid #d4e6da;
-        border-radius: 28px;
-        background: #fff;
-        box-shadow: 0 24px 64px -24px #1d634843, 0 3px 0 #fff inset;
-    }
-    .home-page .home-visual-card::after { background: #eaf5ee; }
-    .home-page .home-visual-brand { gap: 12px; }
-    .home-page .home-visual-brand > div { min-width: 0; }
-    .home-page .home-visual-brand strong { font-size: 16px; line-height: 1.4; }
-    .home-page .home-visual-icon { width: 48px; height: 48px; border-radius: 16px; }
-    .home-page .home-visual-label, .home-page .home-visual-brand > div span { color: #526c62; }
-    .home-page .home-visual-message {
-        margin: 30px 0 24px;
-        padding: 26px 22px;
-        background: linear-gradient(135deg, #f0f8f3, #fafcfb);
-        border-color: #e0ede4;
-        border-radius: 18px;
-    }
-    .home-page .home-visual-message strong { font-size: clamp(22px, 2.2vw, 28px); letter-spacing: -.035em; line-height: 1.25; }
-    .home-page .home-visual-steps { display: grid; grid-template-columns: 1fr; gap: 0; }
-    .home-page .home-visual-steps span { padding: 12px 0; border-radius: 0; background: none; font-size: 13px; gap: 12px; }
-    .home-page .home-visual-steps span + span { border-top: 1px solid #edf2ee; }
-    .home-page .home-visual-steps i { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: #eaf5ee; color: #087f59; }
-    .home-page .nosotros { padding: 80px 0 64px; }
-    .home-page .nosotros .container { max-width: 760px; }
-    .home-page .nosotros h2, .home-page .servicios h2, .home-page .beneficios h2 {
-        margin-top: 0;
-        font-size: clamp(27px, 3vw, 36px);
-        line-height: 1.25;
-        text-wrap: balance;
-    }
-    .home-page .nosotros p { margin: 20px auto 0; max-width: 680px; font-size: 17px; line-height: 1.85; }
-    .home-page .servicios { padding: 64px 0 80px; background: #f7faf8; border-block: 1px solid #e7eee9; }
-    .home-page .servicios h2, .home-page .beneficios h2 { margin-bottom: 36px; }
-    .home-page .grid-servicios { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
-    .home-page .grid-servicios .card { min-width: 0; min-height: 268px; padding: 28px; border-radius: 20px; background: #fff; box-shadow: 0 4px 16px #163d3204; }
-    .home-page .grid-servicios .card > i { width: 50px; height: 50px; margin-bottom: 24px; border: 1px solid #dceee2; border-radius: 16px; }
-    .home-page .grid-servicios .card h3 { margin: 0 0 10px; font-size: 18px; line-height: 1.4; letter-spacing: -.02em; }
-    .home-page .grid-servicios .card p { margin: 0 0 24px; line-height: 1.7; }
-    .home-page .grid-servicios .card button { min-height: 44px; margin-top: auto; padding: 10px 17px; border: 1px solid #d8e8de; background: #f4faf6; font-size: 14px; }
-    .home-page .grid-servicios .card:hover { border-color: #a5ceba; box-shadow: 0 16px 32px #163d3210; transform: translateY(-4px); }
-    .home-page .grid-servicios .card button:hover { background: #e4f2e9; border-color: #a5ceba; }
-    .home-page .beneficios { padding: 76px 0 84px; background: #fff; }
-    .home-page .beneficios-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
-    .home-page .beneficio { display: flex; align-items: center; justify-content: center; min-height: 108px; padding: 24px 18px; border: 1px solid #dcebe1; border-top: 3px solid #74b594; border-radius: 16px; background: #f2f8f4; color: #214e3d; font-size: 15px; font-weight: 650; line-height: 1.6; text-align: center; box-shadow: none; }
-    .home-page .footer { padding: 48px 0 0; background: #123e30; color: #e4eee8; border: 0; border-radius: 0; }
-    .home-page .footer-container { display: grid; grid-template-columns: 1fr 1.2fr 1fr; align-items: start; gap: 40px; padding-block: 0 40px; text-align: left; }
-    .home-page .footer-col { width: auto; min-width: 0; margin: 0; padding: 0; text-align: left; }
-    .home-page .logo-footer { justify-content: flex-start; gap: 10px; color: #fff; font-size: 25px; }
-    .home-page .logo-footer i { color: #a1dbb9; }
-    .home-page .footer p { color: #d2e3d9; font-size: 14px; line-height: 1.8; }
-    .home-page .footer .tagline { margin: 12px 0 0; }
-    .home-page .contact-col p { display: flex; align-items: baseline; gap: 10px; margin: 0 0 12px; }
-    .home-page .contact-col i { color: #a1dbb9; }
-    .home-page .footer .email-link { color: #e4eee8; overflow-wrap: anywhere; }
-    .home-page .footer a:hover { color: #fff; }
-    .home-page .footer .social-title { margin: 0 0 12px; }
-    .home-page .redes { display: flex; justify-content: flex-start; gap: 10px; }
-    .home-page .redes a { display: grid; place-items: center; width: 44px; height: 44px; margin: 0; border: 1px solid #ffffff30; border-radius: 12px; background: #ffffff0b; color: #e4eee8; box-shadow: none; }
-    .home-page .redes a:hover { background: #ffffff20; transform: translateY(-2px); }
-    .home-page .footer-bottom { margin: 0; padding: 20px 24px; border-top: 1px solid #ffffff1c; background: transparent; }
-    .home-page .footer-bottom p { margin: 0; text-align: center; font-size: 12px; }
-    .home-page a:focus-visible, .home-page button:focus-visible { outline: 3px solid #40a67d; outline-offset: 4px; }
-    .home-page .footer a:focus-visible { outline-color: #a1dbb9; }
-    @media (max-width: 960px) {
-        .home-page .grid-servicios { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .home-page .home-hero .hero-content { gap: 30px; }
-        .home-page .home-visual-card { padding: 24px; }
-        .home-page .footer-container { grid-template-columns: 1fr 1fr; gap: 32px; }
-        .home-page .brand-col { grid-column: 1 / -1; }
-    }
-    @media (max-width: 760px) {
-        .home-page .container, .home-page .home-hero .hero-content { width: calc(100% - 36px); }
-        .home-page .nav-container { width: calc(100% - 36px); }
-        .home-page .home-hero { padding: 48px 0 56px; }
-        .home-page .home-hero .hero-content { grid-template-columns: 1fr; gap: 40px; }
-        .home-page .hero-texto h1 { max-width: 560px; font-size: clamp(38px, 7.6vw, 54px); }
-        .home-page .home-visual { max-width: 560px; width: 100%; }
-        .home-page .home-search { max-width: none; }
-        .home-page .nosotros, .home-page .servicios, .home-page .beneficios { padding-block: 52px; }
-        .home-page .beneficios-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .home-page .grid-servicios { gap: 16px; }
-        .home-page .grid-servicios .card { padding: 22px; }
-    }
-    @media (max-width: 480px) {
-        .home-page .home-search { flex-direction: column; }
-        .home-page .home-search input { flex: auto; width: 100%; }
-        .home-page .hero-botones { flex-direction: column; }
-        .home-page .hero-botones a { width: 100%; }
-        .home-page .grid-servicios { grid-template-columns: 1fr; }
-        .home-page .grid-servicios .card { min-height: 245px; }
-        .home-page .beneficios-grid { gap: 12px; }
-        .home-page .beneficio { padding: 20px 12px; font-size: 14px; }
-        .home-page .footer-container { grid-template-columns: 1fr; gap: 28px; }
-        .home-page .brand-col { grid-column: auto; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-        .home-page .grid-servicios .card, .home-page .redes a, .home-page .hero-botones a { transition: none; transform: none; }
-        .home-page .grid-servicios .card:hover, .home-page .redes a:hover { transform: none; }
-    }
-</style>
-<!-- Correccion aislada del encabezado: neutraliza el menu desplegable compartido. -->
-<style is:global>
-    body.home-page { padding-top: 0; }
-    .home-page header.home-navbar {
-        position: sticky;
-        top: 0;
-        width: 100%;
-        height: 80px;
-        min-height: 80px;
-        overflow: visible;
-    }
-    .home-page header.home-navbar .nav-container {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: nowrap;
-        align-items: center;
-        gap: 24px;
-        height: 100%;
-        min-height: 0;
-        padding-block: 0;
-    }
-    .home-page header.home-navbar .home-logo { flex: 0 0 auto; margin: 0; }
-    .home-page header.home-navbar nav#menu {
-        position: static;
-        inset: auto;
-        display: flex !important;
-        flex: 1 1 0;
-        flex-direction: row;
-        flex-wrap: nowrap;
-        align-items: center;
-        justify-content: space-between;
-        min-width: 0;
-        width: auto;
-        height: auto;
-        margin: 0;
-        padding: 0;
-        gap: 20px;
-        overflow: visible;
-        opacity: 1;
-        visibility: visible;
-        pointer-events: auto;
-        transform: none;
-    }
-    .home-page header.home-navbar .home-nav-links {
-        display: flex;
-        flex: 1 1 auto;
-        flex-direction: row;
-        align-items: center;
-        justify-content: center;
-        gap: clamp(4px, 1vw, 16px);
-        min-width: 0;
-        width: auto;
-        margin: 0;
-    }
-    .home-page header.home-navbar nav#menu a { margin-block: 0; transform: none; }
-    .home-page header.home-navbar nav#menu .home-login-link {
-        display: inline-flex;
-        flex: 0 0 auto;
-        align-items: center;
-        justify-content: center;
-        width: auto;
-        min-height: 44px;
-        margin: 0;
-        padding: 12px 22px;
-        line-height: 1.4;
-    }
-    @media (min-width: 761px) and (max-width: 960px) {
-        .home-page header.home-navbar .nav-container { gap: 16px; }
-        .home-page header.home-navbar nav#menu { gap: 12px; }
-        .home-page header.home-navbar nav#menu .home-nav-links a { padding-inline: 8px; }
-        .home-page header.home-navbar nav#menu .home-login-link { padding-inline: 16px; }
-    }
-    @media (max-width: 760px) {
-        .home-page header.home-navbar { height: 70px; min-height: 70px; }
-        .home-page header.home-navbar .nav-container { justify-content: space-between; gap: 12px; }
-        .home-page header.home-navbar nav#menu {
-            position: absolute;
-            top: calc(100% + 8px);
-            right: 0;
-            bottom: auto;
-            left: auto;
-            display: none !important;
-            flex: none;
-            flex-direction: column;
-            align-items: stretch;
-            width: min(340px, calc(100vw - 36px));
-            max-height: calc(100dvh - 94px);
-            overflow-y: auto;
-            padding: 12px;
-            gap: 8px;
-            border: 1px solid var(--public-border);
-            border-radius: 16px;
-            background: #fff;
-            box-shadow: 0 18px 42px #0f372529;
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-        }
-        .home-page header.home-navbar nav#menu.active {
-            display: flex !important;
-            opacity: 1;
-            visibility: visible;
-            pointer-events: auto;
-        }
-        .home-page header.home-navbar .home-nav-links {
-            flex: none;
-            flex-direction: column;
-            align-items: stretch;
-            width: 100%;
-            gap: 3px;
-        }
-        .home-page header.home-navbar nav#menu .home-login-link { width: 100%; }
-    }
-</style>

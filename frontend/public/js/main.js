@@ -113,7 +113,11 @@ document.addEventListener("DOMContentLoaded", () => {
         formula: "/pages/formulas.html"
     };
 
-    document.querySelectorAll("[data-action]").forEach(btn => btn.addEventListener("click", () => {
+    document.querySelectorAll("[data-action]").forEach(btn => btn.addEventListener("click", event => {
+        if (btn.matches("#servicios a")) {
+            if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+        }
         const action = btn.dataset.action;
         const publicCatalog = document.getElementById("catalogo-publico");
         if (action === "medicamentos" && publicCatalog) {

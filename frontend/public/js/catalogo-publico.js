@@ -6,6 +6,7 @@ const lista = document.getElementById('catalogo-publico-lista');
 const estado = document.getElementById('catalogo-publico-estado');
 const anterior = document.getElementById('catalogo-publico-anterior');
 const siguiente = document.getElementById('catalogo-publico-siguiente');
+const completo = document.getElementById('catalogo-publico-completo');
 let buscar = '', pagina = 1, solicitud;
 
 function nodo(etiqueta, texto) {
@@ -25,7 +26,12 @@ function tarjeta(medicamento) {
     elemento.append(imagen, nodo('h3', medicamento.nombre));
     if (medicamento.descripcion) elemento.append(nodo('p', medicamento.descripcion));
     if (medicamento.presentacion) elemento.append(nodo('p', medicamento.presentacion));
-    elemento.append(nodo('strong', medicamento.stockBajo ? 'Stock bajo' : medicamento.disponible ? 'Disponible' : 'Agotado'));
+    const disponibilidad = nodo('strong', medicamento.stockBajo ? 'Stock bajo' : medicamento.disponible ? 'Disponible' : 'Agotado');
+    const consultar = nodo('a', 'Consultar');
+    consultar.className = 'btn-outline';
+    consultar.href = '/pages/medicamentos.html?' + new URLSearchParams({ buscar: medicamento.nombre });
+    consultar.setAttribute('aria-label', 'Consultar ' + medicamento.nombre);
+    elemento.append(disponibilidad, consultar);
     return elemento;
 }
 
@@ -57,6 +63,14 @@ async function cargar() {
 }
 
 catalogo.addEventListener('buscar-medicamentos', event => { buscar = event.detail; pagina = 1; void cargar(); });
+completo.addEventListener('click', event => {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    document.getElementById('busquedaInicio').value = '';
+    catalogo.dispatchEvent(new CustomEvent('buscar-medicamentos', { detail: '' }));
+    catalogo.focus({ preventScroll: true });
+    catalogo.scrollIntoView();
+});
 anterior.addEventListener('click', () => { pagina--; void cargar(); });
 siguiente.addEventListener('click', () => { pagina++; void cargar(); });
 void cargar();
