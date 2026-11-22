@@ -1,0 +1,181 @@
+﻿[data-panel-menu] {
+    --panel-sidebar-width: 252px;
+    --panel-sidebar-space: 0px;
+    grid-template-columns: var(--panel-sidebar-space) minmax(0, 1fr);
+    transition: grid-template-columns 220ms ease;
+}
+
+[data-panel-menu="administrador"] {
+    --panel-sidebar-width: 245px;
+}
+
+[data-panel-menu][data-panel-open="true"] {
+    --panel-sidebar-space: var(--panel-sidebar-width);
+}
+
+[data-panel-menu] > :is(.admin-sidebar, .ad-sidebar) {
+    grid-column: 1;
+    grid-row: 1;
+    width: var(--panel-sidebar-width);
+    height: 100dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    visibility: hidden;
+    transform: translateX(-100%);
+    transition: transform 220ms ease, visibility 0s 220ms;
+}
+
+[data-panel-menu][data-panel-open="true"] > :is(.admin-sidebar, .ad-sidebar) {
+    visibility: visible;
+    transform: translateX(0);
+    transition-delay: 0s;
+}
+
+[data-panel-menu] > :is(.admin-main, .ad-main) {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+[data-panel-menu="administrador"] > .ad-main {
+    margin-block: 0;
+}
+
+[data-panel-menu="administrador"] .ad-topbar {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 20;
+    padding-block-start: 8px;
+    background: var(--ad-bg);
+}
+
+[data-panel-menu] .admin-menu-toggle {
+    display: inline-grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid var(--admin-border, var(--ad-line));
+    border-radius: 10px;
+    background: #fff;
+    color: var(--admin-green, var(--ad-green));
+    cursor: pointer;
+}
+
+[data-panel-menu] .admin-menu-toggle:focus-visible {
+    outline: 3px solid #83cbbb;
+    outline-offset: 3px;
+}
+
+.panel-menu-icon,
+.panel-menu-icon::before,
+.panel-menu-icon::after {
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+}
+
+.panel-menu-icon {
+    position: relative;
+}
+
+.panel-menu-icon::before,
+.panel-menu-icon::after {
+    position: absolute;
+    inset: 0;
+    content: "";
+}
+
+.panel-menu-icon::before { transform: translateY(-6px); }
+.panel-menu-icon::after { transform: translateY(6px); }
+
+.panel-menu-heading {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+}
+
+[data-panel-menu] .admin-side-nav {
+    position: static;
+    width: auto;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+[data-panel-menu] .panel-menu-close,
+.panel-menu-backdrop {
+    display: none;
+}
+
+@media (min-width: 901px) and (max-width: 1100px) {
+    [data-panel-menu] { --panel-sidebar-width: 230px; }
+    [data-panel-menu="administrador"] { --panel-sidebar-width: 210px; }
+}
+
+@media (max-width: 900px) {
+    [data-panel-menu] {
+        display: block;
+    }
+
+    [data-panel-menu] > :is(.admin-sidebar, .ad-sidebar) {
+        position: fixed;
+        z-index: 101;
+        inset: 0 auto 0 0;
+        width: min(290px, calc(100% - 44px));
+    }
+
+    .ad-workspace [data-panel-menu] > .ad-sidebar nav {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .ad-workspace [data-panel-menu] > .ad-sidebar footer {
+        display: block;
+    }
+
+    [data-panel-menu] .panel-menu-close {
+        display: inline-grid;
+        align-self: flex-start;
+        margin-bottom: 12px;
+    }
+
+    .panel-menu-backdrop {
+        display: block;
+    }
+
+    .panel-menu-close .panel-menu-icon { background: transparent; }
+    .panel-menu-close .panel-menu-icon::before { transform: rotate(45deg); }
+    .panel-menu-close .panel-menu-icon::after { transform: rotate(-45deg); }
+
+    .panel-menu-backdrop {
+        position: fixed;
+        z-index: 100;
+        inset: 0;
+        background: rgb(9 43 36 / .58);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 220ms ease, visibility 220ms;
+    }
+
+    [data-panel-modal="true"] > .panel-menu-backdrop {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    html:has([data-panel-modal="true"]) {
+        overflow: hidden;
+        scrollbar-gutter: stable;
+    }
+
+    [data-panel-menu] .ad-topbar { flex-wrap: wrap; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-panel-menu],
+    [data-panel-menu] > :is(.admin-sidebar, .ad-sidebar, .panel-menu-backdrop) {
+        transition: none;
+    }
+}

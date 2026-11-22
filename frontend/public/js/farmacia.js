@@ -22,14 +22,6 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', async () => 
     initAuth();
     document.getElementById('farmaciaUserName').textContent = [user.nombre, user.apellido].filter(Boolean).join(' ').trim() || 'Farmacia';
     document.getElementById('logout').addEventListener('click', logout);
-    const menu = document.getElementById('menu'), toggle = document.getElementById('menuToggle');
-    const mobile = window.matchMedia('(max-width: 900px)');
-    const sync = () => { menu.inert = mobile.matches && !menu.classList.contains('active'); };
-    const close = () => { menu.classList.remove('active'); toggle.setAttribute('aria-expanded', 'false'); sync(); };
-    toggle.addEventListener('click', () => queueMicrotask(sync));
-    mobile.addEventListener('change', close); sync();
-    menu.querySelectorAll('a').forEach(link => link.addEventListener('click', close));
-    document.addEventListener('keydown', event => { if (event.key === 'Escape' && menu.classList.contains('active')) { close(); toggle.focus(); } });
     const access = document.getElementById('farmaciaAccessStatus');
     try { const accessInfo=await apiFetch('/api/farmacia/verificar-acceso'); app.dataset.operacion=String(accessInfo.operacionHabilitada===true);app.dataset.solicitudes=String(accessInfo.solicitudesHabilitadas===true||accessInfo.operacionHabilitada===true);app.dataset.notificaciones=String(accessInfo.notificacionesHabilitadas===true);app.dataset.inventarioPropio=String(accessInfo.inventarioPropioHabilitado===true); }
     catch (error) {

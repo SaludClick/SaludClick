@@ -17,8 +17,6 @@ function actualizarNavegacion() {
         enlace.removeAttribute('aria-current');
         if (id === actual) enlace.setAttribute('aria-current', id === 'epsNavDashboard' ? 'page' : 'location');
     }
-    const menu = document.getElementById('menuToggle');
-    if (menu.getAttribute('aria-expanded') === 'true') menu.click();
 }
 
 const usuario = getCurrentUser();

@@ -145,11 +145,6 @@ export function initFarmaciaNotifications({ root = document, request = apiFetch,
     listen(next, 'click', () => { if (page < pages) { page++; void load(); } });
     listen(readAll, 'click', () => mark('/api/farmacia/notificaciones/leer-todas'));
     listen(bell, 'click', event => { event.preventDefault(); byId('farmaciaNotificationsTitle').focus(); schedule(); });
-    // Only the pharmacy menu is touched; shared navigation scripts remain intact.
-    for (const link of root.querySelectorAll('a[href="#notificacionesFarmacia"]')) listen(link, 'click', () => {
-        byId('menu')?.classList.remove('active');
-        byId('menuToggle')?.setAttribute('aria-expanded', 'false');
-    });
     const onFocus = () => { if (!root.hidden) schedule(); };
     listen(window, 'focus', onFocus);
     listen(root, 'visibilitychange', onFocus);
