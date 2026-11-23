@@ -24,3 +24,25 @@ test('sin catálogo EPS no inventa nombre y sin campos o con duplicados rechaza 
     const s=origenSimulado({catalogo:false});assert.equal((await s.origen.leer()).afiliados[0].eps,null);assert.doesNotMatch(s.llamadas.at(-1),/LEFT JOIN/);
     for(const opciones of [{duplicado:true},{incompleto:true}])await assert.rejects(origenSimulado(opciones).origen.leer(),e=>e.status===503&&e.codigo==='EPS_SOURCE_SCHEMA_INVALID');
 });
+
+test('el resumen del Dashboard distingue inactivos y mantiene el conteo en la EPS solicitada', async () => {
+    const respuestas = [[{ activos: 1, unicos: 1, filtrados: 1 }], [{ identificador: 'A' }],
+        [{ total: 3, inactivos: 1 }]];
+    const consultas = [];
+    const tx = {
+        $executeRaw: async sql => assert.equal(sql.join(''), 'SET TRANSACTION READ ONLY'),
+        $queryRaw: async (sql, ...parametros) => {
+            const consulta = require('@prisma/client').Prisma.sql(sql, ...parametros);
+            consultas.push(consulta);
+            return respuestas.shift();
+        }
+    };
+    const origen = crearOrigen({ obtenerConexion: () => ({
+        esquema: 'public', prisma: { $transaction: operacion => operacion(tx) }
+    }) });
+    const resultado = await origen.leerAutorizados('1', { estadisticas: true });
+    assert.deepEqual(resultado.afiliados, { total: 3, activos: 1, inactivos: 1 });
+    assert.match(consultas[2].sql, /lower\(btrim\(estado::text\)\)='inactivo'/);
+    assert.match(consultas[2].sql, /WHERE eps_id::text=\?/);
+    assert.deepEqual(consultas[2].values, ['1']);
+});

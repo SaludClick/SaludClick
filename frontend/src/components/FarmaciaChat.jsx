@@ -49,8 +49,8 @@ export default function FarmaciaChat({ embedded = false }) {
     document.addEventListener('farmacia:ready', ready);
     return () => document.removeEventListener('farmacia:ready', ready);
   }, [embedded]);
-  const legacyStaff = !embedded && role === 3 && window.location.pathname === '/pages/chat-farmacia.html';
-  const allowed = verified && !legacyStaff && !!getToken() && [2, 3].includes(role);
+  const legacyStaff = role === 3;
+  const allowed = verified && !legacyStaff && !!getToken() && role === 2;
   const isStaff = role === 3;
   const [conversations, setConversations] = useState([]);
   const [active, setActive] = useState(null);
@@ -100,7 +100,7 @@ export default function FarmaciaChat({ embedded = false }) {
 
   useEffect(() => { loadConversations(); return () => { listSequence.current++; }; }, [loadConversations]);
   useEffect(() => {
-    if (legacyStaff) { window.location.replace('/pages/farmacia-chat.html' + window.location.search); return; }
+    if (legacyStaff) { window.location.replace('/pages/farmacia.html'); return; }
     if (verified && !allowed) window.location.replace(getToken() && role === 1 ? '/pages/admin.html' : getToken() && role === 4 ? '/pages/eps.html' : '/login.html');
   }, [allowed, role, verified, legacyStaff]);
   useEffect(() => {

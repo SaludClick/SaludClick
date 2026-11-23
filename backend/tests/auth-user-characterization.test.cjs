@@ -194,7 +194,7 @@ test('recuperación oculta cuentas inexistentes, persiste hash y envía enlace d
     assert.equal(mailMessages.length, 1);
     assert.equal(mailMessages[0].to, 'ana@example.test');
     const enlace = mailMessages[0].html.match(/href="([^"]+)"/)[1];
-    const token = new URL(enlace).searchParams.get('token');
+    const token = new URLSearchParams(new URL(enlace).hash.slice(1)).get('token');
     assert.equal(new URL(enlace).origin, 'https://saludclick.test');
     assert.equal(crypto.createHash('sha256').update(token).digest('hex'), recovery.tokenHash);
 
@@ -207,13 +207,13 @@ test('restablecimiento conserva validación, hash y consumo del token', async t 
         await assert.rejects(authService.restablecerPassword('', 'abcdef'), /enlace de recuperación no es válido/);
     });
     await t.test('contraseña corta', async () => {
-        await assert.rejects(authService.restablecerPassword('token', '12345'), /al menos 6 caracteres/);
+        await assert.rejects(authService.restablecerPassword('a'.repeat(64), '12345'), /al menos 6 caracteres/);
     });
     await t.test('token vencido o desconocido', async () => {
-        await assert.rejects(authService.restablecerPassword('token-desconocido', 'abcdef'), /inválido o ya expiró/);
+        await assert.rejects(authService.restablecerPassword('b'.repeat(64), 'abcdef'), /inválido o ya expiró/);
     });
     await t.test('éxito con contraseña mínima', async () => {
-        const rawToken = 'recovery-token';
+        const rawToken = 'c'.repeat(64);
         recovery = { usuarioId: 7, tokenHash: crypto.createHash('sha256').update(rawToken).digest('hex') };
         await authService.restablecerPassword(rawToken, '123456');
         assert.deepEqual(resetCall, { usuarioId: 7, passwordHash: 'hash:123456', tokenId: 88 });
@@ -228,7 +228,7 @@ test('activación reutiliza recuperación y exige contraseña segura sin activar
     assert.equal(users[0].estado, 'INACTIVO');
     assert.match(mailMessages[0].subject, /Activa/);
     const enlace = mailMessages[0].text.match(/https:\/\/\S+/)[0];
-    const token = new URL(enlace).searchParams.get('token');
+    const token = new URLSearchParams(new URL(enlace).hash.slice(1)).get('token');
     assert.equal(crypto.createHash('sha256').update(token).digest('hex'), recovery.tokenHash);
     await assert.rejects(authService.restablecerPassword(token, '123456'), /12 caracteres/);
     assert.equal(resetCall, undefined);

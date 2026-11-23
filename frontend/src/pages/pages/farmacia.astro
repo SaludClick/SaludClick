@@ -1,24 +1,75 @@
 ---
 import FarmaciaLayout from '../../layouts/FarmaciaLayout.astro';
+const indicadores = [
+  ['solicitudesRecibidas', 'Solicitudes recibidas', 'fa-inbox', 'En el periodo seleccionado'],
+  ['solicitudesCompletadas', 'Solicitudes entregadas', 'fa-clipboard-check', 'Entregas confirmadas en el periodo'],
+  ['medicamentosDisponibles', 'Medicamentos disponibles', 'fa-capsules', 'Referencias con stock propio libre'],
+  ['usuariosVinculados', 'Usuarios vinculados', 'fa-user-group', 'Afiliados activos de la EPS vinculada']
+];
 ---
-<FarmaciaLayout modulo="dashboard" titulo="Dashboard" descripcion="Resumen de solicitudes y existencias. Los indicadores no autorizan una dispensación.">
-  <section id="panelFarmacia" aria-labelledby="farmaciaResumenTitle">
-    <h2 id="farmaciaResumenTitle">Solicitudes por estado</h2><p>Totales de la cola operativa. Selecciona un indicador para abrir su pantalla.</p>
-    <div class="farmacia-stats">
-      {[
-        ['APROBADA', 'Por preparar', 'solicitudes'], ['PREPARANDO', 'En preparación', 'solicitudes'],
-        ['LISTA', 'Listas', 'entregas'], ['ENTREGADA', 'Entregadas', 'entregas']
-      ].map(([estado, texto, pantalla]) => <a class="farmacia-stat" href={`/pages/farmacia-${pantalla}.html?estado=${estado}`} data-dashboard-state={estado} aria-busy="true"><span>{texto}</span><strong data-count>—</strong><small data-count-message>Consultando total</small></a>)}
+<FarmaciaLayout modulo="dashboard" titulo="Panel de control" descripcion="Resumen de tu farmacia.">
+  <section id="panelFarmacia" aria-label="Indicadores de Farmacia">
+    <form id="farmaciaDashboardPeriodo" class="farmacia-filters">
+      <label for="farmaciaDashboardDesde">Desde<input id="farmaciaDashboardDesde" type="date" required /></label>
+      <label for="farmaciaDashboardHasta">Hasta<input id="farmaciaDashboardHasta" type="date" required /></label>
+      <button type="submit">Aplicar periodo</button>
+    </form>
+    <div class="farmacia-dashboard-metrics" aria-busy="true" id="farmaciaDashboardMetrics">
+      {indicadores.map(([key,label,icon,caption]) => (
+        <article class="farmacia-metric">
+          <span class="farmacia-metric-icon"><i class={`fa-solid ${icon}`} aria-hidden="true"></i></span>
+          <span>{label}</span>
+          <strong data-dashboard-metric={key}>—</strong>
+          <span class="farmacia-metric-unavailable" hidden>No disponible</span>
+          <small>{caption}</small>
+          {key === 'solicitudesRecibidas' && <small id="farmaciaDashboardTrend" class="farmacia-dashboard-trend" hidden></small>}
+        </article>
+      ))}
     </div>
-    <p id="farmaciaDashboardOrdersStatus" role="status" aria-live="polite"></p><button id="retryFarmaciaStats" type="button" hidden>Reintentar indicadores</button>
+    <p id="farmaciaDashboardOrdersStatus" role="status" aria-live="polite">Consultando estadísticas autorizadas…</p>
+    <button id="retryFarmaciaStats" type="button" hidden>Reintentar indicadores</button>
   </section>
-  <section aria-labelledby="farmaciaCatalogStatsTitle"><h2 id="farmaciaCatalogStatsTitle">Existencias</h2>
-    <div class="farmacia-existencias-stats" id="farmaciaCatalogStats" aria-busy="true">
-      {[['total', 'Medicamentos registrados'], ['disponibles', 'Con existencias disponibles'], ['agotados', 'Agotados']].map(([clave, texto]) => <article><strong data-dashboard-stock={clave}>—</strong><span>{texto}</span></article>)}
+  <div class="farmacia-dashboard-overview">
+    <section class="farmacia-dashboard-card" aria-labelledby="farmaciaEvolucionTitle">
+      <h2 id="farmaciaEvolucionTitle">Evolución de solicitudes</h2>
+      <p>12 meses hasta la fecha seleccionada</p>
+      <div id="farmaciaDashboardEvolucion" class="farmacia-dashboard-visual" aria-live="polite"></div>
+    </section>
+    <section class="farmacia-dashboard-card" aria-labelledby="farmaciaEstadosTitle">
+      <h2 id="farmaciaEstadosTitle">Solicitudes por estado</h2>
+      <p>Distribución en el periodo seleccionado</p>
+      <div id="farmaciaDashboardEstados" class="farmacia-dashboard-visual" aria-live="polite"></div>
+    </section>
+  </div>
+  <section class="farmacia-dashboard-card farmacia-dashboard-featured" aria-labelledby="farmaciaDestacadosTitle">
+    <div class="farmacia-section-heading">
+      <h2 id="farmaciaDestacadosTitle">Medicamentos destacados</h2>
+      <a href="/pages/farmacia-inventario.html">Ver inventario</a>
     </div>
-    <p>Disponible significa estado disponible y stock positivo.</p><p id="farmaciaDashboardStockStatus" role="status" aria-live="polite"></p>
-    <a href="/pages/farmacia-inventario.html">Consultar inventario</a>
+    <div id="farmaciaDashboardDestacados" class="farmacia-dashboard-table-scroll" role="region" aria-label="Tabla de medicamentos destacados" tabindex="0">
+      <table class="farmacia-dashboard-table">
+        <thead><tr>{['Medicamento', 'Stock', 'Estado', 'Disponibilidad'].map(label => <th scope="col">{label}</th>)}</tr></thead>
+        <tbody aria-live="polite"></tbody>
+      </table>
+    </div>
   </section>
+  <details class="farmacia-dashboard-card farmacia-dashboard-featured">
+    <summary>Ver más detalles de la operación</summary>
+    <p class="farmacia-completed-summary">
+      Solicitudes pendientes: <strong data-dashboard-metric="solicitudesPendientes">—</strong>
+      · Pacientes atendidos: <strong data-dashboard-metric="pacientesAtendidos">—</strong>
+      · Medicamentos entregados: <strong data-dashboard-metric="medicamentosEntregados">—</strong>
+    </p>
+    <section aria-labelledby="farmaciaMonthlyTitle">
+      <div class="farmacia-section-heading"><h2 id="farmaciaMonthlyTitle">Pendientes y completadas</h2><p>Pendientes por fecha de solicitud y completadas por fecha de entrega confirmada.</p></div>
+      <div id="farmaciaDashboardMensual" class="farmacia-monthly-chart" aria-live="polite"></div>
+    </section>
+    <div class="farmacia-dashboard-charts">
+      {[['meses','Solicitudes por mes'],['pacientes','Evolución de pacientes atendidos'],['medicamentos','Medicamentos más solicitados']].map(([key,label]) => <section aria-labelledby={`chart-${key}`}><h2 id={`chart-${key}`}>{label}</h2><div data-dashboard-chart={key} class="farmacia-chart"></div></section>)}
+    </div>
+    <section aria-labelledby="farmaciaLowStockTitle"><div class="farmacia-section-heading"><h2 id="farmaciaLowStockTitle">Alertas de existencias bajas</h2><a href="/pages/farmacia-inventario.html?disponibilidad=bajos">Revisar inventario</a></div><p>Saldo actual propio. Aviso orientativo: 1–5 unidades libres.</p><div id="farmaciaDashboardStock" role="status" aria-live="polite"></div></section>
+    <section aria-labelledby="farmaciaActividadTitle"><div class="farmacia-section-heading"><h2 id="farmaciaActividadTitle">Actividad reciente</h2><a href="/pages/farmacia-solicitudes.html">Consultar solicitudes</a></div><div id="farmaciaDashboardActividad"></div></section>
+  </details>
   <section id="integracionEPS" data-eps-integration class="card admin-dashboard-card"><h2>Integracion EPS</h2></section>
   <script is:inline type="module" src="/js/eps-integracion.js"></script>
 </FarmaciaLayout>

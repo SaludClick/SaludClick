@@ -119,7 +119,7 @@ async function start(){
     if(actual!==expected){location.replace({1:'/pages/admin.html',2:'/pages/dashboard.html',3:'/pages/farmacia.html',4:'/pages/eps.html'}[actual]||'/login.html');return;}
     $('adminIdentity').textContent=user.nombre||role(expected);$('adminLogout').addEventListener('click',logout);
     $('adminRefresh').addEventListener('click',()=>run(async()=>{notice();if(section==='solicitudes')await chat.refresh();else await load();}));
-    $('adminMenu').addEventListener('click',()=>{const open=$('adminSidebar').classList.toggle('open');$('adminMenu').setAttribute('aria-expanded',String(open));});
+    if (client) $('adminMenu').addEventListener('click',()=>{const open=$('adminSidebar').classList.toggle('open');$('adminMenu').setAttribute('aria-expanded',String(open));});
     $('cancelUser')?.addEventListener('click',()=>$('userDialog').close());
     $('userForm')?.addEventListener('submit',e=>{e.preventDefault();const form=e.currentTarget,button=form.querySelector('button[type=submit]');run(async()=>{const data=Object.fromEntries(new FormData(form)),id=data.id;delete data.id;data.rol_id=Number(data.rol_id);if(id){delete data.password;const old=users.find(u=>u.id===Number(id));if(old&&(data.rol_id!==old.rol_id||data.estado!==old.estado)&&!confirm('Confirmar cambio de rol o estado de la cuenta. Esta acci\u00f3n revoca sus sesiones administrativas.'))return;}try{await mutate('/usuarios'+(id?'/'+id:''),data,id?'PATCH':'POST');form.reset();$('userDialog').close();await load();notice('Cuenta guardada.');}catch(error){$('userFormNotice').textContent=error.message;}},button);});
     window.addEventListener('hashchange',navigate);await navigate();

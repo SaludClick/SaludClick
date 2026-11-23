@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const { Server } = require('socket.io');
 const { validarPerfilFarmacia } = require('../src/validators/farmacia-perfil.validator');
 
-let account, failure, writes, lookups, profile, conversation, messages;
+let staffAccount, account, failure, writes, lookups, profile, conversation, messages;
 const users = new Map();
 const db = {
     usuario: { findUnique: async ({ where }) => { lookups++; if (failure === 'auth') throw new Error('PRIVATE_DATABASE_SECRET'); return users.get(where.id); } },
@@ -52,7 +52,8 @@ before(async () => {
 beforeEach(() => {
     account = { id: 30, rol_id: 3, estado: 'ACTIVO' }; users.clear(); users.set(30, account);
     failure = null; writes = 0; lookups = 0; profile = { id: 30, nombre: 'María', apellido: 'Prueba', correo: 'test@example.test' };
-    conversation = { id: 7, cliente_id: 20, agente_id: 30, estado: 'ABIERTA' }; messages = [];
+    staffAccount={id:40,rol_id:1,estado:'ACTIVO'};users.set(40,staffAccount);
+    conversation = { id: 7, cliente_id: 20, agente_id: 40, estado: 'ABIERTA' }; messages = [];
 });
 after(async () => {
     clients.forEach(c => c.ws.close()); await new Promise(resolve => io.close(resolve));
@@ -80,7 +81,7 @@ test('Farmacia: cuenta inactiva, bloqueada, desconocida, ausente o rol revocado 
     assert.equal(writes, 0);
 });
 test('Farmacia: roles contradictorios y errores del proveedor no filtran información', async () => {
-    assert.equal((await request('/auth/profile', { auth: token(30, 3, '1h', { rol_id: 2 }) })).status, 403);
+    assert.equal((await request('/auth/profile', { auth: token(30, 3, '1h', { rol_id: 2 }) })).status, 401);
     failure = 'auth';
     for (const [path] of routes) { const r = await request(path); assert.equal(r.status, 503); assert.ok(!JSON.stringify(r.data).includes('PRIVATE')); }
 });
@@ -138,7 +139,7 @@ test('Dashboard Farmacia: fallo de catálogo devuelve error sin estadísticas fi
 });
 test('Chat HTTP: agente y cliente ajenos no pueden consultar la conversación asignada', async () => {
     users.set(31, { id: 31, rol_id: 3, estado: 'ACTIVO' });
-    assert.equal((await request('/chat/conversaciones/7/mensajes', { auth: token(31) })).status, 404);
+    assert.equal((await request('/chat/conversaciones/7/mensajes', { auth: token(31) })).status, 403);
     assert.equal((await request('/chat/conversaciones/7/mensajes', { auth: token(21, 2) })).status, 404);
     assert.equal((await request('/chat/conversaciones/7/mensajes', { auth: token(20, 2) })).status, 200);
 });
@@ -169,36 +170,36 @@ async function connect(auth) {
     return client;
 }
 function socketFor(id) { return [...io.sockets.sockets.values()].find(s => s.data.usuario.id === id); }
-test('Socket.IO real: handshake Farmacia rechaza inactividad, revocación, expiración y falta de exp', async () => {
+test('Socket.IO real: handshake Administrador rechaza inactividad, revocación, expiración y falta de exp', async () => {
     for (const change of [{ estado: 'INACTIVO' }, { estado: 'BLOQUEADO' }, { estado: null }, { rol_id: 2 }]) {
-        Object.assign(account, { rol_id: 3, estado: 'ACTIVO' }, change); await assert.rejects(connect(token()), /Denied/);
+        Object.assign(staffAccount, { rol_id: 1, estado: 'ACTIVO' }, change); await assert.rejects(connect(token(40,1)), /Denied/);
     }
-    Object.assign(account, { rol_id: 3, estado: 'ACTIVO' });
-    await assert.rejects(connect(token(30, 3, -1)), /Denied/);
-    await assert.rejects(connect(jwt.sign({ id: 30, rol: 3 }, secret)), /Denied/);
+    Object.assign(staffAccount, { rol_id: 1, estado: 'ACTIVO' });
+    await assert.rejects(connect(token(40, 1, -1)), /Denied/);
+    await assert.rejects(connect(jwt.sign({ id: 40, rol: 1 }, secret)), /Denied/);
 });
-test('Socket.IO real: token de Farmacia vence y desconecta sin alterar sesión Paciente', async () => {
-    const staff = await connect(token(30, 3, 1)), patient = await connect(token(20, 2));
+test('Socket.IO real: token de Administrador vence y desconecta sin alterar sesión Paciente', async () => {
+    const staff = await connect(token(40, 1, 1)), patient = await connect(token(20, 2));
     await until(() => staff.disconnected); assert.equal(patient.disconnected, false); patient.ws.close();
 });
 test('Socket.IO real: revalida receptor pasivo antes de entregar mensajes del paciente', async () => {
-    const staff = await connect(token()), patient = await connect(token(20, 2));
-    await socketFor(30).join('chat:7'); await socketFor(20).join('chat:7');
-    account.estado = 'INACTIVO';
+    const staff = await connect(token(40,1)), patient = await connect(token(20, 2));
+    await socketFor(40).join('chat:7'); await socketFor(20).join('chat:7');
+    staffAccount.estado = 'INACTIVO';
     patient.ws.send('42' + JSON.stringify(['chat:send', { conversationId: 7, contenido: 'Mensaje privado' }]));
     await until(() => staff.disconnected && patient.events.some(e => e[0] === 'chat:message'));
     assert.equal(staff.events.some(e => e[0] === 'chat:message'), false); assert.equal(messages.length, 1); patient.ws.close();
 });
 test('Socket.IO real: rol revocado no puede enviar ni marcar lectura', async () => {
-    const staff = await connect(token()); account.rol_id = 4;
+    const staff = await connect(token(40,1)); staffAccount.rol_id = 4;
     staff.ws.send('42' + JSON.stringify(['chat:send', { conversationId: 7, contenido: 'No permitido' }]));
     await until(() => staff.disconnected); assert.equal(messages.length, 0);
 });
 test('Socket.IO real: agente ajeno no recibe una sala y participantes autorizados siguen conversando', async () => {
-    users.set(31, { id: 31, rol_id: 3, estado: 'ACTIVO' });
-    const staff = await connect(token()), other = await connect(token(31)), patient = await connect(token(20, 2));
+    users.set(31, { id: 31, rol_id: 1, estado: 'ACTIVO' });
+    const staff = await connect(token(40,1)), other = await connect(token(31,1)), patient = await connect(token(20, 2));
     other.ws.send('42' + JSON.stringify(['chat:join', 7]));
-    await socketFor(30).join('chat:7'); await socketFor(20).join('chat:7');
+    await socketFor(40).join('chat:7'); await socketFor(20).join('chat:7');
     // Even a stale server-side room membership cannot authorize another agent.
     await socketFor(31).join('chat:7');
     patient.ws.send('42' + JSON.stringify(['chat:send', { conversationId: 7, contenido: 'Autorizado' }]));

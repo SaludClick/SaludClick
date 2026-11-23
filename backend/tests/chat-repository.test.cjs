@@ -71,7 +71,7 @@ Module._load = originalLoad;
 
 beforeEach(() => {
     calls.length = 0;
-    userResult = { rol_id: 3, estado: "ACTIVO" };
+    userResult = { rol_id: 1, estado: "ACTIVO" };
     conversationResult = { id: 7, cliente_id: 10, agente_id: 20, estado: "ABIERTA" };
     conversationSequence = [];
     conversationsResult = [{ id: 7 }];
@@ -83,10 +83,10 @@ beforeEach(() => {
 
 test("esStaff exige rol de agente activo y maneja usuario ausente", async () => {
     assert.equal(await repository.esStaff(20), true);
-    userResult = { rol_id: 3, estado: "INACTIVO" };
+    userResult = { rol_id: 1, estado: "INACTIVO" };
     assert.equal(await repository.esStaff(20), false);
     for (const estado of [null, 'BLOQUEADO', undefined]) {
-        userResult = { rol_id: 3, estado };
+        userResult = { rol_id: 1, estado };
         assert.equal(await repository.esStaff(20), false);
     }
     userResult = { rol_id: 2, estado: "ACTIVO" };

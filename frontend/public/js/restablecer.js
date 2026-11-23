@@ -2,8 +2,10 @@ import { apiUrl } from "./api.js";
 
 document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("restablecerForm");
-    const token = new URLSearchParams(window.location.search).get("token");
-    const activacion = new URLSearchParams(window.location.search).get('activacion') === '1';
+    const params = new URLSearchParams(window.location.hash.slice(1) || window.location.search);
+    const token = params.get("token");
+    const activacion = params.get("activacion") === "1";
+    if (token) window.history.replaceState(null, "", window.location.pathname);
     if (activacion) {
         document.querySelector('h3').textContent = 'Activa tu cuenta';
         document.querySelector('h3 + p').textContent = 'Verifica tu correo estableciendo una contraseña de al menos 12 caracteres.';

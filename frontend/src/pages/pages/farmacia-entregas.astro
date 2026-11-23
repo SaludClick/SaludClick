@@ -1,8 +1,10 @@
 ---
-import FarmaciaLayout from '../../layouts/FarmaciaLayout.astro';
-import FarmaciaOperaciones from '../../components/FarmaciaOperaciones.astro';
+import Layout from '../../layouts/Layout.astro';
 ---
-<FarmaciaLayout modulo="entregas" titulo="Entregas" descripcion="Solicitudes listas y entregadas. Se conservan todos los bloqueos de pago y autorización.">
-  <p class="farmacia-orders-note" role="note">La consulta y los cambios de entregas están bloqueados hasta verificar la relación entre cada pedido y esta farmacia. La vinculación EPS pendiente no habilita entregas. No hay registro persistente de responsable, recepción, historial ni evidencia. La fecha de solicitud no acredita una entrega efectiva.</p>
-  <FarmaciaOperaciones entregas />
-</FarmaciaLayout>
+<Layout title="Módulo retirado | SaludClick">
+  <main><h1>Módulo retirado</h1><p>Este módulo ya no está disponible en el panel de Farmacia.</p><a href="/pages/farmacia.html">Volver al Dashboard</a></main>
+  <script is:inline type="module">
+    import { checkAuthGuard } from '/js/auth.js';
+    checkAuthGuard();
+  </script>
+</Layout>

@@ -237,6 +237,20 @@
                 </div>
 
 
+                <fieldset id="formulaEnSolicitud" class="form-group" hidden>
+                    <legend>Fórmula médica para esta solicitud</legend>
+                    <label for="formulaSolicitud">PDF cargado en Mis fórmulas</label>
+                    <select id="formulaSolicitud"><option value="">Sin fórmula adjunta</option></select>
+                    <p id="estadoFormulaSolicitud" role="status"></p>
+                    <label><input id="autorizarConsultaFormula" type="checkbox" disabled>
+                        Autorizo a la farmacia asignada a consultar este PDF para esta solicitud.
+                    </label>
+                    <label><input id="autorizarDescargaFormula" type="checkbox" disabled>
+                        También autorizo la descarga del PDF original.
+                    </label>
+                    <a href="/pages/formulas.html">Cargar un PDF en Mis fórmulas</a>
+                </fieldset>
+
                 <div class="delivery-info">
 
                     <i class="fa-solid fa-circle-info"></i>

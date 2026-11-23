@@ -7,6 +7,7 @@ const fueraDeAlcance=(req,res)=>res.status(403).json({ok:false,mensaje:'La admin
 router.get("/admin/all",requireAdmin,fueraDeAlcance);
 router.patch("/admin/:id",requireAdmin,fueraDeAlcance);
 router.get("/",requireUsuario,c.listar);
+router.post('/:id/solicitud/:solicitudId',requireUsuario,require('../controllers/farmacia-operacion.controller').vincularFormula);
 router.post("/",requireUsuario,c.crear);
 router.get("/:id",requireUsuario,c.ver);
 module.exports=router;

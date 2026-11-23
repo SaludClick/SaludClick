@@ -4,12 +4,15 @@ const fs = require("node:fs");
 const express = require("express");
 const cors = require("cors");
 const { getAllowedOrigins } = require("./config/cors");
+const { resolvePublicFile } = require("./utils/public-assets");
+const securityHeaders = require("./config/security-headers");
 
 const routes = require("./routes");
 
 const app = express();
 
 const allowedOrigins = getAllowedOrigins();
+app.use(securityHeaders);
 app.use(cors({
     origin(origin, callback) {
         if (!origin || allowedOrigins.has(origin)) return callback(null, true);
@@ -21,16 +24,6 @@ app.use(cors({
 }));
 
 app.disable("x-powered-by");
-app.use((req, res, next) => {
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("X-Frame-Options", "SAMEORIGIN");
-    res.setHeader(
-        "Referrer-Policy",
-        "strict-origin-when-cross-origin"
-    );
-    next();
-});
-
 app.use(express.json({ limit: "8mb" }));
 
 // Archivos estáticos
@@ -41,21 +34,30 @@ const frontendPublicPath = path.resolve(__dirname, "../../frontend/public");
 const frontendPath = fs.existsSync(frontendDistPath)
     ? frontendDistPath
     : frontendPublicPath;
-app.use(express.static(frontendPath));
+app.use(async (req, res, next) => {
+    if (/^\/api(?:\/|$)/i.test(req.path) || !["GET", "HEAD"].includes(req.method)) return next();
+    let pathname;
+    try { pathname = decodeURIComponent(req.path); }
+    catch { return res.sendStatus(400); }
+    const file = await resolvePublicFile(frontendPath, pathname);
+    if (!file) return res.sendStatus(404);
+    if (path.basename(file) === "restablecer.html") res.set("Referrer-Policy", "no-referrer");
+    return res.sendFile(file, { dotfiles: "deny" });
+});
 
 // API
-app.use("/api", routes);
+app.use("/api", (req, res, next) => {
+    if (req.headers.authorization || /^\/auth(?:\/|$)/i.test(req.path)) {
+        res.set("Cache-Control", "no-store");
+    }
+    next();
+}, routes);
 app.use('/api', (req, res) => {
     res.status(404).json({ ok: false, mensaje: 'Ruta de API no encontrada.' });
 });
 
-// Página principal
-app.get("/", (req, res) => {
-    res.sendFile(path.join(frontendPath, "index.html"));
-});
-
 app.use((error, req, res, next) => {
-    if (res.headersSent) return next(error);
+    if (res.headersSent) return next(new Error("No se pudo completar la respuesta."));
     if (error?.message === "Origen no autorizado por CORS.") {
         return res.status(403).json({ ok: false, mensaje: error.message });
     }
@@ -68,7 +70,7 @@ app.use((error, req, res, next) => {
     if (error?.type === 'entity.too.large') {
         return res.status(413).json({ ok: false, mensaje: 'El archivo o los datos enviados superan el tamaño permitido.' });
     }
-    console.error('Error interno de API:', error?.code || error?.name || 'Error');
+    console.error('Error interno de API.');
     return res.status(500).json({ ok: false, mensaje: 'No se pudo completar la operación. Inténtalo nuevamente.' });
 });
 

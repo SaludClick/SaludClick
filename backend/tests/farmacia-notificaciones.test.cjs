@@ -37,6 +37,7 @@ const model = {
 };
 const db = {
     notificacionFarmacia: model,
+    farmaciaAsignacion:{findUnique:async()=>({farmacia_id:30,activa:true})},
     usuario: {
         async findUnique({ where }) { if (failure?.code === 'AUTH_FAILURE') throw failure; return users.find(user => user.id === where.id) || null; },
         async findMany({ where }) { return users.filter(user => matches(user, where)).map(({ id }) => ({ id })); }
@@ -100,7 +101,7 @@ async function request(path = '', { role = 3, id = 30, method = 'GET', body, tok
 
 test('JWT y rol vigente: las cuatro operaciones rechazan otros roles sin consultar notificaciones', async () => {
     for (const [path, method] of [['', 'GET'], ['/no-leidas/count', 'GET'], ['/1/leida', 'PATCH'], ['/leer-todas', 'PATCH']]) {
-        for (const role of [null, 1, 2, 4, 99]) assert.equal((await request(path, { role, method })).status, role === null ? 401 : 403);
+        for (const role of [null, 1, 2, 4, 99]) assert.equal((await request(path, { role, method })).status, role === null || role === 99 ? 401 : 403);
     }
     assert.equal(calls, 0);
     assert.equal((await request('', { id: 32 })).status, 403);
@@ -115,7 +116,7 @@ test('listado paginado estable, campos limitados y contador del destinatario', a
     assert.equal(first.status, 200); assert.equal(first.cache, 'no-store');
     assert.deepEqual(first.data.paginacion, { pagina: 1, tamano: 20, total: 44, paginas: 3 });
     assert.equal(first.data.noLeidas, 43); assert.equal(first.data.notificaciones[0].id, 44);
-    assert.deepEqual(Object.keys(first.data.notificaciones[0]).sort(), ['id', 'tipo', 'titulo', 'mensaje', 'created_at', 'leida_at'].sort());
+    assert.deepEqual(Object.keys(first.data.notificaciones[0]).sort(), ['id', 'tipo', 'titulo', 'mensaje','referencia_evento', 'created_at', 'leida_at','solicitud','medicamento'].sort());
     const second = await request('?pagina=2&tamano=20');
     assert.equal(second.data.notificaciones.length, 20);
     assert.equal(first.data.notificaciones.some(a => second.data.notificaciones.some(b => a.id === b.id)), false);
@@ -176,16 +177,16 @@ test('errores de infraestructura se sanitizan, incluidas escrituras y autorizaci
     failure.code = 'AUTH_FAILURE'; assert.equal((await request()).status, 503);
 });
 
-test('cambio autorizado persiste avisos para farmacias activas antes de emitir; duplicados no se insertan', async () => {
+test('cambio autorizado persiste avisos para farmacias asignadas antes de emitir; duplicados no se insertan', async () => {
     let emitted = 0;
     const result = await pharmacy.avanzarPedido('90', { estadoActual: 'APROBADA', estado: 'PREPARANDO' }, async ids => {
-        emitted++; assert.deepEqual(ids, [30, 31]);
+        emitted++; assert.deepEqual(ids, [30]);
         assert.equal(orders[0].estado, 'PREPARANDO');
-        assert.equal(rows.filter(row => row.referencia_evento === 'solicitud:90:estado:PREPARANDO').length, 2);
+        assert.equal(rows.filter(row => row.referencia_evento === 'solicitud:90:estado:PREPARANDO').length, 1);
     });
     assert.equal(result.estado, 'PREPARANDO'); assert.equal(emitted, 1);
     await repository.registrarCambio(db, 90, 'PREPARANDO');
-    assert.equal(rows.filter(row => row.referencia_evento === 'solicitud:90:estado:PREPARANDO').length, 2);
+    assert.equal(rows.filter(row => row.referencia_evento === 'solicitud:90:estado:PREPARANDO').length, 1);
     await assert.rejects(pharmacy.avanzarPedido('90', { estadoActual: 'APROBADA', estado: 'PREPARANDO' }), { status: 409 });
     assert.equal(rows.some(row => row.destinatario_id === 32), false);
 });
@@ -215,7 +216,7 @@ test('fallo al persistir el aviso revierte el estado y no emite; fallo de transp
     assert.equal(orders[0].estado, 'APROBADA'); assert.equal(emitted, 0); assert.equal(rows.length, 45);
     eventFailure = false;
     await pharmacy.avanzarPedido('90', { estadoActual: 'APROBADA', estado: 'PREPARANDO' }, () => { throw new Error('transport down'); });
-    assert.equal(orders[0].estado, 'PREPARANDO'); assert.equal(rows.length, 47);
+    assert.equal(orders[0].estado, 'PREPARANDO'); assert.equal(rows.length, 46);
 });
 
 test('desactivado conserva la operación con pago real sin tocar la tabla nueva', async () => {
@@ -266,7 +267,7 @@ test('navegador: filtros, lectura persistida al recargar, eventos reales y respo
         await until(() => io.of('/farmacia-notificaciones').sockets.size > 0);
         const before = rows.length;
         await pharmacy.avanzarPedido('90', { estadoActual: 'APROBADA', estado: 'PREPARANDO' }, app.get('farmaciaNotificationEvents'));
-        assert.equal(rows.length, before + 2);
+        assert.equal(rows.length, before + 1);
         await until(() => evaluate(`document.querySelector('#farmaciaNotificationsBadge').textContent === '43'`));
         await until(() => evaluate(`document.querySelector('#farmaciaNotificationsList').textContent.includes('Solicitud actualizada')`));
         for (const width of [1440, 820, 390]) {
@@ -277,7 +278,7 @@ test('navegador: filtros, lectura persistida al recargar, eventos reales y respo
         }
         await click('#farmaciaReadAll');
         await until(() => evaluate(`document.querySelector('#farmaciaNotificationsBadge').textContent === '0'`));
-        assert.equal(rows.filter(row => row.destinatario_id === 31 && !row.leida_at).length, 2);
+        assert.equal(rows.filter(row => row.destinatario_id === 31 && !row.leida_at).length, 1);
         await evaluate(`document.querySelector('#farmaciaNotificationsState').value='no-leidas';document.querySelector('#farmaciaNotificationsState').dispatchEvent(new Event('change'));`);
         await until(() => evaluate(`document.querySelector('#farmaciaNotificationsStatus').textContent === 'No tienes notificaciones sin leer.'`));
         process.env.FARMACIA_NOTIFICACIONES_ENABLED = 'false';

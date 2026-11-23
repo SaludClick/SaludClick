@@ -92,9 +92,9 @@ document.addEventListener("DOMContentLoaded", () => {
         logout();
     });
 
-    logoutDropdown?.addEventListener("click", (e) => { 
-        e.preventDefault(); 
-        logout(); 
+    logoutDropdown?.addEventListener("click", (e) => {
+        e.preventDefault();
+        logout();
     });
 
     // Delegación general para cualquier elemento con la clase .logout-link
@@ -113,11 +113,21 @@ document.addEventListener("DOMContentLoaded", () => {
         formula: "/pages/formulas.html"
     };
 
-    document.querySelectorAll("[data-action]").forEach(btn => btn.addEventListener("click", () => {
+    document.querySelectorAll("[data-action]").forEach(btn => btn.addEventListener("click", event => {
+        if (btn.matches("#servicios a")) {
+            if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+        }
         const action = btn.dataset.action;
-        if (action === "contacto") { 
+        const publicCatalog = document.getElementById("catalogo-publico");
+        if (action === "medicamentos" && publicCatalog) {
+            publicCatalog.focus();
+            publicCatalog.scrollIntoView();
+            return;
+        }
+        if (action === "contacto") {
             window.location.href = "/pages/chat.html";
-            return; 
+            return;
         }
         navegarPrivado(acciones[action] || "/pages/dashboard.html");
     }));
@@ -128,6 +138,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (searchBtn && searchInput) {
         searchBtn.addEventListener("click", () => {
             const q = searchInput.value.trim();
+            const publicCatalog = document.getElementById("catalogo-publico");
+            if (publicCatalog) {
+                publicCatalog.dispatchEvent(new CustomEvent("buscar-medicamentos", { detail: q }));
+                publicCatalog.focus();
+                publicCatalog.scrollIntoView();
+                return;
+            }
             navegarPrivado(`/pages/medicamentos.html${q ? `?buscar=${encodeURIComponent(q)}` : ""}`);
         });
     }

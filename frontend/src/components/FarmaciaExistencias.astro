@@ -3,22 +3,24 @@ const { tipo = 'inventario' } = Astro.props;
 const catalogo = tipo === 'catalogo';
 const prefijo = catalogo ? 'catalogoFarmacia' : 'inventarioFarmacia';
 ---
-<section id={catalogo ? 'medicamentos' : 'inventarioFarmacia'} class="farmacia-existencias" data-existencias={tipo} aria-labelledby={`${prefijo}Title`} tabindex="-1">
-  <h2 id={`${prefijo}Title`}>{catalogo ? 'Medicamentos' : 'Consulta de inventario'}</h2>
-  <p>Consulta de solo lectura. La disponibilidad de existencias no autoriza una dispensación.</p>
-  <p>Saldo del catálogo global: no acredita titularidad ni existencias físicas de tu farmacia. Entradas, salidas y ajustes bloqueados: faltan asignación verificable e historial auditable.</p>
+<section id={catalogo ? 'medicamentos' : 'inventarioFarmacia'} class="farmacia-existencias" data-existencias={tipo} aria-labelledby={catalogo ? "farmaciaMedicamentosTitle" : `${prefijo}Title`} tabindex="-1">
+  {catalogo ? <slot /> : <>
+  <h2 id={`${prefijo}Title`}>Consulta de inventario</h2>
+  <p>Consulta de solo lectura y exportación a Excel. La disponibilidad de existencias no autoriza una dispensación.</p>
+  <p data-existencias-part="alcance">Saldo del catálogo global: no acredita titularidad ni existencias físicas de tu farmacia.</p>
   <p>Stock bajo: aviso orientativo entre 1 y 5 unidades disponibles; no es un mínimo configurado. Lotes y vencimientos no están registrados.</p>
   <p data-existencias-part="alerta-bajo" role="status" aria-live="polite"></p>
+  <div class="farmacia-export"><button type="button" data-existencias-part="excel"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> DESCARGAR REPORTE EXCEL</button><p data-existencias-part="excel-status" role="status" aria-live="polite">Exporta todos los resultados de los filtros aplicados. Alcance: catálogo global.</p></div>
   <div class="farmacia-existencias-stats" aria-label="Indicadores de existencias">
     <article><strong data-existencias-count="total">—</strong><span>Medicamentos registrados</span></article>
     <article><strong data-existencias-count="disponibles">—</strong><span>Con existencias disponibles</span></article>
     <article><strong data-existencias-count="agotados">—</strong><span>Agotados</span></article>
   </div>
-  <p class="farmacia-existencias-note">Indicadores de todo el catálogo, independientes de los filtros. Disponible significa estado disponible y stock mayor que cero.</p>
+  <p class="farmacia-existencias-note" data-existencias-part="nota">Indicadores de todo el catálogo, independientes de los filtros. Disponible significa estado disponible y stock mayor que cero.</p>
   <p data-existencias-part="integridad" role="status"></p>
-  <form id={catalogo ? 'buscarCatalogoFarmaciaForm' : 'buscarInventario'} data-existencias-part="form" class="farmacia-existencias-filters">
-    <label for={catalogo ? 'buscarCatalogoFarmacia' : 'buscarFarmacia'}>Buscar medicamento</label>
-    <input id={catalogo ? 'buscarCatalogoFarmacia' : 'buscarFarmacia'} data-existencias-part="buscar" type="search" maxlength="150" placeholder="Nombre, principio activo, presentación o registro" />
+  <form id="buscarInventario" data-existencias-part="form" class="farmacia-existencias-filters">
+    <label for="buscarFarmacia">Buscar medicamento</label>
+    <input id="buscarFarmacia" data-existencias-part="buscar" type="search" maxlength="150" placeholder="Nombre, principio activo, presentación o registro" />
     <label for={`${prefijo}Disponibilidad`}>Disponibilidad</label>
     <select id={`${prefijo}Disponibilidad`} data-existencias-part="disponibilidad">
       <option value="todas">Todas</option><option value="disponibles">Disponibles</option><option value="bajos">Stock bajo (1-5)</option><option value="agotados">Agotados</option><option value="inactivos">Inactivos</option><option value="inconsistentes">Inconsistencias</option><option value="desconocidos">Estado desconocido</option>
@@ -30,15 +32,16 @@ const prefijo = catalogo ? 'catalogoFarmacia' : 'inventarioFarmacia';
     <button type="submit" data-existencias-part="actualizar">Buscar / actualizar</button>
     <button type="button" data-existencias-part="limpiar">Limpiar filtros</button>
   </form>
+  </>}
   <p id={catalogo ? 'catalogoFarmaciaEstado' : 'inventoryEmpty'} data-existencias-part="estado" role="status" aria-live="polite">Cargando información…</p>
   <div class="farmacia-table">
     <table class="farmacia-existencias-table">
-      <caption>{catalogo ? 'Catálogo de medicamentos' : 'Existencias registradas'}</caption>
-      <thead><tr>{(catalogo ? ['Medicamento', 'Presentación', 'Principio activo', 'Disponibilidad', 'Fórmula', 'Detalle'] : ['Medicamento', 'Presentación', 'Categoría', 'Stock', 'Disponibilidad', 'Detalle']).map(titulo => <th scope="col">{titulo}</th>)}</tr></thead>
+      <caption class:list={{"farmacia-catalogo-caption": catalogo}}>{catalogo ? 'Catálogo de medicamentos' : 'Existencias registradas'}</caption>
+      <thead><tr>{(catalogo ? ['Fotografía y nombre', 'Presentación', 'Cantidad disponible', 'Stock mínimo', 'Publicación', 'Disponibilidad', 'Acciones'] : ['Código', 'Medicamento', 'Descripción', 'Presentación', 'Cantidad disponible', 'Unidades entregadas', 'Estado de existencias', 'Detalle']).map(titulo => <th scope="col">{titulo}</th>)}</tr></thead>
       <tbody id={catalogo ? 'farmaciaMedicamentos' : 'farmaciaInventory'} data-existencias-part="lista" aria-busy="true"></tbody>
     </table>
   </div>
-  <nav class="farmacia-pagination" aria-label={`Páginas de ${catalogo ? 'medicamentos' : 'inventario'}`}>
+  <nav hidden={catalogo} data-existencias-part="paginacion" class="farmacia-pagination" aria-label={`Páginas de ${catalogo ? 'medicamentos' : 'inventario'}`}>
     <button id={catalogo ? 'catalogoPrevious' : 'inventoryPrevious'} data-existencias-part="anterior" type="button" disabled>Anterior</button>
     <span id={catalogo ? 'catalogoPage' : 'inventoryPage'} data-existencias-part="pagina"></span>
     <button id={catalogo ? 'catalogoNext' : 'inventoryNext'} data-existencias-part="siguiente" type="button" disabled>Siguiente</button>
@@ -46,6 +49,6 @@ const prefijo = catalogo ? 'catalogoFarmacia' : 'inventarioFarmacia';
   <dialog class="farmacia-existencias-dialog" data-existencias-part="detalle" aria-labelledby={`${prefijo}DetalleTitle`}>
     <div class="farmacia-existencias-heading"><h2 id={`${prefijo}DetalleTitle`}>Detalle de {catalogo ? 'medicamento' : 'inventario'}</h2><button type="button" data-existencias-part="cerrar">Cerrar detalle</button></div>
     <div data-existencias-part="contenido" aria-busy="false"></div>
-    <p>Lotes, vencimientos y stock mínimo: información no disponible.</p>
+    {!catalogo && <p>Lotes, vencimientos y stock mínimo: información no disponible.</p>}
   </dialog>
 </section>

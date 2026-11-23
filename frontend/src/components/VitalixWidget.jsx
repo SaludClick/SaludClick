@@ -1,10 +1,13 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Chat from "./Chat.jsx";
+import {rolSinChat} from '../lib/chat-policy.mjs';
 
 export default function VitalixWidget() {
   const [open, setOpen] = useState(false);
   const dialog = useRef(null);
   const trigger = useRef(null);
+  const [blocked,setBlocked]=useState(false);
+  useEffect(()=>{const check=()=>setBlocked(!!rolSinChat());check();window.addEventListener('storage',check);window.addEventListener('focus',check);return()=>{window.removeEventListener('storage',check);window.removeEventListener('focus',check);};},[]);
 
   function show() {
     if (!dialog.current || dialog.current.open) return;
@@ -33,6 +36,7 @@ export default function VitalixWidget() {
     }
   }
 
+  if(blocked)return null;
   return (
     <aside className="vitalix-widget" aria-label="Asistente VITALIX">
       <button ref={trigger} type="button" className="vitalix-launcher"

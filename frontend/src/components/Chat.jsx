@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "../styles/chat.css";
 import { HISTORY_KEY, MAX_TURNS, interpretMessage, readHistory, safeUserText } from "../lib/vitalix-engine.mjs";
 import {useAdministrativeConversation} from '../hooks/useAdministrativeConversation.js';
+import {rolSinChat} from '../lib/chat-policy.mjs';
 
 const OPCIONES = [
   { id: "solicitar-cuenta", icon: "fa-user-plus", label: "Solicitar una cuenta" },
@@ -70,6 +71,8 @@ function Respuesta({ respuesta, at }) {
 }
 
 function Chat({ embedded = false, visible = true }) {
+  const [blocked,setBlocked]=useState(false);
+  useEffect(()=>{const role=rolSinChat();if(role){setBlocked(true);if(!embedded)window.location.replace(role===3?'/pages/farmacia.html':'/pages/eps.html');}},[embedded]);
   const human=useAdministrativeConversation(visible);
   const Container = embedded ? "div" : "main";
   const [turns, setTurns] = useState([]);
@@ -138,6 +141,7 @@ function Chat({ embedded = false, visible = true }) {
     input.current?.focus({ preventScroll: true });
   }
 
+  if(blocked)return null;
   return (
     <Container className="vitalix-page">
       {!embedded && <section className="vitalix-heading" aria-labelledby="vitalixTitle">

@@ -11,7 +11,11 @@ const { getAllowedOrigins } = require("./src/config/cors");
 const PORT = process.env.PORT || 3000;
 const httpServer = http.createServer(app);
 const allowedOrigins = getAllowedOrigins();
-const io = new Server(httpServer, { cors: { origin(origin, callback) { callback(null, !origin || allowedOrigins.has(origin)); }, methods: ["GET", "POST"] } });
+const originAllowed = origin => !origin || allowedOrigins.has(origin);
+const io = new Server(httpServer, {
+    cors: { origin(origin, callback) { callback(null, originAllowed(origin)); }, methods: ["GET", "POST"] },
+    allowRequest(req, callback) { callback(null, originAllowed(req.headers.origin)); }
+});
 
 attachChatSocket(io);
 require('./src/sockets/administrative.socket').attachAdministrativeSocket(io,app);

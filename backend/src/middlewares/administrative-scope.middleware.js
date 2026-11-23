@@ -1,8 +1,8 @@
-const jwt=require('jsonwebtoken');
+const { verificarToken } = require("../utils/jwt");
 const {session}=require('./administrative-session.middleware');
 function administrativeScope(req,res,next) {
     const token=/^Bearer (\S+)$/.exec(req.headers.authorization||'')?.[1];
-    let claims;try{claims=jwt.verify(token,process.env.JWT_SECRET);}catch{return next();}
+    let claims;try{claims=verificarToken(token);}catch{return next();}
     if(Number(claims.rol_id??claims.rol)!==1)return next();
     if(/^\/admin\/afiliados(?:\/|$)/i.test(req.path))
         return res.status(403).json({ok:false,mensaje:'La gestión independiente de afiliados no pertenece a los módulos administrativos autorizados.'});

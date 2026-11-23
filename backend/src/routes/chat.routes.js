@@ -4,6 +4,7 @@ const { farmaciaVigenteSiCorresponde } = require('../middlewares/farmacia-sessio
 const controller = require("../controllers/chat.controller");
 const router = express.Router();
 router.use(validarJWT, farmaciaVigenteSiCorresponde);
+router.use((req,res,next)=>[1,2].includes(Number(req.usuario?.rol_id??req.usuario?.rol))?next():res.status(403).json({ok:false,mensaje:'Chat exclusivo de Administrador y Paciente.'}));
 router.get("/conversaciones", controller.listar);
 router.post("/conversaciones", controller.crear);
 router.get("/conversaciones/:id/mensajes", controller.historial);

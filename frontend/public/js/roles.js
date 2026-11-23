@@ -2,12 +2,13 @@ export const ROLES = Object.freeze({ ADMINISTRADOR: 1, USUARIO: 2, FARMACIA: 3, 
 const permisos = Object.freeze({
     '/pages/admin.html': [1], '/pages/admin-cuentas.html': [1],
     '/pages/farmacia.html': [3],
-    ...Object.fromEntries(['usuarios', 'solicitudes', 'inventario', 'medicamentos', 'entregas', 'notificaciones', 'chat', 'perfil'].map(modulo => [`/pages/farmacia-${modulo}.html`, [3]])),
+    ...Object.fromEntries(['usuarios', 'solicitudes', 'inventario', 'medicamentos', 'notificaciones', 'perfil'].map(modulo => [`/pages/farmacia-${modulo}.html`, [3]])),
     '/pages/dashboard.html': [2], '/pages/medicamentos.html': [2],
     '/pages/pedidos.html': [2], '/pages/historial.html': [2], '/pages/formulas.html': [2],
-    '/pages/chat-farmacia.html': [2, 3], '/pages/perfil.html': [1, 2, 3, 4],
+    '/pages/farmacia-chat.html': [], '/pages/farmacia-entregas.html': [],
+    '/pages/chat-farmacia.html': [2], '/pages/perfil.html': [1, 2, 3, 4],
     '/pages/admin-pacientes.html': [1], '/pages/admin-afiliados.html': [],
-    '/pages/eps.html': [4], '/pages/soporte.html': [2]
+    '/pages/eps.html': [4], '/pages/eps-v1.html': [4], '/pages/soporte.html': [2]
 });
 export const PAGINAS_PRIVADAS = new Set(Object.keys(permisos));
 export function rolUsuario(usuario) {

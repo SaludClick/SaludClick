@@ -335,11 +335,11 @@ if (checkAuthGuard()) {
       }
 
       try {
-        await apiFetch(`/api/pedidos/${pedido.id}`, {
+        await apiFetch(`/api/pedidos/${pedido.id}?accion=cancelar`, {
           method: "DELETE",
         });
 
-        alert(`El pedido #${pedido.id} fue eliminado correctamente.`);
+        alert(`El pedido #${pedido.id} fue cancelado correctamente.`);
 
         await cargarHistorial();
       } catch (error) {

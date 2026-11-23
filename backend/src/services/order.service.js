@@ -167,12 +167,21 @@ async function crearPedido(usuarioId, data, idempotencyKey) {
     const observaciones = String(
         data.observaciones || ""
     ).trim();
+    const formula = data.formula;
+    if (formula !== undefined && (
+        !formula || !Number.isSafeInteger(formula.id) || formula.id < 1 ||
+        typeof formula.permiteDescarga !== 'boolean'
+    )) {
+        throw serviceError('Selecciona una fórmula PDF válida e indica el permiso de descarga.');
+    }
+    const consentimiento = formula && { id: formula.id, permiteDescarga: formula.permiteDescarga };
     const idempotencyHash = crypto
         .createHash("sha256")
         .update(JSON.stringify({
             tipoEntrega,
             direccion,
             observaciones,
+            ...(consentimiento && { formula: consentimiento }),
             items: [...items].sort(
                 (a, b) => a.medicamento_id - b.medicamento_id
             )
@@ -185,6 +194,9 @@ async function crearPedido(usuarioId, data, idempotencyKey) {
         idempotencyHash
     );
     if (existing) return existing;
+    if (consentimiento && !require('../config/farmacia-solicitudes').habilitadas()) {
+        throw serviceError('La autorización de fórmulas en pedidos no está disponible.');
+    }
 
     const meds =
         await orderRepository.listarMedicamentos(
@@ -259,6 +271,7 @@ async function crearPedido(usuarioId, data, idempotencyKey) {
             tipoEntrega,
             direccion,
             observaciones,
+            formula: consentimiento,
             items: calculados,
             total,
             pago,
@@ -279,14 +292,10 @@ async function crearPedido(usuarioId, data, idempotencyKey) {
 // ELIMINAR PEDIDO
 // =================================================
 
-async function eliminarPedido(
-    usuarioId,
-    pedidoId
-) {
-    return await orderRepository.eliminarPedidoUsuario(
-        usuarioId,
-        pedidoId
-    );
+async function eliminarPedido(usuarioId, pedidoId, ocultar = false) {
+    return ocultar
+        ? orderRepository.eliminarPedidoUsuario(usuarioId, pedidoId, true)
+        : orderRepository.eliminarPedidoUsuario(usuarioId, pedidoId);
 }
 
 // =================================================

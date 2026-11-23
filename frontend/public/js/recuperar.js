@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
-        
+
         const correo = inputEmail.value.trim().toLowerCase();
         const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -45,14 +45,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (!respuesta.ok || !resultado.ok) {
                 mostrarMensaje(
-                    resultado.mensaje || "No fue posible recuperar la cuenta: el servicio no está disponible.", 
+                    resultado.mensaje || "No fue posible recuperar la cuenta: el servicio no está disponible.",
                     "text-danger"
                 );
                 return;
             }
 
             mostrarMensaje(
-                resultado.mensaje || "Si el correo está registrado, recibirás las instrucciones.", 
+                resultado.mensaje || "Si el correo está registrado, recibirás las instrucciones.",
                 "text-success fw-semibold"
             );
 

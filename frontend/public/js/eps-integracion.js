@@ -382,12 +382,17 @@ export function mountIntegration(root) {
   }
 
   async function pharmacy() {
-    const convenios = (await request('/farmacia/convenios')).datos;
+    const [{ datos: convenios }, { operacionHabilitada }] = await Promise.all([
+      request('/farmacia/convenios'),
+      apiFetch('/api/farmacia/verificar-acceso'),
+    ]);
     const g = group('Existencias de mis convenios EPS');
     g.append(
       node(
         'p',
-        'Registra cantidades reales del convenio. Los pedidos y el catalogo general conservan su proceso habitual.',
+        operacionHabilitada
+          ? 'Registra cantidades reales del convenio.'
+          : 'Las existencias y solicitudes del convenio est?n disponibles para consulta.',
       ),
     );
     const saveStock = (row) => {
@@ -423,8 +428,10 @@ export function mountIntegration(root) {
       );
       if (catalog) void catalog.load(1);
     };
-    if (convenios.length) g.append(button('Registrar existencias', () => saveStock()));
-    else g.append(node('p', 'No tienes convenios EPS activos.'));
+    if (!convenios.length) g.append(node('p', 'No tienes convenios EPS activos.'));
+    if (operacionHabilitada && convenios.length) {
+      g.append(button('Registrar existencias', () => saveStock()));
+    }
     const stock = node('div');
     g.append(stock);
     await rows(
@@ -435,7 +442,7 @@ export function mountIntegration(root) {
         r.medicamento.nombre,
         r.vinculo.eps.nombre,
         r.stock + ' / ' + r.minimo,
-        button('Actualizar', () => saveStock(r)),
+        operacionHabilitada ? button('Actualizar', () => saveStock(r)) : 'Consulta',
       ],
     );
     const auth = group('Autorizaciones EPS asignadas');
@@ -457,7 +464,7 @@ export function mountIntegration(root) {
           r.afiliado.nombres + ' ' + r.afiliado.apellidos,
           r.solicitud_id + ' / ' + (r.solicitud?.estado || 'Sin solicitud'),
           r.solicitud?.detalles.map((d) => d.medicamento.nombre + ' x' + d.cantidad).join(', '),
-          next
+          next && operacionHabilitada
             ? button('Avanzar a ' + next, async () => {
                 await request(
                   '/farmacia/solicitudes/' + r.solicitud_id + '/estado',

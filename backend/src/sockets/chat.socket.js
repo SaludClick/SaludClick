@@ -1,29 +1,30 @@
-const jwt = require("jsonwebtoken");
+const { publicMessage } = require("../utils/public-error");
+const { verificarToken } = require("../utils/jwt");
 const chatService = require("../services/chat.service");
 const chatRepository = require("../repositories/chat.repository");
-const { authorize } = require('../middlewares/farmacia-notificaciones.middleware');
-const { esSesionFarmacia } = require('../middlewares/farmacia-session.middleware');
+const { authorizeChatStaff: authorize } = require('../middlewares/chat-staff.middleware');
+const esStaffSocket = user => Number(user?.rol_id ?? user?.rol) === 1;
 
-function attachChatSocket(io, { authenticateFarmacia = authorize, recheckMs = 15000 } = {}) {
-    const farmacias = new Set();
+function attachChatSocket(io, { authenticateStaff = authorize, recheckMs = 15000 } = {}) {
+    const staffSockets = new Set();
     const pacientes = new Set();
     const expirado = socket => Number.isFinite(socket.data.usuario.exp) &&
         Date.now() >= socket.data.usuario.exp * 1000;
     async function vigente(socket) {
-        const user = await authenticateFarmacia(socket.handshake.auth?.token);
+        const user = await authenticateStaff(socket.handshake.auth?.token);
         if (user.id !== socket.data.usuario.id) throw new Error('Sesión inválida.');
         return user;
     }
     function disconnect(socket) {
-        farmacias.delete(socket);
+        staffSockets.delete(socket);
         pacientes.delete(socket);
         socket.disconnect(true);
     }
-    // Revalidate pharmacy recipients before broadcasting, including sockets that
+    // Revalidate staff recipients before broadcasting, including sockets that
     // only listen. Revoked sessions must not receive messages from patients.
     async function emit(room, event, data) {
         const excluded = [];
-        const members = [...farmacias].filter(s => s.rooms.has(room));
+        const members = [...staffSockets].filter(s => s.rooms.has(room));
         let participants;
         if (members.length && room.startsWith('chat:') && room !== 'chat:staff') {
             try { participants = await chatRepository.obtenerParticipantes(Number(room.slice(5))); }
@@ -51,50 +52,53 @@ function attachChatSocket(io, { authenticateFarmacia = authorize, recheckMs = 15
         try {
             const token = socket.handshake.auth?.token;
             if (!token || !process.env.JWT_SECRET) return next(new Error("No autorizado"));
-            const payload = jwt.verify(token, process.env.JWT_SECRET);
-            if (!payload?.id || ![2, 3].includes(Number(payload.rol ?? payload.rol_id))) return next(new Error("No autorizado"));
+            const payload = verificarToken(token);
+            if (!payload?.id || ![1, 2].includes(Number(payload.rol ?? payload.rol_id))) return next(new Error("No autorizado"));
             socket.data.usuario = payload;
-            if (esSesionFarmacia(payload)) {
+            if (esStaffSocket(payload)) {
                 if (payload.rol !== undefined && payload.rol_id !== undefined && Number(payload.rol) !== Number(payload.rol_id)) return next(new Error('No autorizado'));
-                socket.data.farmacia = await vigente(socket);
+                socket.data.chatStaff = await vigente(socket);
             }
             next();
         } catch { next(new Error("Token inválido o expirado")); }
     });
     io.on("connection", (socket) => {
-        if (socket.data.farmacia) {
-            farmacias.add(socket);
-            const expires = setTimeout(() => disconnect(socket), Math.max(0, Math.min(socket.data.farmacia.exp * 1000 - Date.now(), 2147483647)));
-            expires.unref?.();
+        if (expirado(socket)) return disconnect(socket);
+        if (Number.isFinite(socket.data.usuario.exp)) {
+            if (!socket.data.chatStaff) pacientes.add(socket);
+            let timer;
+            const scheduleExpiry = () => {
+                if (expirado(socket)) return disconnect(socket);
+                const remaining = socket.data.usuario.exp * 1000 - Date.now();
+                timer = setTimeout(scheduleExpiry, Math.min(remaining, 2147483647));
+                timer.unref?.();
+            };
+            socket.on('disconnect', () => { pacientes.delete(socket); clearTimeout(timer); });
+            scheduleExpiry();
+        }
+        if (socket.data.chatStaff) {
+            staffSockets.add(socket);
             let check;
             const schedule = () => {
                 check = setTimeout(async () => {
-                    try { await vigente(socket); if (farmacias.has(socket)) schedule(); }
+                    try {
+                        if (expirado(socket)) return disconnect(socket);
+                        await vigente(socket);
+                        if (staffSockets.has(socket)) schedule();
+                    }
                     catch { disconnect(socket); }
                 }, recheckMs);
                 check.unref?.();
             };
             schedule();
-            socket.on('disconnect', () => { farmacias.delete(socket); clearTimeout(expires); clearTimeout(check); });
-        } else if (Number.isFinite(socket.data.usuario.exp)) {
-            pacientes.add(socket);
-            let timer;
-            const schedule = () => {
-                if (expirado(socket)) return disconnect(socket);
-                const remaining = socket.data.usuario.exp * 1000 - Date.now();
-                timer = setTimeout(schedule, Math.min(remaining, 2147483647));
-                timer.unref?.();
-            };
-            socket.on('disconnect', () => { pacientes.delete(socket); clearTimeout(timer); });
-            schedule();
-            if (!pacientes.has(socket)) return;
+            socket.on('disconnect', () => { staffSockets.delete(socket); clearTimeout(check); });
         }
         const on = (event, handler) => socket.on(event, async (...args) => {
-            if (socket.data.farmacia) {
+            if (socket.data.chatStaff) {
                 try { await vigente(socket); }
                 catch {
                     const ack = args.at(-1);
-                    if (typeof ack === 'function') ack({ ok: false, mensaje: 'La sesión de Farmacia no tiene acceso vigente.' });
+                    if (typeof ack === 'function') ack({ ok: false, mensaje: 'La sesión de Administración no tiene acceso vigente.' });
                     disconnect(socket); return;
                 }
             } else if (expirado(socket)) {
@@ -127,7 +131,7 @@ function attachChatSocket(io, { authenticateFarmacia = authorize, recheckMs = 15
                 if (other) await emit(`user:${other}`, "chat:notification", { conversationId: message.conversacion_id });
                 if (!participants?.agente_id) await emit("chat:staff", "chat:notification", { conversationId: message.conversacion_id });
                 ack({ ok: true, message });
-            } catch (error) { ack({ ok: false, mensaje: socket.data.farmacia ? 'No se pudo enviar el mensaje. Comprueba la conversación e inténtalo nuevamente.' : error.message }); }
+            } catch (error) { ack({ ok: false, mensaje: socket.data.chatStaff ? 'No se pudo enviar el mensaje. Comprueba la conversación e inténtalo nuevamente.' : publicMessage(error, "No se pudo enviar el mensaje.") }); }
         });
         on("chat:read", async (conversationId, ack = () => {}) => {
             try {

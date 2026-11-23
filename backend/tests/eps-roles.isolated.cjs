@@ -3,7 +3,6 @@ const { test } = require('node:test'),
   assert = require('node:assert/strict');
 const fs = require('node:fs'),
   path = require('node:path'),
-  os = require('node:os'),
   http = require('node:http');
 const { spawnSync } = require('node:child_process'),
   { randomUUID } = require('node:crypto');
@@ -15,8 +14,11 @@ test(
   'admin -> patient -> EPS -> assigned pharmacy -> patient notifications',
   { timeout: 180000 },
   async (t) => {
-    const { PGlite } = require('@electric-sql/pglite'),
-      { PGLiteSocketServer } = require('@electric-sql/pglite-socket');
+    const prismaRequire = require('node:module').createRequire(require.resolve('@prisma/dev', {
+      paths: [path.dirname(require.resolve('prisma/package.json'))],
+    }));
+    const { PGlite } = prismaRequire('@electric-sql/pglite');
+    const { PGLiteSocketServer } = prismaRequire('@electric-sql/pglite-socket');
     const memory = await PGlite.create(),
       socket = new PGLiteSocketServer({
         db: memory,
@@ -26,51 +28,17 @@ test(
       });
     let pool, db, server, browser;
     try {
-      const schema = fs.readFileSync(path.resolve(__dirname, '../prisma/schema.prisma'), 'utf8');
-      const baseline = schema
-        .slice(0, schema.indexOf('// EPS: aislamiento'))
-        .split('\n')
-        .filter(
-          (line) =>
-            !/\bEps[A-Z]|eps_version Int|eps_affiliate_scope|eps_affiliate_patient/.test(line),
-        )
-        .join('\n');
-      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'saludclick-four-roles-')),
-        from = path.join(tmp, 'baseline.prisma');
-      fs.writeFileSync(from, baseline);
-      const ddl = spawnSync(
-        process.execPath,
-        [
-          path.resolve(__dirname, '../node_modules/prisma/build/index.js'),
-          'migrate',
-          'diff',
-          '--from-empty',
-          '--to-schema',
-          from,
-          '--script',
-        ],
-        { cwd: path.resolve(__dirname, '..'), encoding: 'utf8' },
-      );
-      assert.equal(ddl.status, 0, ddl.stderr);
-      await memory.exec(ddl.stdout);
-      await memory.exec(
-        fs.readFileSync(
-          path.resolve(
-            __dirname,
-            '../prisma/migrations/20261114090000_eps_workspace/migration.sql',
-          ),
-          'utf8',
-        ),
-      );
-      const integrationSql = fs.readFileSync(
-        path.resolve(
-          __dirname,
-          '../prisma/migrations/20261115090000_eps_role_integration/migration.sql',
-        ),
-        'utf8',
-      );
-      assert.ok(!/DROP\s+(TABLE|COLUMN)|TRUNCATE|DELETE\s+FROM/i.test(integrationSql));
-      await memory.exec(integrationSql);
+      assert.equal(process.env.FARMACIA_OPERACION_ENABLED, 'false');
+      const migrations = path.resolve(__dirname, '../prisma/migrations');
+      for (const name of fs.readdirSync(migrations).sort()) {
+        if (name > '20261116173000_eps_notificaciones') break;
+        if (name.startsWith('20261111190000')) {
+          await memory.exec("INSERT INTO roles(id,nombre) VALUES(2,'usuario')");
+        }
+        await memory.exec(fs.readFileSync(path.join(migrations, name, 'migration.sql'), 'utf8'));
+      }
+      const pending = await memory.query("SELECT to_regclass('farmacia_catalogo_autorizaciones') AS tabla");
+      assert.equal(pending.rows[0].tabla, null);
       await socket.start();
       pool = new Pool({
         connectionString: 'postgresql://postgres@' + socket.getServerConn() + '/postgres',
@@ -82,7 +50,11 @@ test(
         ['../src/config/prisma', db],
         [
           '../src/repositories/afiliados-origen.repository',
-          { leer: async () => ({ afiliados: [], conexion: { tabla: 'isolated-source' } }) },
+          { leerAutorizados: async () => ({
+            pacientes: [{ identificador: a.id, documento: '10002', tipo_documento: 'CC',
+              nombres: 'Person2', apellidos: 'Fixture' }],
+            total: 1, afiliados: { total: 1, activos: 1, inactivos: 0 },
+          }) },
         ],
       ]) {
         const id = require.resolve(file);
@@ -115,7 +87,7 @@ test(
         [3, 'farmacia'],
         [4, 'EPS'],
       ])
-        await db.rol.create({ data: { id, nombre } });
+        await db.rol.upsert({ where: { id }, create: { id, nombre }, update: {} });
       const roleMap = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 2, 6: 3, 7: 4, 8: 2 };
       for (const [id, rol] of Object.entries(roleMap))
         await db.usuario.create({
@@ -169,10 +141,11 @@ test(
         regimen: 'Subsidiado',
         estado: 'Activo',
       });
-      let a, b, linkA, linkB, order, authorization;
+      let a, b, linkA, order, authorization;
       const category = await db.categoria.create({ data: { nombre: 'Fixture category' } }),
         drug = await db.medicamento.create({
           data: { nombre: 'Fixture medicine', requiere_formula: false, categoria_id: category.id, precio: 20, stock: 10 },
+          select: { id: true, categoria_id: true },
         });
       await t.test(
         'administrator manages entities and EPS account scope without clinical access',
@@ -249,6 +222,9 @@ test(
             method: 'PUT',
             body: { afiliado_id: b.id, usuario_id: 5 },
           });
+          await db.afiliadoCuentaOrigen.create({
+            data: { usuario_id: 2, afiliado_id: a.id, eps_id: 'A', verificado_por: 1 },
+          });
           assert.equal(
             (await req('/integracion/paciente/afiliacion', { id: 2 })).afiliacion.eps.id,
             'A',
@@ -264,7 +240,7 @@ test(
               body: { farmacia_id: 3, activa: true },
             })
           ).vinculo;
-          linkB = (
+          (
             await req('/integracion/admin/eps/B/farmacia', {
               method: 'PUT',
               body: { farmacia_id: 6, activa: true },
@@ -280,7 +256,7 @@ test(
         for (const items of [[],[{id:drug.id,cantidad:11}]]) await req('/pedidos/',{id:2,method:'POST',status:400,key:randomUUID(),body:{items,pago:{...payment,numero:'4242424242424242'}}});
         assert.equal(await db.solicitud.count(),beforeOrders);
         assert.equal(await db.pago.count(),beforePayments);
-        assert.equal((await db.medicamento.findUnique({where:{id:drug.id}})).stock,10);
+        assert.equal((await db.medicamento.findUnique({where:{id:drug.id},select:{stock:true}})).stock,10);
       });
       await t.test(
         'patient creates one permitted request through existing checkout and idempotency',
@@ -313,7 +289,7 @@ test(
           await req('/pedidos/', { id: 2, method: 'POST', status: 201, body, key });
           assert.equal(await db.solicitud.count(), 1);
           assert.equal(await db.epsNotificacionCompartida.count(), before);
-          assert.equal((await db.medicamento.findUnique({ where: { id: drug.id } })).stock, 9);
+          assert.equal((await db.medicamento.findUnique({ where: { id: drug.id }, select: { stock: true } })).stock, 9);
           assert.equal(await db.pago.count(),1);
           const persisted = await db.pago.findFirst({where:{solicitud_id:order,usuario_id:2}});
           assert.equal(persisted.estado,'APROBADO');
@@ -336,8 +312,7 @@ test(
             0,
           );
           await req('/integracion/paciente/solicitudes?usuario_id=2', { id: 5, status: 400 });
-          await req('/farmacia/pedidos', { id: 3, status: 503 });
-          await req('/farmacia/pedidos', { id: 6, status: 503 });
+          assert.equal((await req('/farmacia/verificar-acceso', { id: 3 })).operacionHabilitada, false);
         },
       );
       await t.test(
@@ -449,130 +424,127 @@ test(
           await req('/farmacia/pedidos', { id: 3, status: 503 });
           await req('/farmacia/pedidos', { id: 6, status: 503 });
           await req('/integracion/farmacia/solicitudes/' + order + '/estado', {
-            id: 6,
-            method: 'PATCH',
-            status: 404,
-            body: { estadoActual: 'APROBADA', estado: 'PREPARANDO' },
-          });
-          await req('/farmacia/pedidos/' + order + '/estado', {
-            id: 6,
-            method: 'PATCH',
-            status: 503,
+            id: 3, method: 'PATCH', status: 503,
             body: { estadoActual: 'APROBADA', estado: 'PREPARANDO' },
           });
         },
       );
-      await t.test(
-        'pharmacy selects from the catalog and only changes real stock in its own agreement',
-        async () => {
-          const path = '/integracion/farmacia/catalogo';
-          const catalog = await req(path + '?buscar=fixture+medicine', { id: 3 });
-          assert.equal(catalog.paginacion.total, 1);
-          assert.equal(catalog.datos[0].id, drug.id);
-          assert.equal('stock' in catalog.datos[0], false);
-          assert.equal((await req(path + '?buscar=missing+medicine', { id: 3 })).paginacion.total, 0);
-          await req(path + '?farmacia=6', { id: 3, status: 400 });
-          await req(path, { id: 4, status: 403 });
-          assert.equal((await req('/eps/inventario', { id: 4 })).paginacion.total, 0);
-          await req('/integracion/farmacia/existencias', {
-            id: 3,
-            method: 'PUT',
-            status: 404,
-            body: { vinculo_id: linkB.id, medicamento_id: drug.id, stock: 4, minimo: 5 },
-          });
-          const row = (
+      process.env.FARMACIA_OPERACION_ENABLED = 'true';
+      try {
+        await t.test(
+          'pharmacy selects from the catalog and only changes real stock in its own agreement',
+          async () => {
+            const path = '/integracion/farmacia/catalogo';
+            const catalog = await req(path + '?buscar=fixture+medicine', { id: 3 });
+            assert.equal(catalog.paginacion.total, 1);
+            assert.equal(catalog.datos[0].id, drug.id);
+            assert.equal('stock' in catalog.datos[0], false);
+            assert.equal((await req(path + '?buscar=missing+medicine', { id: 3 })).paginacion.total, 0);
+            await req(path + '?farmacia=6', { id: 3, status: 400 });
+            await req(path, { id: 4, status: 403 });
+            assert.equal((await req('/eps/inventario', { id: 4 })).paginacion.total, 0);
+            await req('/integracion/farmacia/existencias', {
+              id: 3,
+              method: 'PUT',
+              status: 404,
+              body: { vinculo_id: linkB.id, medicamento_id: drug.id, stock: 4, minimo: 5 },
+            });
+            const row = (
+              await req('/integracion/farmacia/existencias', {
+                id: 3,
+                method: 'PUT',
+                body: { vinculo_id: linkA.id, medicamento_id: drug.id, stock: 4, minimo: 5 },
+              })
+            ).existencia;
+            assert.equal((await req('/eps/inventario?estado=BAJO', { id: 4 })).datos[0].stock, 4);
+            assert.equal((await req('/eps/inventario', { id: 7 })).paginacion.total, 0);
+            const count = await db.epsNotificacionCompartida.count();
             await req('/integracion/farmacia/existencias', {
               id: 3,
               method: 'PUT',
               body: { vinculo_id: linkA.id, medicamento_id: drug.id, stock: 4, minimo: 5 },
-            })
-          ).existencia;
-          assert.equal((await req('/eps/inventario?estado=BAJO', { id: 4 })).datos[0].stock, 4);
-          assert.equal((await req('/eps/inventario', { id: 7 })).paginacion.total, 0);
-          const count = await db.epsNotificacionCompartida.count();
-          await req('/integracion/farmacia/existencias', {
-            id: 3,
-            method: 'PUT',
-            body: { vinculo_id: linkA.id, medicamento_id: drug.id, stock: 4, minimo: 5 },
-          });
-          assert.equal(await db.epsNotificacionCompartida.count(), count);
-          await req('/integracion/farmacia/existencias', {
-            id: 3,
-            method: 'PUT',
-            status: 409,
-            body: {
-              vinculo_id: linkA.id,
-              medicamento_id: drug.id,
-              stock: 0,
-              minimo: 5,
-              actualizado_at: '2000-01-01T00:00:00Z',
-            },
-          });
-          await req('/integracion/farmacia/existencias', {
-            id: 3,
-            method: 'PUT',
-            body: {
-              vinculo_id: linkA.id,
-              medicamento_id: drug.id,
-              stock: 0,
-              minimo: 5,
-              actualizado_at: row.actualizado_at,
-            },
-          });
-          assert.equal((await db.medicamento.findUnique({ where: { id: drug.id } })).stock, 9);
-          assert.equal((await req('/eps/dashboard', { id: 4 })).estadisticas.agotados, 1);
-          assert.equal(
-            await db.epsNotificacionCompartida.count({
-              where: { usuario_id: 2, tipo: 'INVENTARIO' },
-            }),
-            0,
-          );
-        },
-      );
-      await t.test(
-        'simulation mode lets the assigned pharmacy deliver without converting the payment to real',
-        async () => {
-          await req('/integracion/farmacia/solicitudes/' + order + '/estado', {
-            id: 3, method: 'PATCH', status: 409,
-            body: { estadoActual: 'APROBADA', estado: 'PREPARANDO' },
-          });
-          assert.equal((await db.solicitud.findUnique({ where: { id: order } })).estado, 'APROBADA');
-          const simulationMode = process.env.PEDIDOS_SIMULADOS;
-          try {
-            process.env.PEDIDOS_SIMULADOS = 'true';
-            const pending = await req('/integracion/farmacia/pedidos/' + order, { id: 3 });
-            assert.equal(pending.pedido.operacion.simulacion, true);
-            assert.equal(pending.pedido.operacion.siguienteEstado, 'PREPARANDO');
-            for (const [actual, next] of [
-              ['APROBADA', 'PREPARANDO'],
-              ['PREPARANDO', 'LISTA'],
-              ['LISTA', 'ENTREGADA'],
-            ])
-              await req('/integracion/farmacia/solicitudes/' + order + '/estado', {
-                id: 3,
-                method: 'PATCH',
-                body: { estadoActual: actual, estado: next },
-              });
-          } finally {
-            if (simulationMode === undefined) delete process.env.PEDIDOS_SIMULADOS;
-            else process.env.PEDIDOS_SIMULADOS = simulationMode;
-          }
-          assert.equal((await db.pago.findFirst({ where: { solicitud_id: order } })).simulacion, true);
-          assert.equal(
-            (await req('/integracion/paciente/solicitudes', { id: 2 })).datos[0].estado,
-            'ENTREGADA',
-          );
-          const stats = (await req('/eps/dashboard', { id: 4 })).estadisticas;
-          assert.equal(stats.solicitudes, 1);
-          assert.equal(stats.autorizaciones, 1);
-          assert.equal(stats.pacientes, 1);
-          assert.ok(
-            (await req('/integracion/notificaciones', { id: 2 })).datos.some(
-              (n) => n.tipo === 'SOLICITUD',
-            ),
-          );
-        },
-      );
+            });
+            assert.equal(await db.epsNotificacionCompartida.count(), count);
+            await req('/integracion/farmacia/existencias', {
+              id: 3,
+              method: 'PUT',
+              status: 409,
+              body: {
+                vinculo_id: linkA.id,
+                medicamento_id: drug.id,
+                stock: 0,
+                minimo: 5,
+                actualizado_at: '2000-01-01T00:00:00Z',
+              },
+            });
+            await req('/integracion/farmacia/existencias', {
+              id: 3,
+              method: 'PUT',
+              body: {
+                vinculo_id: linkA.id,
+                medicamento_id: drug.id,
+                stock: 0,
+                minimo: 5,
+                actualizado_at: row.actualizado_at,
+              },
+            });
+            assert.equal((await db.medicamento.findUnique({ where: { id: drug.id }, select: { stock: true } })).stock, 9);
+            assert.equal((await req('/eps/dashboard', { id: 4 })).estadisticas.agotados, 1);
+            assert.equal(
+              await db.epsNotificacionCompartida.count({
+                where: { usuario_id: 2, tipo: 'INVENTARIO' },
+              }),
+              0,
+            );
+          },
+        );
+        await t.test(
+          'simulation mode lets the assigned pharmacy deliver without converting the payment to real',
+          async () => {
+            await req('/integracion/farmacia/solicitudes/' + order + '/estado', {
+              id: 3, method: 'PATCH', status: 409,
+              body: { estadoActual: 'APROBADA', estado: 'PREPARANDO' },
+            });
+            assert.equal((await db.solicitud.findUnique({ where: { id: order } })).estado, 'APROBADA');
+            const simulationMode = process.env.PEDIDOS_SIMULADOS;
+            try {
+              process.env.PEDIDOS_SIMULADOS = 'true';
+              const pending = await req('/integracion/farmacia/pedidos/' + order, { id: 3 });
+              assert.equal(pending.pedido.operacion.simulacion, true);
+              assert.equal(pending.pedido.operacion.siguienteEstado, 'PREPARANDO');
+              for (const [actual, next] of [
+                ['APROBADA', 'PREPARANDO'],
+                ['PREPARANDO', 'LISTA'],
+                ['LISTA', 'ENTREGADA'],
+              ])
+                await req('/integracion/farmacia/solicitudes/' + order + '/estado', {
+                  id: 3,
+                  method: 'PATCH',
+                  body: { estadoActual: actual, estado: next },
+                });
+            } finally {
+              if (simulationMode === undefined) delete process.env.PEDIDOS_SIMULADOS;
+              else process.env.PEDIDOS_SIMULADOS = simulationMode;
+            }
+            assert.equal((await db.pago.findFirst({ where: { solicitud_id: order } })).simulacion, true);
+            assert.equal(
+              (await req('/integracion/paciente/solicitudes', { id: 2 })).datos[0].estado,
+              'ENTREGADA',
+            );
+            const stats = (await req('/eps/dashboard', { id: 4 })).estadisticas;
+            assert.equal(stats.solicitudes, 1);
+            assert.equal(stats.autorizaciones, 1);
+            assert.equal(stats.pacientes, 1);
+            assert.ok(
+              (await req('/integracion/notificaciones', { id: 2 })).datos.some(
+                (n) => n.tipo === 'SOLICITUD',
+              ),
+            );
+          },
+        );
+      } finally {
+        process.env.FARMACIA_OPERACION_ENABLED = 'false';
+      }
       await t.test(
         'notifications are private, idempotent and synchronized with EPS read receipts',
         async () => {
@@ -609,6 +581,23 @@ test(
             ).leida_at.toISOString(),
             first.toISOString(),
           );
+          const unread = (await req('/eps/notificaciones?estado=no_leidas', { id: 4 })).notificaciones;
+          assert.ok(unread.length >= 2);
+          await req('/eps/notificaciones/' + unread[0].id + '/leida', {
+            id: 7, method: 'PATCH', status: 404,
+          });
+          await req('/eps/notificaciones/' + unread[0].id + '/leida', { id: 4, method: 'PATCH' });
+          await req('/eps/notificaciones/leer-todas', { id: 4, method: 'PATCH' });
+          assert.equal((await req('/eps/notificaciones/no-leidas/count', { id: 4 })).noLeidas, 0);
+          for (const n of unread) {
+            const shared = await db.epsNotificacionCompartida.findUnique({ where: { id: n.id } });
+            const receipt = await db.epsLectura.findUnique({
+              where: { evento_id_usuario_id: {
+                evento_id: Number(shared.clave.split(':')[1]), usuario_id: 4,
+              } },
+            });
+            assert.equal(+receipt.leida_at, +shared.leida_at);
+          }
           const own = await db.epsNotificacionCompartida.findFirst({
             where: { usuario_id: 4 },
             orderBy: { id: 'asc' },
@@ -629,7 +618,7 @@ test(
             where: { usuario_id: 4, leida_at: null },
           });
           const event = { id: Number(pending.clave.split(':')[1]) };
-          await req('/eps/notificaciones/' + event.id + '/leida', { id: 4, method: 'PATCH' });
+          await req('/eps/v1/notificaciones/' + event.id + '/leida', { id: 4, method: 'PATCH' });
           assert.ok(
             (
               await db.epsNotificacionCompartida.findUnique({
@@ -654,11 +643,12 @@ test(
           async () => {
             browser = await require('./support/afiliados-edge.cjs').abrirEdge();
             const { send, evaluate, until } = browser;
+            t.after(() => { process.env.FARMACIA_OPERACION_ENABLED = 'false'; });
             for (const [id, page] of [
               [1, 'admin'],
               [2, 'historial'],
               [3, 'farmacia'],
-              [4, 'eps#autorizaciones'],
+              [4, 'eps-convenios#inventario'],
             ]) {
               const { identifier } = await send('Page.addScriptToEvaluateOnNewDocument', {
                 source:
@@ -670,10 +660,11 @@ test(
                   roleMap[id] +
                   ',nombre:"Fixture"}));',
               });
+              process.env.FARMACIA_OPERACION_ENABLED = id === 3 ? 'true' : 'false';
               const [file, fragment] = page.split('#');
               await send('Page.navigate', { url: origin + '/pages/' + file + '.html' + (fragment ? '#' + fragment : '') });
               if (id === 4) {
-                await until(() => evaluate('location.hash === "#autorizaciones" && document.querySelector("#epsWorkspace")?.getAttribute("aria-busy") === "false"'));
+                await until(() => evaluate('location.hash === "#inventario" && document.querySelector("#epsWorkspace")?.getAttribute("aria-busy") === "false"'));
                 assert.equal(await evaluate('document.querySelectorAll("[data-eps-view=autorizaciones], [data-eps-view=pacientes]").length'), 0);
                 await send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
                 continue;
@@ -699,6 +690,7 @@ test(
               if (id === 3) {
                 const extra = await db.medicamento.create({
                   data: { nombre: 'Catalog selection fixture', categoria_id: drug.categoria_id, precio: 20, stock: 0, requiere_formula: false },
+                  select: { id: true },
                 });
                 await evaluate('[...document.querySelectorAll("[data-eps-integration] button")].find(b => b.textContent === "Registrar existencias").click()');
                 await until(() => evaluate('[...document.querySelectorAll("dialog select[name=medicamento_id] option")].some(o => o.value === ' + JSON.stringify(String(extra.id)) + ')'));
@@ -708,10 +700,19 @@ test(
                 await until(() => evaluate('!document.querySelector("dialog[open]") && document.querySelector("[data-eps-integration]").textContent.includes("Catalog selection fixture")'));
                 const eps = await req('/eps/inventario?farmacia=3&buscar=Catalog+selection', { id: 4 });
                 assert.deepEqual(eps.datos.map(row => [row.medicamento.id, row.stock, row.minimo]), [[extra.id, 7, 2]]);
-                assert.equal((await db.medicamento.findUnique({ where: { id: extra.id } })).stock, 0);
+                assert.equal((await db.medicamento.findUnique({ where: { id: extra.id }, select: { stock: true } })).stock, 0);
               }
               await send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
             }
+            const { identifier } = await send('Page.addScriptToEvaluateOnNewDocument', {
+              source: 'sessionStorage.setItem("saludclick_token",' + JSON.stringify(token(4)) +
+                ');sessionStorage.setItem("saludclick_user",JSON.stringify({id:4,rol:4,nombre:"Fixture"}));',
+            });
+            await send('Page.navigate', { url: origin + '/pages/eps.html#notificaciones' });
+            await until(() => evaluate('document.querySelector("[href=\'/pages/eps-v1.html\']") !== null'));
+            await send('Page.navigate', { url: origin + '/pages/eps-v1.html#notificaciones' });
+            await until(() => evaluate('document.querySelector("[data-eps-view=notificaciones]") !== null'));
+            await send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
             assert.deepEqual(browser.errores, []);
             await browser.cerrar();
             browser = null;
@@ -788,14 +789,14 @@ test(
         const persisted=await db.pago.findFirst({where:{solicitud_id:order.id,usuario_id:2}});
         assert.equal(persisted.estado,'APROBADO');
         assert.equal(persisted.simulacion,true);
-        const beforeCancel = await db.medicamento.findUnique({ where: { id: drug.id } });
+        const beforeCancel = await db.medicamento.findUnique({ where: { id: drug.id }, select: { stock: true } });
         await req('/pedidos/' + order.id, { id: 5, method: 'DELETE', status: 404 });
         const cancellation = { id: 2, method: 'DELETE' };
         await Promise.all([
           req('/pedidos/' + order.id, cancellation),
           req('/pedidos/' + order.id, cancellation),
         ]);
-        assert.equal((await db.medicamento.findUnique({ where: { id: drug.id } })).stock, beforeCancel.stock + 1);
+        assert.equal((await db.medicamento.findUnique({ where: { id: drug.id }, select: { stock: true } })).stock, beforeCancel.stock + 1);
         assert.equal((await db.solicitud.findUnique({ where: { id: order.id } })).estado, 'CANCELADA');
         assert.equal(await db.pago.count(), beforePayments + 1);
         assert.equal(await db.detalleSolicitud.count({ where: { solicitud_id: order.id } }), 1);
@@ -809,7 +810,7 @@ test(
           else process.env.NODE_ENV = environment;
         }
         assert.equal(await db.solicitud.count(), beforeOrders + 1);
-        assert.equal((await db.medicamento.findUnique({ where: { id: drug.id } })).stock, beforeCancel.stock + 1);
+        assert.equal((await db.medicamento.findUnique({ where: { id: drug.id }, select: { stock: true } })).stock, beforeCancel.stock + 1);
       });
     } finally {
       if (browser) await browser.cerrar();

@@ -58,10 +58,7 @@ function createRecaptchaMiddleware({
             const valido = resultado.success === true && allowedHostnames.includes(hostname);
 
             if (!valido) {
-                logger.warn("Validación reCAPTCHA rechazada:", {
-                    success: resultado.success,
-                    errorCodes: resultado["error-codes"]
-                });
+                logger.warn("Validación reCAPTCHA rechazada.");
                 return res.status(403).json({
                     ok: false,
                     mensaje: "No se pudo validar la solicitud. Inténtalo nuevamente."
@@ -69,8 +66,8 @@ function createRecaptchaMiddleware({
             }
 
             return next();
-        } catch (error) {
-            logger.error("Error verificando reCAPTCHA:", error.message);
+        } catch {
+            logger.error("Error verificando reCAPTCHA.");
             return res.status(503).json({
                 ok: false,
                 mensaje: "No se pudo verificar la seguridad. Inténtalo nuevamente."

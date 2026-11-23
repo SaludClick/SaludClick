@@ -24,7 +24,9 @@ router.use("/formulas", formulaRoutes);
 router.use("/admin", adminRoutes);
 router.use("/admin/afiliados", require("./afiliados.routes"));
 router.use("/farmacia", farmaciaRoutes);
+router.use("/eps/v1", require("./eps-v1.routes"));
 router.use("/eps", epsRoutes);
+router.use("/eps", require("./eps-v1.routes"));
 router.use("/integracion", require("./eps-integration.routes").createRouter());
 router.use("/chat", chatRoutes);
 

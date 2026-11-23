@@ -1,7 +1,8 @@
 const medicationRepository = require('../repositories/medication.repository');
 
-async function listar() {
-    return medicationRepository.listar();
+async function listar(options) {
+    return medicationRepository.listar(options);
 }
 
-module.exports = { listar };
+module.exports = { listar, buscarPublicados: (...args) => medicationRepository.buscarPublicados(...args),
+    foto: archivo => medicationRepository.foto(archivo) };

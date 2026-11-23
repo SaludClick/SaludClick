@@ -1,47 +1,49 @@
 ---
 import Layout from './Layout.astro';
 const { modulo, titulo, descripcion = '' } = Astro.props;
+const dashboard = modulo === 'dashboard';
 const enlaces = [
-  ['dashboard', 'Dashboard', '/pages/farmacia.html'],
-  ['usuarios', 'Usuarios', '/pages/farmacia-usuarios.html'],
-  ['solicitudes', 'Solicitudes', '/pages/farmacia-solicitudes.html'],
-  ['inventario', 'Inventario', '/pages/farmacia-inventario.html'],
-  ['medicamentos', 'Medicamentos', '/pages/farmacia-medicamentos.html'],
-  ['entregas', 'Entregas', '/pages/farmacia-entregas.html'],
-  ['notificaciones', 'Notificaciones', '/pages/farmacia-notificaciones.html'],
-  ['chat', 'Chat', '/pages/farmacia-chat.html'],
-  ['perfil', 'Perfil', '/pages/farmacia-perfil.html']
+  ['dashboard', 'Dashboard', '/pages/farmacia.html', 'fa-gauge-high'],
+  ['solicitudes', 'Solicitudes', '/pages/farmacia-solicitudes.html', 'fa-clipboard-list'],
+  ['usuarios', 'Usuarios', '/pages/farmacia-usuarios.html', 'fa-user-group'],
+  ['inventario', 'Inventario', '/pages/farmacia-inventario.html', 'fa-boxes-stacked'],
+  ['medicamentos', 'Medicamentos', '/pages/farmacia-medicamentos.html', 'fa-capsules'],
+  ['notificaciones', 'Notificaciones', '/pages/farmacia-notificaciones.html', 'fa-bell'],
+  ['perfil', 'Perfil', '/pages/farmacia-perfil.html', 'fa-circle-user']
 ];
 ---
-<Layout title={`${titulo} | Farmacia | SaludClick`} bodyClass="admin-console">
-  <Fragment slot="head"><link rel="stylesheet" href="/css/farmacia.css" /><slot name="head" /></Fragment>
-  <div class="admin-app" id="farmaciaApp" data-farmacia-module={modulo}>
+<Layout title={`${titulo} | Farmacia | SaludClick`} bodyClass={dashboard ? 'admin-console farmacia-dashboard-page' : 'admin-console'}>
+  <Fragment slot="head"><link rel="stylesheet" href="/css/farmacia.css" /><link rel="stylesheet" href="/css/panel-menu.css" /><slot name="head" /></Fragment>
+  <div class="admin-app" data-panel-menu="farmacia" id="farmaciaApp" data-farmacia-module={modulo}>
     <aside class="admin-sidebar" id="menu" aria-label="Navegación de farmacia">
+      <button class="admin-menu-toggle panel-menu-close" type="button" data-panel-close aria-label="Cerrar menú"><span class="panel-menu-icon" aria-hidden="true"></span></button>
       <a href="/pages/farmacia.html" class="admin-brand"><span class="admin-brand-mark"><i class="fa-solid fa-heart-pulse" aria-hidden="true"></i></span><span>SaludClick<small>FARMACIA</small></span></a>
       <span class="admin-nav-caption">MENÚ PRINCIPAL</span>
       <nav class="admin-side-nav" aria-label="Secciones de farmacia">
-        {enlaces.map(([clave, texto, ruta]) => <a class:list={['admin-side-link', { active: clave === modulo }]} href={ruta} aria-current={clave === modulo ? 'page' : undefined} data-farmacia-link={clave}><span>{texto}</span></a>)}
+        {enlaces.map(([clave, texto, ruta, icono]) => <a class:list={['admin-side-link', { active: clave === modulo }]} href={ruta} aria-current={clave === modulo ? 'page' : undefined} data-farmacia-link={clave}>{dashboard && <i class={`fa-solid ${icono}`} aria-hidden="true"></i>}<span>{texto}</span></a>)}
       </nav>
       <div class="admin-sidebar-bottom">
         <div class="admin-sidebar-user"><span class="admin-avatar"><i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i></span><span><strong id="farmaciaUserName">Farmacia</strong><small>Personal de farmacia</small></span></div>
         <button class="admin-logout" id="logout" type="button">Cerrar sesión</button>
       </div>
     </aside>
+    <div class="panel-menu-backdrop" data-panel-backdrop aria-hidden="true"></div>
     <div class="admin-main">
       <header class="admin-topbar">
         <button class="admin-menu-toggle" id="menuToggle" type="button" aria-label="Abrir menú de farmacia" aria-expanded="false" aria-controls="menu"><span aria-hidden="true">☰</span></button>
-        <div class="admin-topbar-copy"><span>SaludClick · Farmacia</span><strong>{titulo}</strong></div>
+        <div class="admin-topbar-copy"><span>SaludClick · Farmacia</span>{!dashboard && <strong>{titulo}</strong>}</div>
         <a class="farmacia-notifications-bell" id="farmaciaNotificationsBell" href="/pages/farmacia-notificaciones.html" aria-label="Notificaciones de farmacia. Contador no disponible."><i class="fa-solid fa-bell" aria-hidden="true"></i><span id="farmaciaNotificationsBadge" aria-hidden="true">—</span></a>
+        {dashboard && <a class="farmacia-dashboard-profile" href="/pages/farmacia-perfil.html" aria-label="Perfil de Farmacia"><span class="farmacia-dashboard-avatar" aria-hidden="true" id="farmaciaDashboardAvatar">F</span><span id="farmaciaDashboardAccountName">Farmacia</span></a>}
       </header>
       <p id="farmaciaAccessStatus" class="admin-message" role="status" aria-live="polite">Verificando acceso de Farmacia…</p>
       <main class="admin-content farmacia-main" id="farmaciaMain" hidden>
-        <header class="admin-page-heading"><div><span class="admin-eyebrow">OPERACIÓN DE FARMACIA</span><h1>{titulo}</h1><p>{descripcion}</p></div><button id="refreshFarmacia" class="btn-outline admin-refresh" type="button" hidden={['usuarios', 'chat', 'perfil'].includes(modulo)}>Actualizar</button></header>
+        <header class="admin-page-heading"><div>{!dashboard && modulo !== "medicamentos" && <span class="admin-eyebrow">OPERACIÓN DE FARMACIA</span>}<h1 id={modulo === "medicamentos" ? "farmaciaMedicamentosTitle" : undefined}>{titulo}</h1>{(modulo !== "medicamentos" || descripcion) && <p>{descripcion}</p>}</div><button id="refreshFarmacia" class="btn-outline admin-refresh" type="button" hidden={['usuarios', 'perfil', 'medicamentos'].includes(modulo)}>Actualizar</button></header>
         <div id="farmaciaMessage" class="admin-message" role="status" aria-live="polite"></div>
-        <p id="farmaciaLinkedEps" role="status" aria-live="polite">Consultando EPS vinculada…</p>
+        <p hidden={modulo === "medicamentos"} id="farmaciaLinkedEps" role="status" aria-live="polite">Consultando EPS vinculada…</p>
         <slot />
       </main>
     </div>
   </div>
-  <script is:inline type="module" src="/js/menu.js"></script>
+  <script is:inline type="module" src="/js/panel-menu.js"></script>
   <script is:inline type="module" src="/js/farmacia.js"></script>
 </Layout>

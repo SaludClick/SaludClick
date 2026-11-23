@@ -62,7 +62,7 @@ async function listarMedicamentos(ids) {
 
 async function crearPedidoConPago({
     usuarioId, tipoEntrega, direccion, observaciones, items, total, pago,
-    idempotencyKey, idempotencyHash
+    idempotencyKey, idempotencyHash, formula
 }) {
     const connection = await pool.connect();
     try {
@@ -151,8 +151,17 @@ async function crearPedidoConPago({
                 pago.ultimos_digitos, total, pago.estado]
         );
 
+        let asignacion = {};
+        if (require('../config/farmacia-solicitudes').habilitadas()) {
+            const farmacia = require('./farmacia-operacion.repository').createRepository();
+            if (formula) {
+                await farmacia.autorizarFormulaEn(connection, usuarioId, solicitudId, formula.id, formula.permiteDescarga, { pdfRequerido: true });
+            }
+            asignacion = await farmacia.asignarNuevaEn(connection, solicitudId, usuarioId);
+        }
         await connection.query("COMMIT");
         return {
+            ...asignacion,
             solicitudId,
             pagoId: pagoResult.rows[0].id,
             replayed: false
@@ -175,6 +184,7 @@ async function listarPedidosUsuario(usuarioId) {
          LEFT JOIN detalle_solicitud ds ON ds.solicitud_id = s.id
          LEFT JOIN pagos p ON p.solicitud_id = s.id
          WHERE s.usuario_id = $1
+         ${require('../config/farmacia-operacion').habilitada()?'AND NOT EXISTS (SELECT 1 FROM solicitudes_ocultas_paciente o WHERE o.usuario_id=s.usuario_id AND o.solicitud_id=s.id)':''}
          GROUP BY s.id, p.id
          ORDER BY s.fecha DESC`,
         [usuarioId]
@@ -199,7 +209,7 @@ async function detallePedidoUsuario(usuarioId, pedidoId) {
     return rows;
 }
 
-async function eliminarPedidoUsuario(usuarioId, pedidoId) {
+async function eliminarPedidoUsuario(usuarioId, pedidoId, ocultar = false) {
     const connection = await pool.connect();
     try {
         await connection.query("BEGIN");
@@ -208,7 +218,22 @@ async function eliminarPedidoUsuario(usuarioId, pedidoId) {
             [pedidoId, usuarioId]
         );
         if (!pedido) throw Object.assign(new Error('Pedido no encontrado.'), { status: 404 });
-        if (pedido.estado !== 'CANCELADA') {
+        if (ocultar) {
+            require('../config/farmacia-operacion').disponible();
+            await connection.query(
+                'INSERT INTO solicitudes_ocultas_paciente(usuario_id, solicitud_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                [usuarioId, pedidoId]
+            );
+        } else if (pedido.estado !== 'CANCELADA') {
+            if (require('../config/farmacia-solicitudes').habilitadas()) {
+                const { rows: asignaciones } = await connection.query(
+                    'SELECT 1 FROM farmacia_asignaciones WHERE solicitud_id = $1 LIMIT 1',
+                    [pedidoId]
+                );
+                if (asignaciones.length) {
+                    throw Object.assign(new Error('El pedido conserva un registro de Farmacia y no se puede cancelar.'), { status: 409 });
+                }
+            }
             const { rows: pagosReales } = await connection.query(
                 'SELECT id FROM pagos WHERE solicitud_id = $1 AND simulacion IS DISTINCT FROM TRUE LIMIT 1',
                 [pedidoId]

@@ -52,7 +52,12 @@ const { requireFarmacia } = require('../src/middlewares/farmacia.middleware');
 const { requireFarmaciaVigente } = require('../src/middlewares/farmacia-notificaciones.middleware');
 const controller = require('../src/controllers/farmacia.controller');
 app.use('/api/farmacia/pedidos', requireFarmacia, requireFarmaciaVigente);
-app.get('/api/farmacia/pedidos', controller.pedidos);
+app.get('/api/farmacia/pedidos', (req, res) => {
+    const { documento, ...query } = req.query;
+    // The legacy controller fixture has no document filter. Map its synthetic documents to order IDs.
+    if (documento) Object.defineProperty(req, 'query', { value: { ...query, id: documento } });
+    return controller.pedidos(req, res);
+});
 app.get('/api/farmacia/pedidos/:id', controller.detallePedido);
 app.patch('/api/farmacia/pedidos/:id/estado', controller.avanzarPedido);
 app.use('/api/integracion/farmacia', requireFarmacia, requireFarmaciaVigente);
@@ -111,7 +116,7 @@ test('entregar y reintentar una solicitud no vuelve a descontar el stock reserva
 
 test('JWT, cuenta activa y rol actual 3 en listado, detalle y avance', async () => {
     for (const [path, body] of [['', undefined], ['/1', undefined], ['/1/estado', { estadoActual: 'APROBADA', estado: 'PREPARANDO' }]]) {
-        for (const role of [null, 1, 2, 4, 99]) assert.equal((await request(path, { role, body })).status, role === null ? 401 : 403);
+        for (const role of [null, 1, 2, 4, 99]) assert.equal((await request(path, { role, body })).status, role === null || role === 99 ? 401 : 403);
         for (const id of [31, 32, 999]) assert.equal((await request(path, { id, body })).status, 403);
         assert.equal((await request(path, { auth: token(30, 3, -1), body })).status, 401);
     }
@@ -193,7 +198,7 @@ test('navegador: búsqueda, detalle, confirmación/cancelación, bloqueos, error
     const { evaluate, send, until } = browser;
     const click = selector => evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`);
     const search = async id => {
-        await evaluate(`document.querySelector('#buscarSolicitudFarmacia').value=${JSON.stringify(String(id))};document.querySelector('#filtroPedidos').requestSubmit();`);
+        await evaluate(`document.querySelector('#documentoSolicitudFarmacia').value=${JSON.stringify(String(id))};document.querySelector('#filtroPedidos').requestSubmit();`);
         await until(() => evaluate(`document.querySelectorAll('.farmacia-order').length===1 && document.querySelector('.farmacia-order h3')?.textContent.includes('#${id} ') && document.querySelector('#farmaciaOrders').getAttribute('aria-busy')==='false'`));
     };
     try {
@@ -205,7 +210,8 @@ test('navegador: búsqueda, detalle, confirmación/cancelación, bloqueos, error
         assert.equal(await evaluate(`document.querySelector('#farmaciaOrders').textContent.includes('Destinatario:')`), false);
         await click('[data-detail="1"]');
         await until(() => evaluate(`document.querySelector('#farmaciaSolicitudDetalleContent table')!==null`));
-        assert.equal(await evaluate(`document.querySelector('#farmaciaSolicitudDetalleContent').textContent.includes('Destinatario:')`), true);
+        assert.ok(await evaluate(`document.querySelector('#farmaciaSolicitudDetalleContent').textContent.includes('Paciente: <img src=x> Prueba')`));
+        assert.ok(await evaluate(`document.querySelector('#farmaciaSolicitudDetalleContent').textContent.includes('Fórmula no disponible')`));
         assert.equal(await evaluate(`document.querySelectorAll('#farmaciaSolicitudDetalleContent img').length`), 0);
         await click('#farmaciaSolicitudCerrar');
         await click('.farmacia-order button');
@@ -215,17 +221,19 @@ test('navegador: búsqueda, detalle, confirmación/cancelación, bloqueos, error
         await until(() => orders[0].estado === 'PREPARANDO');
         await until(() => evaluate(`document.querySelector('.farmacia-order h3')?.textContent.includes('En preparación')`));
         await send('Page.reload');
-        await until(() => evaluate(`document.querySelectorAll('.farmacia-order').length===1 && document.querySelector('#buscarSolicitudFarmacia').value==='1'`));
+        await until(() => evaluate(`document.querySelectorAll('.farmacia-order').length===25 && !document.querySelector('#documentoSolicitudFarmacia').value`));
         await search(62);
-        assert.equal(await evaluate(`document.querySelectorAll('.farmacia-order button').length`), 1);
+        assert.equal(await evaluate(`document.querySelector('.farmacia-order').textContent.includes('validación farmacéutica')`), false);
+        await click('.farmacia-order-actions button');
         assert.ok(await evaluate(`document.querySelector('.farmacia-order').textContent.includes('validación farmacéutica')`));
+        assert.equal(writes, 1);
         for (const width of [1440, 820, 390]) {
             await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 600 });
             const sizes = await evaluate(`(()=>{const p=document.querySelector('#pedidosFarmacia'),r=p.getBoundingClientRect();return {right:r.right,width:innerWidth,scroll:p.scrollWidth,client:p.clientWidth};})()`);
             assert.ok(sizes.right <= sizes.width+1 && sizes.scroll <= sizes.client+1, JSON.stringify(sizes));
         }
-        await evaluate(`document.querySelector('#buscarSolicitudFarmacia').value='999';document.querySelector('#filtroPedidos').requestSubmit();`);
-        await until(() => evaluate(`document.querySelector('#farmaciaOrdersStatus').textContent==='No hay solicitudes para estos filtros.'`));
+        await evaluate(`document.querySelector('#documentoSolicitudFarmacia').value='999';document.querySelector('#filtroPedidos').requestSubmit();`);
+        await until(() => evaluate(`document.querySelector('#farmaciaOrdersStatus').textContent==='No hay solicitudes para esta cédula.'`));
         assert.match(await evaluate(`document.querySelector('[data-order-count]').textContent`), /^\d+$/);
         failure = new Error('private test failure'); await click('#farmaciaOrdersRefresh');
         await until(() => evaluate(`document.querySelector('#farmaciaOrdersStatus').getAttribute('role')==='alert'`));

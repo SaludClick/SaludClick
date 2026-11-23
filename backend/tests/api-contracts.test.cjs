@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const http = require('node:http');
 const Module = require('node:module');
 const jwt = require('jsonwebtoken');
+const { PublicError } = require('../src/utils/public-error');
 const { createRecaptchaMiddleware } = require('../src/middlewares/recaptcha.middleware');
 
 const secretBefore = process.env.JWT_SECRET;
@@ -90,7 +91,7 @@ const fakeModules = new Map([
         solicitarRecuperacion: async correo => { if (correo === 'fail@example.test') throw new Error('mail failure'); },
         restablecerPassword: async (token, password) => {
             if (serviceFailures.restablecerPassword) throw serviceFailures.restablecerPassword;
-            if (!token || !password) throw new Error('El enlace de recuperación es inválido o ya expiró.');
+            if (!token || !password) throw new PublicError('El enlace de recuperación es inválido o ya expiró.');
         },
         profile: async id => ({ id, nombre: 'Usuario de prueba' }),
         updateProfile: async (id, data) => ({ id, ...data })
@@ -103,7 +104,7 @@ const fakeModules = new Map([
         updateProfile: async (id, data) => {
             const nombre = String(data.nombre || '').trim();
             const apellido = String(data.apellido || '').trim();
-            if (!nombre || !apellido) throw new Error('Nombre y apellido son obligatorios.');
+            if (!nombre || !apellido) throw new PublicError('Nombre y apellido son obligatorios.');
             return { id, nombre, apellido, telefono: String(data.telefono || '').trim(),
                 tipoDocumento: String(data.tipoDocumento || '').trim(), ciudad: String(data.ciudad || '').trim() };
         }
@@ -147,9 +148,11 @@ const fakeModules = new Map([
         mkdir: async () => {},
         open: async () => ({ writeFile: async () => {}, close: async () => {} }),
         rm: async file => { repositoryFailures.cleanedFormula = file; },
-        access: async () => {
+        realpath: async target => {
             if (repositoryFailures.fileAccess) throw repositoryFailures.fileAccess;
-        }
+            return target;
+        },
+        stat: async () => ({ isFile: () => true })
     }]
 ]);
 
@@ -162,9 +165,9 @@ function token(rol = 2, expiresIn = '1h') {
     return jwt.sign({ id: 12, correo: 'api-test@example.test', rol }, TEST_SECRET, { expiresIn });
 }
 
-async function call(path, { method = 'GET', role, auth = true, body, idempotencyKey } = {}) {
+async function call(path, { method = 'GET', role, auth = true, body, idempotencyKey, bearer } = {}) {
     const headers = {};
-    if (auth) headers.Authorization = `Bearer ${role === 'expired' ? token(2, -1) : token(role ?? 2)}`;
+    if (auth) headers.Authorization = `Bearer ${bearer ?? (role === 'expired' ? token(2, -1) : token(role ?? 2))}`;
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (method === 'POST' && path === '/api/pedidos/') {
         const key = idempotencyKey === false
@@ -386,6 +389,7 @@ test('las rutas de farmacia y paciente respetan roles separados', async t => {
                 });
             } else {
                 assert.deepEqual(data, {
+                    ...(path.includes('/farmacia/')?{operacionHabilitada:false,notificacionesHabilitadas:false,inventarioPropioHabilitado:false}:{}),
                     ok: true,
                     mensaje: path.includes('/eps/')
                         ? 'Acceso autorizado al panel EPS.'
@@ -456,7 +460,8 @@ test('errores de controlador conservan sus status, campos y mensajes', async t =
 
 test('controladores de auth y pedidos cubren errores del servicio sin filtrar detalles', async () => {
     const originalConsoleError = console.error;
-    console.error = () => {};
+    const logged = [];
+    console.error = (...args) => logged.push(args.join(' '));
     try {
         serviceFailures.register = new Error('registro fallido');
         let result = await call('/api/auth/register', { method: 'POST', role: 1, body: {} });
@@ -469,7 +474,7 @@ test('controladores de auth y pedidos cubren errores del servicio sin filtrar de
             method: 'POST', body: { recaptchaToken: 'test-recaptcha-token' }
         });
         assert.equal(result.response.status, 400);
-        assert.deepEqual(result.data, { ok: false, mensaje: 'login fallido' });
+        assert.deepEqual(result.data, { ok: false, mensaje: 'No se pudo iniciar sesión.' });
         delete serviceFailures.login;
 
         result = await call('/api/auth/google', {
@@ -486,17 +491,19 @@ test('controladores de auth y pedidos cubren errores del servicio sin filtrar de
             method: 'POST', body: { token: 'valid-shape', password: 'valid-shape' }
         });
         assert.equal(result.response.status, 400);
-        assert.deepEqual(result.data, { ok: false, mensaje: 'reset fallido' });
+        assert.deepEqual(result.data, { ok: false, mensaje: 'No se pudo restablecer la contraseña.' });
         delete serviceFailures.restablecerPassword;
 
         serviceFailures.crearPedido = Object.assign(new Error('pedido inválido'), { status: 400 });
         result = await call('/api/pedidos/', { method: 'POST', body: {} });
         assert.equal(result.response.status, 400);
         assert.equal(result.data.mensaje, 'pedido inválido');
-        serviceFailures.crearPedido = new Error('backend failure');
+        const marker = 'audit-internal-error-marker';
+        serviceFailures.crearPedido = new Error(marker);
         result = await call('/api/pedidos/', { method: 'POST', body: {} });
         assert.equal(result.response.status, 500);
         assert.deepEqual(result.data, { ok: false, mensaje: 'No se pudo crear el pedido.' });
+        assert.equal(logged.some(line => line.includes(marker)), false);
         delete serviceFailures.crearPedido;
 
         serviceFailures.listarPedidos = new Error('storage');
@@ -519,6 +526,66 @@ test('controladores de auth y pedidos cubren errores del servicio sin filtrar de
         for (const key of Object.keys(serviceFailures)) delete serviceFailures[key];
         console.error = originalConsoleError;
     }
+});
+
+test('JWT exige firma HS256 y expiración en endpoints privados', async () => {
+    const claims = { id: 12, rol: 2 };
+    for (const bearer of [
+        'invalid-token',
+        jwt.sign(claims, 'another-test-key', { expiresIn: '1h' }),
+        jwt.sign(claims, TEST_SECRET),
+        jwt.sign(claims, TEST_SECRET, { algorithm: 'HS384', expiresIn: '1h' }),
+        jwt.sign({ ...claims, rol_id: 1 }, TEST_SECRET, { expiresIn: '1h' }),
+        jwt.sign({ ...claims, id: 0 }, TEST_SECRET, { expiresIn: '1h' }),
+        jwt.sign({ ...claims, rol: 99 }, TEST_SECRET, { expiresIn: '1h' }),
+        token().replace(/\.[^.]+$/, '.altered-signature')
+    ]) {
+        const { response } = await call('/api/pedidos/', { bearer });
+        assert.equal(response.status, 401);
+    }
+    assert.equal((await call('/api/pedidos/', { auth: false })).response.status, 401);
+    assert.equal((await call('/api/pedidos/', { role: 'expired' })).response.status, 401);
+    assert.equal((await call('/api/pedidos/', { role: 4 })).response.status, 403);
+});
+
+test('archivos privados y respaldos quedan fuera del servidor estático', async () => {
+    for (const path of [
+        '/%2eenv', '/.env.production', '/respaldo.sql', '/private_uploads/formula.pdf',
+        '/backup.json', '/data.dump', '/credentials.json', '/backend/.env'
+    ]) {
+        assert.equal((await call(path, { auth: false })).response.status, 404);
+    }
+});
+
+test('recuperación responde de forma neutra y limita intentos repetidos', async () => {
+    const tryRecovery = correo => call('/api/auth/recuperar', {
+        method: 'POST', auth: false, body: { correo }
+    });
+    const unknown = await tryRecovery('unknown@example.test');
+    const failed = await tryRecovery('fail@example.test');
+    assert.deepEqual(unknown.data, failed.data);
+    assert.equal(unknown.response.headers.get('cache-control'), 'no-store');
+    let last = failed;
+    for (let i = 0; i < 20 && last.response.status !== 429; i++) {
+        last = await tryRecovery('unknown@example.test');
+    }
+    assert.equal(last.response.status, 429);
+    assert.ok(Number(last.response.headers.get('retry-after')) > 0);
+});
+
+test('login local y Google comparten un límite antes de reCAPTCHA', async () => {
+    for (let i = 0; i < 31; i++) {
+        const endpoint = i % 2 ? 'google' : 'login';
+        const { response } = await call(`/api/auth/${endpoint}`, { method: 'POST', auth: false, body: {} });
+        if (response.status === 429) {
+            const otherEndpoint = i % 2 ? 'login' : 'google';
+            const limited = await call(`/api/auth/${otherEndpoint}`, { method: 'POST', auth: false, body: {} });
+            assert.equal(limited.response.status, 429);
+            assert.ok(Number(limited.response.headers.get('retry-after')) > 0);
+            return;
+        }
+    }
+    assert.fail('Se esperaba un límite compartido de peticiones de inicio de sesión.');
 });
 
 test('lectura de fórmula privada limita propietario y no requiere filesystem real', async t => {
@@ -562,7 +629,7 @@ test('lectura de fórmula privada limita propietario y no requiere filesystem re
             repositoryFailures.formulaCrear = new Error('repository unavailable');
             const failedCreate = await submit(dataUrl('application/pdf', Buffer.from('%PDF-1.4')));
             assert.equal(failedCreate.response.status, 500);
-            assert.equal(failedCreate.data.mensaje, 'No se pudo guardar la f?rmula.');
+            assert.equal(failedCreate.data.mensaje, 'No se pudo guardar la fórmula.');
             assert.match(repositoryFailures.cleanedFormula, /[0-9a-f-]+[.]pdf$/i);
             delete repositoryFailures.formulaCrear;
         } finally {
@@ -645,7 +712,7 @@ test('lectura de fórmula privada limita propietario y no requiere filesystem re
 
 test('dashboard: el endpoint usa la identidad JWT y entrega los cuatro indicadores sin aceptar IDs del cliente', async () => {
     for (const id of [71, 72]) {
-        const token = jwt.sign({ id, rol: 2 }, TEST_SECRET);
+        const token = jwt.sign({ id, rol: 2 }, TEST_SECRET, { expiresIn: '5m' });
         const response = await fetch(origin + '/api/dashboard/me?usuario_id=999&id=999', { headers: { Authorization: 'Bearer ' + token } });
         assert.equal(response.status, 200);
         assert.equal(dashboardPatientIds.at(-1), id);

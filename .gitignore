@@ -110,3 +110,40 @@ private_uploads/*
 
 # Accidental local path listing; preserve on disk, never publish.
 /SaludClick
+
+# Entornos locales y temporales
+.local-farmacia-runtime/
+.audit-admin-visual/
+.audit-admin-visual.cjs
+.integration-worktrees/
+
+# Resultados de pruebas
+*.tap
+
+# Credenciales
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Archivos privados
+private_uploads/
+
+# Respaldos y salidas operativas locales con datos de producción.
+*respaldo*.sql
+*.private.json
+**/private_exports/
+**/database/dumps/
+/docs/calidad/activacion-farmacia-2026-11-17/
+/docs/calidad/evidencias/dashboard-farmacia/
+/docs/calidad/reportes/farmacia-preflight-real-*.json
+/docs/calidad/reportes/farmacia-usuarios-real-*.json
+/docs/calidad/reportes/farmacia-usuarios-continuacion-readonly-*.json
+/docs/calidad/reportes/farmacia-usuarios-prevalidacion-*.json
+/docs/calidad/reportes/farmacia-usuarios-historia-reconciliada-*.json
+/docs/calidad/reportes/farmacia-usuarios-reversion-*.sql
+/docs/calidad/reportes/farmacia-eps-busqueda-respaldos-*.json
+/docs/calidad/reportes/farmacia-eps-historial-remoto-*.json
+/docs/calidad/reportes/farmacia-implementacion-*.png
+/docs/calidad/reportes/farmacia-integral-*.png
+/farmacia-integral-audit.json

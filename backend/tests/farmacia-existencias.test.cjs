@@ -32,6 +32,11 @@ const db = {
         async findUnique({ where, select }) { calls.push({ operation: 'detail', where }); if (failure) throw failure; return project(records.find(row => row.id === where.id), select); }
     },
     solicitud: { findMany: async () => [], count: async () => 0, groupBy: async () => [] },
+    $queryRawUnsafe: async (sql, ids) => {
+        if (failure) throw failure;
+        if (ids) return records.filter(row => JSON.parse(ids).includes(row.id)).map(row=>({id:row.id,stock_minimo:row.stock_minimo??0}));
+        return records.filter(row=>row.estado==='DISPONIBLE'&&row.stock>0&&row.stock<=(row.stock_minimo??0)).map(row=>({id:row.id}));
+    },
     $transaction: operation => operation(db)
 };
 for (const method of ['create', 'createMany', 'update', 'updateMany', 'delete', 'deleteMany']) db.medicamento[method] = () => assert.fail('Una consulta intentó escribir existencias.');
@@ -72,7 +77,7 @@ async function request(path, { id = 30, role = 3, auth, method = 'GET' } = {}) {
 }
 test('JWT, cuenta activa y rol actual 3 protegen inventario, catálogo, detalles y dashboard', async () => {
     for (const path of ['/inventario','/inventario/1','/medicamentos','/medicamentos/1','/dashboard']) {
-        for (const role of [null,1,2,4,99]) assert.equal((await request(path,{role})).status,role === null ? 401 : 403);
+        for (const role of [null,1,2,4,99]) assert.equal((await request(path,{role})).status,role === null || role === 99 ? 401 : 403);
         for (const id of [31,32,999]) assert.equal((await request(path,{id})).status,403);
         assert.equal((await request(path,{auth:token(30,3,-1)})).status,401);
     }
@@ -111,7 +116,8 @@ test('detalle farmacéutico existente y fórmula desconocida explícita; sin inv
         const result=await request(path); assert.equal(result.status,200);
         assert.equal(result.data.medicamento.requisitoFormula,'DESCONOCIDO');
         assert.equal(result.data.medicamento.presentacion,'Caja de prueba');
-        for(const field of ['precio','codigo_fuente','lotes','vencimientos','stock_minimo']) assert.equal(result.data.medicamento[field],undefined);
+        for(const field of ['lotes','vencimientos']) assert.equal(result.data.medicamento[field],undefined);
+        assert.equal(result.data.medicamento.stock_minimo,path.startsWith('/medicamentos/')?0:undefined);
     }
     assert.equal((await request('/medicamentos/1')).data.medicamento.requisitoFormula,'REQUIERE');
     assert.equal((await request('/medicamentos/2')).data.medicamento.requisitoFormula,'NO_REQUIERE');
@@ -122,11 +128,15 @@ test('validación de filtros, IDs y máximo de página antes de consultar medica
     for(const path of ['/inventario/0','/medicamentos/2147483648','/inventario/1?extra=1']) assert.equal((await request(path)).status,400);
     assert.equal(calls.length,0);
 });
-test('sin escrituras en consultas; las rutas nuevas no ofrecen POST/PATCH/DELETE', async () => {
+test('las consultas son de solo lectura y la gestión de medicamentos valida su entrada', async () => {
     const before=structuredClone(records);
     for(const path of ['/inventario','/medicamentos','/inventario/1','/medicamentos/1']) {
         assert.equal((await request(path)).status,200);
-        for(const method of ['POST','PATCH','DELETE']) assert.equal((await request(path,{method})).status,404);
+        for(const method of ['POST','PATCH','DELETE']) {
+            const medicationWrite = path === '/medicamentos' && method === 'POST'
+                || path === '/medicamentos/1' && ['PATCH','DELETE'].includes(method);
+            assert.equal((await request(path,{method})).status,medicationWrite ? 400 : 404);
+        }
     }
     assert.deepEqual(records,before); assert.equal(process.env.FARMACIA_NOTIFICACIONES_ENABLED,'false');
 });
@@ -169,11 +179,9 @@ test('navegador: búsquedas, filtros, paginación, detalle, requisitos, recarga,
         await click(sel('inventario')+' [data-existencias-part="cerrar"]');
         await send('Page.navigate',{url:`${origin}/pages/farmacia-medicamentos.html`});
         await until(()=>evaluate(`document.querySelectorAll('#farmaciaMedicamentos tr').length===25`));
-        await filter('catalogo','formula','desconocido');
-        assert.ok(await evaluate(`document.querySelector('#farmaciaMedicamentos').textContent.includes('Requisito desconocido')`));
-        await click(sel('catalogo')+' [data-existencias-part="limpiar"]');
-        await filter('catalogo','buscar','TEST-3');
-        assert.ok(await evaluate(`document.querySelector('#farmaciaMedicamentos').textContent.includes('Medicamento')`));
+        assert.ok(await evaluate(`document.querySelector('#medicamentos [data-existencias-part="form"]')===null`));
+        await click(sel('catalogo')+' [data-existencias-part="siguiente"]');
+        await until(()=>evaluate(`document.querySelector('#catalogoPage').textContent.includes('Página 2')`));
         for(const width of [1440,820,390]){
             await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<600});
             assert.ok(await evaluate(`Array.from(document.querySelectorAll('.farmacia-existencias')).every(p=>p.getBoundingClientRect().right<=innerWidth+1&&p.scrollWidth<=p.clientWidth+1)`));

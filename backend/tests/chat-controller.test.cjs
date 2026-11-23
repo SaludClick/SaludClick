@@ -43,7 +43,7 @@ test("chat controller lista conversaciones y mapea errores a 403", async () => {
     const failed = response();
     await controller.listar({ usuario: { id: 10 } }, failed);
     assert.equal(failed.statusCode, 403);
-    assert.deepEqual(failed.body, { ok: false, mensaje: "No autorizado" });
+    assert.deepEqual(failed.body, { ok: false, mensaje: "No se pudo completar la operación de chat." });
 });
 
 test("chat controller crea conversación con 201 y mapea errores a 403", async () => {
@@ -63,7 +63,7 @@ test("chat controller diferencia conversación no autorizada y error de historia
     await controller.historial({ usuario: { id: 10 }, params: { id: "7" } }, res);
     assert.deepEqual(res.body, { ok: true, conversation: { id: 7 }, messages: [] });
 
-    failure = new Error("Conversación sin permisos");
+    failure = new (require("../src/utils/public-error").PublicError)("Conversación sin permisos");
     const forbidden = response();
     await controller.historial({ usuario: { id: 10 }, params: { id: "7" } }, forbidden);
     assert.equal(forbidden.statusCode, 404);

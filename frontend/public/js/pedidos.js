@@ -137,18 +137,45 @@ if (checkAuthGuard()) {
             }
             updateDemo();
 
+            const formulaPanel = document.getElementById('formulaEnSolicitud');
+            const formulaSelect = document.getElementById('formulaSolicitud');
+            const consultaFormula = document.getElementById('autorizarConsultaFormula');
+            const descargaFormula = document.getElementById('autorizarDescargaFormula');
+            if (formulaPanel) {
+                formulaSelect.addEventListener('change', () => {
+                    consultaFormula.checked = descargaFormula.checked = false;
+                    consultaFormula.disabled = !formulaSelect.value;
+                    descargaFormula.disabled = true;
+                });
+                consultaFormula.addEventListener('change', () => {
+                    descargaFormula.disabled = !consultaFormula.checked;
+                    if (!consultaFormula.checked) descargaFormula.checked = false;
+                });
+                apiFetch('/api/formulas').then(({ formulas, adjuntarASolicitud }) => {
+                    if (!adjuntarASolicitud) return;
+                    const pdfs = formulas.filter(formula => formula.tipo_mime === 'application/pdf');
+                    for (const pdf of pdfs) formulaSelect.add(new Option(pdf.nombre, String(pdf.id)));
+                    if (!pdfs.length) document.getElementById('estadoFormulaSolicitud').textContent = 'Tu cuenta todavía no tiene un PDF cargado.';
+                    formulaPanel.hidden = false;
+                }).catch(() => {
+                    document.getElementById('estadoFormulaSolicitud').textContent = 'No pudimos consultar tus fórmulas. Recarga la página para adjuntar un PDF.';
+                    formulaPanel.hidden = false;
+                });
+            }
+
             function claveIntento() { return IDEMPOTENCY_STORAGE_KEY + ':' + getCurrentUser()?.id; }
 
             function limpiarClavePedido() {
                 sessionStorage.removeItem(claveIntento());
             }
 
-            function obtenerClavePedido(items) {
+            function obtenerClavePedido(items, formula) {
                 const fingerprint = JSON.stringify({
                     tipoEntrega: tipoEntrega.value,
                     items: [...items].sort(
                         (a, b) => Number(a.id) - Number(b.id)
-                    )
+                    ),
+                    ...(formula && { formula })
                 });
                 const saved = sessionStorage.getItem(claveIntento());
                 if (saved) {
@@ -644,6 +671,13 @@ if (checkAuthGuard()) {
                 const token = getToken();
                 try {
                     const state = validarFormulario();
+                    if (formulaSelect?.value && !consultaFormula.checked) {
+                        throw new Error('Autoriza la consulta del PDF seleccionado o envía la solicitud sin adjuntarlo.');
+                    }
+                    const formula = formulaSelect?.value
+                        ? { id: Number(formulaSelect.value), permiteDescarga: descargaFormula.checked }
+                        : undefined;
+
                     processing = true;
                     btn.disabled = true;
                     btn.classList.add('loading');
@@ -655,9 +689,10 @@ if (checkAuthGuard()) {
                         tipoEntrega: tipoEntrega.value,
                         direccion: direccion.value.trim(),
                         observaciones: observaciones.value.trim(),
+                        formula,
                         pago: {...demoPayment()}
                     };
-                    const idempotencyKey = obtenerClavePedido(payload.items);
+                    const idempotencyKey = obtenerClavePedido(payload.items, formula);
                     const result = await apiFetch('/api/pedidos', {
                         method:'POST', body:JSON.stringify(payload), headers:{'Idempotency-Key':idempotencyKey}
                     });

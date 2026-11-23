@@ -8,7 +8,7 @@ const INDEX_SQL = `SELECT i.indisunique AND i.indisvalid AND i.indisready
     AND pg_get_expr(i.indpred,i.indrelid) IN ('activa','(activa = true)') AS valido
     FROM pg_index i WHERE i.indexrelid=to_regclass('public.${INDEX_NAME}')
     AND i.indrelid='public.eps_farmacias'::regclass`;
-function createRepository(db = pool) {
+function createRepository(db = pool, origen = require('./afiliados-origen.repository')) {
     async function transaction(readonly, operation) {
         const client = await db.connect();
         try {
@@ -42,15 +42,10 @@ function createRepository(db = pool) {
             const paginacion = { pagina: options.pagina, tamano: options.take, total: 0, paginas: 0 };
             if (!vinculacion.eps) return { vinculacion, pacientes: [], totalActivos: 0, paginacion };
             const epsId = vinculacion.eps.id;
-            const where = `a.eps_id=$1 AND lower(btrim(a.estado))='activo'`;
-            const search = `($2='' OR strpos(lower(concat_ws(' ',a.nombres,a.apellidos)),lower($2))>0)`;
-            const counts = await client.query(`SELECT count(*)::int AS activos,
-                count(*) FILTER (WHERE ${search})::int AS filtrados FROM afiliados a WHERE ${where}`, [epsId, options.buscar]);
-            const { rows } = await client.query(`SELECT a.nombres,a.apellidos,a.estado FROM afiliados a
-                WHERE ${where} AND ${search} ORDER BY a.apellidos,a.nombres,a.id LIMIT $3 OFFSET $4`, [epsId, options.buscar, options.take, options.skip]);
-            paginacion.total = counts.rows[0].filtrados;
-            paginacion.paginas = Math.ceil(paginacion.total / options.take);
-            return { vinculacion, pacientes: rows, totalActivos: counts.rows[0].activos, paginacion };
+            const original=await origen.leerAutorizados(String(epsId),options);
+            paginacion.total=original.total;
+            paginacion.paginas=Math.ceil(original.total/options.take);
+            return {vinculacion,pacientes:original.pacientes,totalActivos:original.totalActivos,paginacion};
         });
     }
     async function administrar(actorId, farmaciaId) {

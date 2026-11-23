@@ -2,6 +2,7 @@ import { checkAuthGuard, initAuth, getToken } from './auth.js';
 import { carritoSesion, cambioDeCarrito } from './carrito-sesion.js';
 import { MAX_CANTIDAD, IMAGEN_MEDICAMENTO_RESPALDO, setCatalogo, leerEstado, actualizarPedido, totalUnidades } from './pedido-temporal.js';
 import { apiFetch } from './api.js';
+import { imagenSegura } from './medicamento-imagen.js';
 
 if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
     initAuth();
@@ -39,6 +40,7 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
         const img = element('img', undefined, 'mc-medication-image');
         img.src = med.imagen;
         img.alt = med.nombre;
+        img.referrerPolicy = 'no-referrer';
         img.loading = 'lazy';
         img.width = 160;
         img.height = 120;
@@ -46,7 +48,10 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
         imageBox.append(img);
         const body = element('div', undefined, 'mc-card-body');
         body.append(element('span', med.categoria, 'mc-category'), element('h3', med.nombre), element('p', med.presentacion, 'mc-presentation'));
-        body.append(element('p', med.disponible ? 'Disponible · ' + med.stock + ' unidades' : (med.estado === 'INACTIVO' ? 'No disponible' : 'Sin existencias'), 'mc-availability' + (med.disponible ? '' : ' mc-unavailable')));
+        if (med.descripcion && med.descripcion !== med.presentacion) {
+            body.append(element('p', med.descripcion, 'mc-description'));
+        }
+        body.append(element('p', med.stockBajo ? 'Stock bajo' : med.disponible ? 'Disponible · ' + med.stock + ' unidades' : (med.estado === 'INACTIVO' ? 'No disponible' : 'Sin existencias'), 'mc-availability' + (med.disponible ? '' : ' mc-unavailable')));
         const prescription = med.requiereFormula === true ? 'Requiere fórmula médica' : med.requiereFormula === false ? 'No requiere fórmula según el catálogo' : 'Prescripción: información no registrada';
         body.append(element('p', prescription, 'mc-prescription'));
         const button = element('button', med.disponible ? 'Agregar a solicitud' : 'No disponible', 'mc-primary');
@@ -155,7 +160,9 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
                 categoria: typeof med.categoria === 'string' && med.categoria ? med.categoria : 'Sin categoría registrada',
                 presentacion: med.presentacion || med.descripcion || 'Presentación no registrada',
                 requiereFormula: med.requiere_formula,
-                imagen: med.imagen || IMAGEN_MEDICAMENTO_RESPALDO,
+                imagen: imagenSegura(med.imagen),
+                descripcion: med.descripcion,
+                stockBajo: med.estado === 'DISPONIBLE' && Number(med.stock) > 0 && Number(med.stock) <= (med.stock_minimo ?? 0),
                 estado: String(med.estado || '').toUpperCase(), stock: Math.max(0, Number(med.stock) || 0),
                 disponible: med.estado === 'DISPONIBLE' && Number(med.stock) > 0,
                 precio: Number(med.precio) || 0

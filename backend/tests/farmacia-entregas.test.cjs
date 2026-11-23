@@ -44,7 +44,7 @@ test('producción: rutas reales cierran cola global para ambas farmacias sin con
             const response = await fetch(`http://127.0.0.1:${server.address().port}/api/farmacia/pedidos/10`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
             assert.equal(response.status, rol === null || rol === 3 ? 401 : 403);
         }
-        for (const account of [4,5,6,7,8]) for (const [path, method] of [['?estado=LISTA&pagina=2&id=10','GET'], ['/10','GET'], ['/10/estado','PATCH']]) {
+        for (const account of [4,5,6,7,8]) for (const [path, method] of [['?estado=LISTA&pagina=2&id=10','GET'], ['/10','GET'], ['/10/estado','PATCH'], ['/10/formulas/1','GET'], ['/10/formulas/1?descarga=1','GET']]) {
             const token = require('jsonwebtoken').sign({ id: account, rol: 3 }, process.env.JWT_SECRET, { expiresIn: '1h' });
             const response = await fetch(`http://127.0.0.1:${server.address().port}/api/farmacia/pedidos${path}`, { method, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, ...(method === 'PATCH' ? { body: JSON.stringify(command()) } : {}) });
             assert.equal(response.status, account >= 6 ? 403 : 503);

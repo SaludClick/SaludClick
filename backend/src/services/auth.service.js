@@ -1,3 +1,4 @@
+const { PublicError } = require("../utils/public-error");
 const { generarToken } = require("../utils/jwt");
 const bcrypt = require("bcrypt");
 const authRepository = require("../repositories/auth.repository");
@@ -90,7 +91,7 @@ const register = async (data) => {
     const existe = await authRepository.buscarPorCorreo(correo);
 
     if (existe) {
-        throw new Error("El correo ya está registrado");
+        throw new PublicError("El correo ya está registrado");
     }
 
     validarRegistro(data);
@@ -127,10 +128,10 @@ const invitarCuenta = async ({ correo, rol_id }) => {
     const autorizadas = require('../config/authorized-accounts').obtenerCuentasAutorizadas();
     if (!autorizadas.some(c => c.correo === correo && c.rol_id === rol_id)) throw new Error('Cuenta o rol fuera del alcance autorizado.');
     const existente = await authRepository.buscarPorCorreo(correo);
-    if (existente) throw new Error('El correo ya está registrado; no se modificó la cuenta.');
+    if (existente) throw new PublicError('El correo ya está registrado; no se modificó la cuenta.');
     require('../config/activation-url').validarUrlActivacion();
     const cuentas = require('../repositories/admin.repository');
-    if (await cuentas.buscarCuentaPorCorreo(correo)) throw new Error('El correo ya está registrado; no se modificó la cuenta.');
+    if (await cuentas.buscarCuentaPorCorreo(correo)) throw new PublicError('El correo ya está registrado; no se modificó la cuenta.');
     if (!await cuentas.buscarRol(rol_id)) throw new Error('El rol solicitado no existe en PostgreSQL.');
     await transporter.verify();
     const cuenta = await cuentas.crearCuenta({ nombre: rol_id === 3 ? 'Farmacia' : 'EPS', apellido: 'SaludClick', correo, rol_id, estado: 'INACTIVO', password: '!ACTIVACION_PENDIENTE' });
@@ -149,7 +150,7 @@ const login = async (data) => {
     const usuario = await authRepository.login(correo);
 
     if (!usuario) {
-        throw new Error(
+        throw new PublicError(
             "Correo o contraseña incorrectos"
         );
     }
@@ -160,13 +161,13 @@ const login = async (data) => {
     );
 
     if (!passwordCorrecta) {
-        throw new Error(
+        throw new PublicError(
             "Correo o contraseña incorrectos"
         );
     }
 
     if (usuario.estado === "INACTIVO") {
-        throw new Error(
+        throw new PublicError(
             "La cuenta se encuentra inactiva"
         );
     }
@@ -236,7 +237,7 @@ const googleLogin = async (idToken) => {
     }
 
     if (usuario.estado === "INACTIVO") {
-        throw new Error(
+        throw new PublicError(
             "La cuenta se encuentra inactiva"
         );
     }
@@ -315,7 +316,7 @@ const solicitarRecuperacion = async (correo) => {
         ).replace(/\/$/, "");
 
     const enlace =
-        `${baseUrl}/restablecer.html?token=${
+        `${baseUrl}/restablecer.html#token=${
             encodeURIComponent(token)
         }${usuario.password === '!ACTIVACION_PENDIENTE' ? '&activacion=1' : ''}`;
 
@@ -356,14 +357,14 @@ const restablecerPassword = async (
         );
 
     if (!registro) {
-        throw new Error(
+        throw new PublicError(
             "El enlace de recuperación es inválido o ya expiró."
         );
     }
 
     if (registro.password === '!ACTIVACION_PENDIENTE' &&
         (typeof nuevaPassword !== 'string' || nuevaPassword.length < 12 || Buffer.byteLength(nuevaPassword) > 72)) {
-        throw new Error('Usa una contraseña de al menos 12 caracteres y máximo 72 bytes.');
+        throw new PublicError('Usa una contraseña de al menos 12 caracteres y máximo 72 bytes.');
     }
 
     const passwordHash =

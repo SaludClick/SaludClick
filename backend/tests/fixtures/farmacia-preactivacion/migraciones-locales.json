@@ -1,0 +1,33 @@
+{
+  "alcance": "Huellas del indice local y de variantes sinteticas con BOM y CRLF. No es historial de una base ni evidencia de auditoria.",
+  "migraciones": [
+    {
+      "nombre": "20261016220827_init",
+      "sha256Local": "086699462db94858e56bfed6b0052e8c8b620b221fc10592de3f1c1ae0c65e58",
+      "sha256VarianteSintetica": "d32aeefe7147c9fad3543227fce1d1a55aadea909c29dda6300d4fe893b6eafb"
+    },
+    {
+      "nombre": "20261106000000_add_chat",
+      "sha256Local": "aca44cebce2e519054f86a66578039aa7cb801838d1935a7d5bd945c209c500b",
+      "sha256VarianteSintetica": "a83cdc8cd061e44bfa78b7908a8c69b7904d594f882d9c84f38c76ecf665ee0f"
+    },
+    {
+      "nombre": "20261112120000_administrative_workspace",
+      "sha256Local": "f795729ff2ab24c6d9c2d4d1cb11d726cbffef8fa52784b9428aafe9059aa86d",
+      "sha256VarianteSintetica": "41160ac7894d9e1396db6e635bfb5b985b84660302613f1c177e7b3be7586a68"
+    },
+    {
+      "nombre": "20261113120000_administrative_visitors",
+      "sha256Local": "fd419707be3667660b75e55e400aa685b36ea2d84d4ff0c4d1b3d155a8ef2194",
+      "sha256VarianteSintetica": "4f53453c71402a91a8cd9008ec54ee4c5c95b4499fec6a006ec9da5736d63f11"
+    },
+    {
+      "nombre": "20261114090000_eps_workspace",
+      "sha256Local": "2f98aa07aec71b403cd38e1d721a570f3996b6be54bbfb400b7bc88f73c4e835"
+    },
+    {
+      "nombre": "20261115090000_eps_role_integration",
+      "sha256Local": "99b5dca81847e36f95f4f0d1372dd4598705abb5eb98f408ead9d7637212076e"
+    }
+  ]
+}

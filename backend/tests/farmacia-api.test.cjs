@@ -51,7 +51,7 @@ async function request(path, role = 3, body) {
 test('solo farmacia consulta pedidos e inventario, sin acceder a datos ante roles rechazados', async () => {
     for (const path of ['/pedidos', '/inventario']) for (const role of [null, 1, 2, 4, 99]) {
         const count = calls.length;
-        assert.equal((await request(path, role)).status, role === null ? 401 : 403);
+        assert.equal((await request(path, role)).status, role === null || role === 99 ? 401 : 403);
         assert.equal(calls.length, count);
     }
 });
@@ -72,7 +72,7 @@ test('inventario filtra nombres sin interpolar SQL y no publica campos internos'
     assert.equal((await request('/inventario?buscar=aspirina')).status, 200);
     const { options } = calls.at(-1);
     assert.ok(options.where.AND[0].OR.some(condition => condition.nombre?.contains === 'aspirina' && condition.nombre.mode === 'insensitive'));
-    assert.deepEqual(Object.keys(options.select).sort(), ['categoria', 'estado', 'id', 'nombre', 'presentacion', 'requiere_formula', 'stock']);
+    assert.deepEqual(Object.keys(options.select).sort(), ['categoria','codigo_fuente','descripcion','estado','id','imagen','nombre','presentacion','requiere_formula','stock']);
 });
 test('filtros invalidos fallan antes de consultar la base', async () => {
     for (const path of ['/pedidos?pagina=0', '/pedidos?pagina=-1', '/pedidos?pagina=1.5', '/pedidos?estado=CANCELADA', '/pedidos?estado=DESCONOCIDO', '/inventario?buscar=' + 'x'.repeat(151)]) {
@@ -127,7 +127,7 @@ test('otra transicion concurrente responde 409 y otros roles nunca escriben', as
     const body = { estadoActual: 'APROBADA', estado: 'PREPARANDO' };
     for (const role of [null, 1, 2, 4, 99]) {
         const count = calls.length;
-        assert.equal((await request('/pedidos/9/estado', role, body)).status, role === null ? 401 : 403);
+        assert.equal((await request('/pedidos/9/estado', role, body)).status, role === null || role === 99 ? 401 : 403);
         assert.equal(calls.length, count);
     }
     storedState = 'APROBADA';

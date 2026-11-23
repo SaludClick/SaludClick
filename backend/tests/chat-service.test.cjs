@@ -6,7 +6,7 @@ const service = require("../src/services/chat.service");
 
 const original = { ...repository };
 const customer = { id: 10, rol: 2 };
-const agent = { id: 20, rol: 3 };
+const agent = { id: 20, rol: 1 };
 const conversation = { id: 7, cliente_id: 10, agente_id: 20, estado: "ABIERTA" };
 
 test("chat service: restringe historial a cliente y agente asignado", async () => {
@@ -16,7 +16,7 @@ test("chat service: restringe historial a cliente y agente asignado", async () =
   assert.equal((await service.historial(customer, 7)).messages.length, 1);
   assert.equal((await service.historial(agent, 7)).messages.length, 1);
   await assert.rejects(service.historial({ id: 11, rol: 2 }, 7), /permisos/);
-  await assert.rejects(service.historial({ id: 21, rol: 3 }, 7), /permisos/);
+  await assert.rejects(service.historial({ id: 21, rol: 1 }, 7), /permisos/);
 });
 
 test("chat service: valida mensajes y persiste los mensajes autorizados", async () => {
@@ -50,7 +50,7 @@ test("chat service: determina roles y lista solo cuentas autorizadas", async () 
   await service.listar(customer);
   await service.listar(agent);
   assert.deepEqual(listed, [{ id: 10, staff: false }, { id: 20, staff: true }]);
-  await assert.rejects(service.listar({ id: 30, rol: 1 }), /No autorizado/);
+  await assert.rejects(service.listar({ id: 30, rol: 3 }), /No autorizado/);
 });
 
 test("chat service: reutiliza conversaciones existentes y valida autorización", async () => {
@@ -59,7 +59,7 @@ test("chat service: reutiliza conversaciones existentes y valida autorización",
   assert.equal(await service.crear(customer), conversation);
 
   assert.equal(await service.autorizada(customer, "invalid"), null);
-  assert.equal(await service.autorizada({ id: 1, rol: 1 }, 7), null);
+  assert.equal(await service.autorizada({ id: 1, rol: 4 }, 7), null);
   repository.esStaff = async () => false;
   assert.equal(await service.autorizada(agent, 7), null);
   repository.esStaff = async () => true;
