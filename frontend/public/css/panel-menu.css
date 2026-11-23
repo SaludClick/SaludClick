@@ -1,4 +1,8 @@
-﻿[data-panel-menu] {
+body:has(> [data-panel-menu]) {
+    padding-block-start: 0;
+}
+
+[data-panel-menu] {
     --panel-sidebar-width: 252px;
     --panel-sidebar-space: 0px;
     grid-template-columns: var(--panel-sidebar-space) minmax(0, 1fr);
@@ -38,13 +42,13 @@
 
 [data-panel-menu="administrador"] > .ad-main {
     margin-block: 0;
+    padding-block-start: 0;
 }
 
 [data-panel-menu="administrador"] .ad-topbar {
     position: sticky;
     inset-block-start: 0;
     z-index: 20;
-    padding-block-start: 8px;
     background: var(--ad-bg);
 }
 
@@ -115,7 +119,7 @@
     [data-panel-menu="administrador"] { --panel-sidebar-width: 210px; }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 900px), (pointer: coarse) {
     [data-panel-menu] {
         display: block;
     }
@@ -157,17 +161,18 @@
         background: rgb(9 43 36 / .58);
         opacity: 0;
         visibility: hidden;
+        pointer-events: none;
         transition: opacity 220ms ease, visibility 220ms;
     }
 
     [data-panel-modal="true"] > .panel-menu-backdrop {
         opacity: 1;
         visibility: visible;
+        pointer-events: auto;
     }
 
     html:has([data-panel-modal="true"]) {
         overflow: hidden;
-        scrollbar-gutter: stable;
     }
 
     [data-panel-menu] .ad-topbar { flex-wrap: wrap; }

@@ -51,7 +51,11 @@ test('Edge: menus by role, viewport, keyboard, navigation and persistence', { ti
     let browser;
     try {
         browser = await abrirEdge();
-        const { evaluate, send, until } = browser;
+        const { evaluate, send, until, onEvent } = browser;
+        const consoleErrors = [];
+        onEvent('Runtime.consoleAPICalled', ({ type, args }) => {
+            if (type === 'error') consoleErrors.push(args.map(arg => arg.value ?? arg.description).join(' '));
+        });
         const origin = 'http://127.0.0.1:' + server.address().port;
         await send('Network.setBlockedURLs', { urls: ['https://*', 'http://localhost:*'] });
         await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
@@ -77,6 +81,8 @@ test('Edge: menus by role, viewport, keyboard, navigation and persistence', { ti
                 sidebarInert: sidebar.inert,
                 mainInert: main.inert,
                 backdrop: getComputedStyle(backdrop).visibility === 'visible' && getComputedStyle(backdrop).display !== 'none',
+                headerTop: main.querySelector('header').getBoundingClientRect().top,
+                bodyPadding: getComputedStyle(document.body).paddingBlockStart,
                 left: main.getBoundingClientRect().left,
                 right: main.getBoundingClientRect().right,
                 scrollWidth: document.documentElement.scrollWidth,
@@ -118,12 +124,15 @@ test('Edge: menus by role, viewport, keyboard, navigation and persistence', { ti
                 sessionStorage.setItem('saludclick_user', JSON.stringify({ id: ${role}, rol: ${role}, nombre: 'Cuenta de prueba' }));
                 window.io = () => ({on(){return this;},disconnect(){}});
             ` });
-            for (const width of [1440, 768, 390]) {
+            for (const width of [1440, 1024, 768, 390, 320]) {
                 await t.test(`${name} at ${width}px`, async () => {
-                    const desktop = width === 1440;
+                    const desktop = width >= 1024;
                     await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: !desktop });
                     await navigate('/pages/' + start + '.html');
                     await active(links[0]);
+                    assert.equal((await state()).open, desktop);
+                    assert.equal((await state()).headerTop, 0);
+                    assert.equal((await state()).bodyPadding, '0px');
                     if (name === 'administrador') await until(() => evaluate('document.querySelectorAll(".ad-stat").length > 0'));
                     if (name === 'eps') await until(() => evaluate('!document.querySelector("#epsDashboardDatos").hidden'));
                     if (name === 'farmacia') {
@@ -172,6 +181,7 @@ test('Edge: menus by role, viewport, keyboard, navigation and persistence', { ti
                     await active(next);
                     await until(() => evaluate('document.readyState === "complete" && !!document.querySelector("[data-panel-open]")'));
                     assert.equal((await state()).open, desktop);
+                    assert.equal((await state()).headerTop, 0);
                     if (name === 'administrador' && desktop) {
                         for (const href of [next, ...links.filter(link => link !== next)]) {
                             await click(`aside nav a[href="${href}"]`);
@@ -190,17 +200,53 @@ test('Edge: menus by role, viewport, keyboard, navigation and persistence', { ti
                         await until(() => evaluate('location.pathname.endsWith("eps-v1.html") && !!document.querySelector("[data-panel-open]")'));
                         await active('#dashboard');
                         assert.equal((await state()).open, desktop);
+                        assert.equal((await state()).headerTop, 0);
+                        await navigate('/pages/eps-convenios.html');
+                        await active('#dashboard');
+                        if (!desktop) await click(toggle);
+                        await click('aside nav a[href="#inventario"]');
+                        await active('#inventario');
+                        assert.equal((await state()).open, desktop);
+                        assert.equal((await state()).headerTop, 0);
                     }
                     if (desktop) {
+                        const heading = name === 'administrador' ? '.panel-menu-heading > span' : '.admin-topbar-copy';
+                        await click(heading);
+                        assert.equal((await state()).open, false);
+                        await click(toggle);
                         await click(toggle);
                         await navigate('/pages/' + start + '.html');
                         assert.equal((await state()).open, false);
+                        await click(toggle);
+                        await send('Emulation.setDeviceMetricsOverride', { width: 768, height: 900, deviceScaleFactor: 1, mobile: true });
+                        await until(async () => !(await state()).open);
+                        await click(toggle);
+                        await until(async () => (await state()).modal);
+                        await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: false });
+                        await until(async () => (await state()).open && !(await state()).modal);
+                        assert.equal((await state()).mainInert, false);
+                        assert.equal((await state()).backdrop, false);
+                        assert.ok((await state()).scrollWidth <= width);
+                        if (width === 1024) {
+                            await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+                            try {
+                                await until(() => evaluate('matchMedia("(pointer: coarse)").matches'));
+                                await until(async () => !(await state()).open);
+                                await click(toggle);
+                                assert.equal((await state()).modal, true);
+                                await key('Escape', 27);
+                                assert.equal((await state()).open, false);
+                            } finally {
+                                await send('Emulation.setTouchEmulationEnabled', { enabled: false });
+                            }
+                        }
                     }
                 });
             }
             await send('Page.removeScriptToEvaluateOnNewDocument', { identifier: source.identifier });
         }
         assert.deepEqual(browser.errores, []);
+        assert.deepEqual(consoleErrors, []);
     } finally {
         await browser?.cerrar();
         await new Promise(resolve => server.close(resolve));

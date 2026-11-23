@@ -1,4 +1,4 @@
-﻿const panel = document.querySelector('[data-panel-menu]');
+const panel = document.querySelector('[data-panel-menu]');
 
 if (panel) {
     const toggle = panel.querySelector('button[aria-controls]');
@@ -6,7 +6,7 @@ if (panel) {
     const closeButton = sidebar.querySelector('[data-panel-close]');
     const backdrop = panel.querySelector('[data-panel-backdrop]');
     const main = panel.querySelector(':scope > :is(.admin-main, .ad-main)');
-    const mobile = matchMedia('(max-width: 900px)');
+    const mobile = matchMedia('(max-width: 900px), (pointer: coarse)');
     const storageKey = 'saludclick.panel-menu.' + panel.dataset.panelMenu;
 
     function desktopOpen() {
@@ -45,12 +45,16 @@ if (panel) {
         }
     }
 
-    toggle.addEventListener('click', event => {
-        const open = panel.dataset.panelOpen !== 'true';
+    function rememberDesktop(open) {
         if (!mobile.matches) {
             try { sessionStorage.setItem(storageKey, open ? 'open' : 'closed'); }
             catch { /* The current view still works when storage is unavailable. */ }
         }
+    }
+
+    toggle.addEventListener('click', event => {
+        const open = panel.dataset.panelOpen !== 'true';
+        rememberDesktop(open);
         setOpen(open, true);
         if (open && !mobile.matches && event.detail === 0) {
             const target = sidebar.querySelector('nav a[aria-current]') || sidebar.querySelector('nav a[href]');
@@ -59,8 +63,8 @@ if (panel) {
     });
 
     function close() {
-        if (mobile.matches) setOpen(false, true);
-        else toggle.click();
+        rememberDesktop(false);
+        setOpen(false, true);
     }
 
     backdrop.addEventListener('click', close);
@@ -70,12 +74,15 @@ if (panel) {
         const primaryUnmodifiedClick = event.button === 0 &&
             !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey &&
             (!link?.target || link.target === '_self');
-        const pharmacyRoute = panel.dataset.panelMenu === 'farmacia' &&
-            link?.origin === location.origin;
-        const samePageSection = link?.hash && link.pathname === location.pathname;
+        if (mobile.matches && primaryUnmodifiedClick && link) close();
+    });
 
-        if (primaryUnmodifiedClick &&
-            ((pharmacyRoute || samePageSection) && mobile.matches)) close();
+    document.addEventListener('click', event => {
+        if (!mobile.matches && panel.dataset.panelOpen === 'true' &&
+            !sidebar.contains(event.target) && !toggle.contains(event.target) &&
+            !event.target.closest('dialog[open]')) {
+            setOpen(false);
+        }
     });
 
     document.addEventListener('keydown', event => {

@@ -81,13 +81,7 @@ function init() {
   for (const a of document.querySelectorAll('[data-eps-view]'))
     a.addEventListener('click', (e) => {
       e.preventDefault();
-      const toggle = document.getElementById('menuToggle');
-      const menuWasOpen = toggle.getAttribute('aria-expanded') === 'true' && toggle.offsetWidth > 0;
       navigate(a.dataset.epsView);
-      if (menuWasOpen) {
-        toggle.click();
-        document.getElementById('epsTitle').focus();
-      }
     });
   window.addEventListener('hashchange', () => {
     const target = location.hash.slice(1);
