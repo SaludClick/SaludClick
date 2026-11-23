@@ -145,7 +145,7 @@ test('administrative chat: isolated PostgreSQL persistence, concurrency, HTTP ow
   });
   await t.test('anonymous capability is isolated, durable and cannot become a registered session',async()=>{
     const {randomBytes}=require('node:crypto');
-    const credential=randomBytes(32).toString('hex'),other=randomBytes(32).toString('hex');
+    const credential=randomBytes(32).toString('hex'),other=randomBytes(32).toString('hex'),expired=randomBytes(32).toString('hex');
     async function guest(path,token=credential,body,status=200){
       const response=await fetch(origin+'/api/administrativo'+path,{method:body?'POST':'GET',headers:{Authorization:'Vitalix '+token,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
       const data=await response.json();assert.equal(response.status,status,JSON.stringify(data));return data;
@@ -155,6 +155,8 @@ test('administrative chat: isolated PostgreSQL persistence, concurrency, HTTP ow
     await guest('/visitante/mensajes',credential,{contenido:'Sin clave de reintento'},400);
     assert.equal((await guest('/visitante/conversacion')).caso,null);
     const body={contenido:'Solicito una cuenta como visitante',idempotency_key:randomUUID()};
+    const otherCase=(await guest('/visitante/mensajes',other,{contenido:'Conversacion de otro visitante',idempotency_key:randomUUID()})).caso;
+    const otherSocket=await connectAdministrativeSocket(origin,{visitorToken:other});sockets.push(otherSocket);
     const sends=await Promise.all(Array.from({length:6},()=>guest('/visitante/mensajes',credential,body)));
     const c=sends[0].caso;
     assert.equal((await guest('/visitante/conversacion',require('../src/middlewares/administrative-visitor.middleware').visitorHash(credential))).caso,null);
@@ -178,10 +180,23 @@ test('administrative chat: isolated PostgreSQL persistence, concurrency, HTTP ow
     await request(`/atenciones/${c.id}/leido`,admin,{method:'POST',body:{hasta:detail.mensajes.at(-1).id}});
     assert.ok((await guest('/visitante/conversacion')).mensajes[0].leido_at);
     assert.ok((await request('/atenciones',admin)).casos.some(row=>row.id===c.id));
-    await pool.query("UPDATE administrative_cases SET visitante_expira_at=now()-interval '1 second' WHERE id=$1",[c.id]);
+    const expiredCase=(await guest('/visitante/mensajes',expired,{contenido:'Sesion de prueba expirada',idempotency_key:randomUUID()})).caso;
+    await pool.query("UPDATE administrative_cases SET visitante_expira_at=now()-interval '1 second' WHERE id=$1",[expiredCase.id]);
+    assert.equal((await guest('/visitante/conversacion',expired)).caso,null);
+    await guest('/visitante/mensajes',expired,{contenido:'No debe escribir',idempotency_key:randomUUID()},410);
+    await assert.rejects(connectAdministrativeSocket(origin,{visitorToken:expired}),/denied/);
+
+    const revoked=await guest('/visitante/revocar',credential,{});
+    assert.equal(revoked.revocada,true);assert.equal(revoked.visitante_hash,undefined);
+    await Promise.race([gs.closed,new Promise((_,reject)=>setTimeout(()=>reject(new Error('Revoked visitor socket stayed connected')),3000))]);
     assert.equal((await guest('/visitante/conversacion')).caso,null);
-    await guest('/visitante/mensajes',credential,{...body,idempotency_key:randomUUID()},410);
+    await guest('/visitante/mensajes',credential,{contenido:'No debe escribir tras revocar',idempotency_key:randomUUID()},410);
+    await guest('/visitante/leido',credential,{hasta:2147483647});
+    await guest('/visitante/revocar',credential,{},410);
     await assert.rejects(connectAdministrativeSocket(origin,{visitorToken:credential}),/denied/);
+    assert.equal(otherSocket.isClosed,false,'Revoking one token must not disconnect another visitor.');
+    assert.equal((await guest('/visitante/conversacion',other)).caso.id,otherCase.id,'Revoking one token must preserve another visitor conversation.');
+    assert.equal((await repo.visitorConversation(require('../src/middlewares/administrative-visitor.middleware').visitorHash(credential))).mensajes.length,2,'Revocation must preserve the existing conversation and messages.');
   });
   if(process.env.ADMIN_CHAT_BROWSER==='1')await t.test('anonymous visitor and authenticated administrator converse in two real browsers without mail or JWT',async()=>{
     const admin=await user(1,'guestadmin');auth.set(admin.id,token(admin));

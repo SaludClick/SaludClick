@@ -238,7 +238,7 @@ function Chat({ embedded = false, visible = true }) {
           <p className="vitalix-disclaimer">
             {human.enabled?'Los mensajes confirmados se guardan en tu conversación con Administración.':storageUnavailable ? "El historial solo estará disponible mientras esta página siga abierta." : "Historial temporal en esta pestaña (hasta 40 intercambios). No se envía a servicios de IA."}
           </p>
-          {human.enabled?<><p className="vitalix-note" role="alert">{human.error}</p><button type="button" className="vitalix-clear" onClick={()=>human.sync()}>Actualizar conversación</button></>:<><button type="button" className="vitalix-clear" onClick={clearHistory}>Borrar conversación</button></>}
+          {human.enabled?<><p className="vitalix-note" role="alert">{human.error}</p>{human.visitor&&!human.revoked&&<button type="button" className="vitalix-clear" disabled={human.revoking} onClick={human.revoke}>{human.revoking?'Revocando sesión…':'Finalizar y revocar sesión'}</button>}{human.revoked&&<p className="vitalix-note" role="status">La sesión fue revocada. Esta conversación ya no puede consultarse desde el servidor.</p>}<button type="button" className="vitalix-clear" onClick={()=>human.sync()} disabled={human.revoked}>Actualizar conversación</button></>:<><button type="button" className="vitalix-clear" onClick={clearHistory}>Borrar conversación</button></>}
         </section>
       </div>
     </Container>

@@ -1,10 +1,11 @@
 import {useEffect,useRef,useState} from 'react';
-import {connectAdministrative,newMessageKey,visitorSession} from '../../public/js/administrative-transport.js';
+import {clearVisitorSession,connectAdministrative,newMessageKey,visitorSession} from '../../public/js/administrative-transport.js';
 
 export function useAdministrativeConversation(visible=true){
     const [identity,setIdentity]=useState(null),[checking,setChecking]=useState(true);
     const [messages,setMessages]=useState([]),[conversation,setConversation]=useState(null),[error,setError]=useState('');
     const [sending,setSending]=useState(false),[connected,setConnected]=useState(false),[hasOlder,setHasOlder]=useState(false),[pendingContent,setPendingContent]=useState('');
+    const [revoked,setRevoked]=useState(false),[revoking,setRevoking]=useState(false);
     const context=useRef(null),visibleRef=useRef(visible);
     visibleRef.current=visible;
     useEffect(()=>{
@@ -23,21 +24,21 @@ export function useAdministrativeConversation(visible=true){
         return()=>{active=false;for(const event of ['storage','focus','pageshow'])window.removeEventListener(event,read);};
     },[]);
     useEffect(()=>{
-        setMessages([]);setConversation(null);setError('');setConnected(false);setSending(false);setHasOlder(false);setPendingContent('');
+        setMessages([]);setConversation(null);setError('');setConnected(false);setSending(false);setHasOlder(false);setPendingContent('');setRevoked(false);setRevoking(false);
         if(!identity?.enabled){context.current=null;return;}
         let active=true,socket,connecting=false;
         const key=`saludclick_admin_pending_v1:${identity.visitor?identity.visitorToken:identity.id}`;
-        const ctx={identity,key,map:new Map(),caseId:null,pending:null,sending:false,syncing:false,resync:false,readMarker:'',initialized:false,older:false};
+        const ctx={identity,key,map:new Map(),caseId:null,pending:null,sending:false,syncing:false,resync:false,readMarker:'',initialized:false,older:false,revoked:false,revoking:false,socket:null,revoke:async()=>false};
         context.current=ctx;
         try{const pending=JSON.parse(sessionStorage.getItem(key)||'null');if(pending&&typeof pending.content==='string'&&pending.content.length<=2000&&typeof pending.key==='string'){ctx.pending=pending;setPendingContent(pending.content);}}catch{/* A draft can still be retained in memory when storage is unavailable. */}
         const current=()=>active&&context.current===ctx;
         const paint=()=>{if(current())setMessages([...ctx.map.values()].sort((a,b)=>a.id-b.id));};
         ctx.sync=async()=>{
-            if(!current())return;if(ctx.syncing){ctx.resync=true;return;}ctx.syncing=true;
+            if(!current()||ctx.revoked)return;if(ctx.syncing){ctx.resync=true;return;}ctx.syncing=true;
             try{
                 const data=await identity.api.apiFetch('/api/administrativo/'+(identity.visitor?'visitante/conversacion':ctx.caseId?'atenciones/'+ctx.caseId:'conversacion'));
-                if(!current())return;
-                if(data.caso){ctx.caseId=data.caso.id;setConversation(data.caso);if(identity.visitor&&!socket&&!connecting){connecting=true;connectAdministrative(()=>ctx.sync(),value=>{if(current())setConnected(value);},identity.visitorToken).then(value=>{connecting=false;if(!current())value?.disconnect();else socket=value;});}}
+                if(!current()||ctx.revoked)return;
+                if(data.caso){ctx.caseId=data.caso.id;setConversation(data.caso);if(identity.visitor&&!socket&&!connecting){connecting=true;connectAdministrative(()=>ctx.sync(),value=>{if(current())setConnected(value);},identity.visitorToken).then(value=>{connecting=false;if(!current()||ctx.revoked)value?.disconnect();else{socket=value;ctx.socket=value;}});}}
                 for(const message of data.mensajes||[])ctx.map.set(message.id,message);
                 if(!ctx.initialized){ctx.older=!!data.hayAnteriores;setHasOlder(ctx.older);ctx.initialized=true;}paint();
                 if(!ctx.pending)setError('');
@@ -50,12 +51,12 @@ export function useAdministrativeConversation(visible=true){
             finally{ctx.syncing=false;if(ctx.resync&&current()){ctx.resync=false;await ctx.sync();}}
         };
         ctx.send=async(content)=>{
-            if(!current()||ctx.sending)return false;ctx.sending=true;setSending(true);setError('');
+            if(!current()||ctx.revoked||ctx.sending)return false;ctx.sending=true;setSending(true);setError('');
             const pending=ctx.pending?.content===content?ctx.pending:{key:newMessageKey(),content};ctx.pending=pending;setPendingContent(pending.content);
             try{sessionStorage.setItem(key,JSON.stringify(pending));}catch{/* The same request key remains available in memory. */}
             try{
                 const data=await identity.api.apiFetch(identity.visitor?'/api/administrativo/visitante/mensajes':'/api/administrativo/vitalix/mensajes',{method:'POST',body:JSON.stringify({contenido:content,idempotency_key:pending.key})});
-                if(!current())return false;
+                if(!current()||ctx.revoked)return false;
                 ctx.caseId=data.caso.id;setConversation(data.caso);
                 ctx.map.set(data.mensaje.id,{...data.mensaje,nombre:identity.visitor?'Visitante':identity.name,rol_id:identity.visitor?0:2});paint();
                 ctx.pending=null;setPendingContent('');try{sessionStorage.removeItem(key);}catch{}
@@ -63,11 +64,22 @@ export function useAdministrativeConversation(visible=true){
             }catch(e){if(current())setError(e.message+' Tu mensaje se conserva; puedes reintentar.');return false;}
             finally{ctx.sending=false;if(current())setSending(false);}
         };
+        ctx.revoke=async()=>{
+            if(!current()||!identity.visitor||ctx.revoked||ctx.revoking)return false;
+            ctx.revoking=true;setRevoking(true);setError('');
+            try{
+                await identity.api.apiFetch('/api/administrativo/visitante/revocar',{method:'POST',body:JSON.stringify({})});
+                if(!current())return false;
+                ctx.revoked=true;ctx.socket?.disconnect();clearVisitorSession(identity.visitorToken);
+                setRevoked(true);setConnected(false);setError('');return true;
+            }catch(error){if(current())setError(error.message);return false;}
+            finally{ctx.revoking=false;if(current())setRevoking(false);}
+        };
         ctx.loadOlder=async()=>{
-            if(!ctx.caseId||!ctx.map.size||!current())return;
+            if(!ctx.caseId||!ctx.map.size||!current()||ctx.revoked)return;
             try{
                 const data=await identity.api.apiFetch(identity.visitor?`/api/administrativo/visitante/conversacion?antes=${Math.min(...ctx.map.keys())}`:`/api/administrativo/atenciones/${ctx.caseId}?antes=${Math.min(...ctx.map.keys())}`);
-                if(!current())return;for(const m of data.mensajes)ctx.map.set(m.id,m);ctx.older=!!data.hayAnteriores;setHasOlder(ctx.older);paint();
+                if(!current()||ctx.revoked)return;for(const m of data.mensajes)ctx.map.set(m.id,m);ctx.older=!!data.hayAnteriores;setHasOlder(ctx.older);paint();
             }catch(e){if(current())setError(e.message);}
         };
         ctx.sync();
@@ -77,5 +89,5 @@ export function useAdministrativeConversation(visible=true){
         return()=>{active=false;clearInterval(timer);socket?.disconnect();document.removeEventListener('visibilitychange',focus);if(context.current===ctx)context.current=null;};
     },[identity]);
     useEffect(()=>{if(visible)context.current?.sync?.();},[visible]);
-    return {eligible:!!identity?.enabled,enabled:!!identity?.enabled&&!!(conversation||pendingContent||sending),operational:context.current?.identity.signature===identity?.signature&&!!context.current?.send,checking,messages,conversation,error,sending,connected,hasOlder,pendingContent,userId:identity?.visitor?null:identity?.id,visitor:!!identity?.visitor,send:content=>context.current?.send(content)??Promise.resolve(false),sync:()=>context.current?.sync?.(),loadOlder:()=>context.current?.loadOlder?.()};
+    return {eligible:!!identity?.enabled,enabled:!!identity?.enabled&&!!(conversation||pendingContent||sending),operational:context.current?.identity.signature===identity?.signature&&!!context.current?.send&&!context.current?.revoked,checking,messages,conversation,error,sending,connected,hasOlder,pendingContent,userId:identity?.visitor?null:identity?.id,visitor:!!identity?.visitor,revoked,revoking,revoke:()=>context.current?.revoke?.()??Promise.resolve(false),send:content=>context.current?.send(content)??Promise.resolve(false),sync:()=>context.current?.sync?.(),loadOlder:()=>context.current?.loadOlder?.()};
 }

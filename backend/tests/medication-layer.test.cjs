@@ -87,6 +87,19 @@ test('catálogo conserva la delegación controlador → servicio → repositorio
     });
 });
 
+test('catalogo publico devuelve el precio real del repositorio y filtra publicaciones', async () => {
+    shouldFail = false;
+    let body;
+    const response = {
+        set(name, value) { assert.equal(name, 'Cache-Control'); assert.equal(value, 'no-store'); return this; },
+        json(value) { body = value; return this; }
+    };
+    await controller.publico({ query: { buscar: '', pagina: '1' } }, response);
+    assert.equal(body.medicamentos[0].precio, 5000);
+    assert.match(queries.at(-1), /m\.estado = 'DISPONIBLE'/);
+    assert.match(queries.at(-1), /m\.precio/);
+});
+
 test('fallo del repositorio conserva HTTP 500 y el mensaje actual del catálogo', async () => {
     shouldFail = true;
     let statusCode;

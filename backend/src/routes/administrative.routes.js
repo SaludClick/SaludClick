@@ -12,6 +12,7 @@ function createRouter({controller,guards=roles,emit}={}) {
     router.get('/visitante/conversacion',visitor,handle('visitorConversation'));
     router.post('/visitante/mensajes',visitorLimiter,visitor,handle('visitorMessage'));
     router.post('/visitante/leido',visitorLimiter,visitor,handle('visitorRead'));
+    router.post('/visitante/revocar',visitorLimiter,visitor,handle('visitorRevoke'));
     router.use(...guards(1,2),require('../middlewares/administrative-rate.middleware').createLimiter());
     router.get('/faq',...guards(1,2),handle('faq'));
     router.get('/atenciones',...guards(1,2),handle('cases'));

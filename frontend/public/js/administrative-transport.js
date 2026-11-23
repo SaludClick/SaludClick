@@ -28,6 +28,11 @@ export function visitorSession(){
     }
     visitorMemory=session;return session;
 }
+export function clearVisitorSession(token){
+    const key='saludclick_vitalix_visitor_v1';
+    if(visitorMemory?.token===token)visitorMemory=undefined;
+    try{const stored=JSON.parse(localStorage.getItem(key)||'null');if(stored?.token===token)localStorage.removeItem(key);}catch{/* The server has already revoked the capability. */}
+}
 export async function connectAdministrative(onUpdate,onStatus=()=>{},visitorToken=null){
     const [{apiUrl},auth]=await Promise.all([import('./api.js'),import('./auth.js')]);
     const origin=new URL(apiUrl('/api/administrativo'),location.href).origin;

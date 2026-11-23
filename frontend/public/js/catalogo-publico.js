@@ -26,6 +26,13 @@ function tarjeta(medicamento) {
     elemento.append(imagen, nodo('h3', medicamento.nombre));
     if (medicamento.descripcion) elemento.append(nodo('p', medicamento.descripcion));
     if (medicamento.presentacion) elemento.append(nodo('p', medicamento.presentacion));
+    const precio = Number(medicamento.precio);
+    if (Number.isFinite(precio) && precio > 0) {
+        const formatoPrecio = new Intl.NumberFormat('es-CO', {
+            style: 'currency', currency: 'COP', maximumFractionDigits: 2
+        });
+        elemento.append(nodo('p', formatoPrecio.format(precio)));
+    }
     const disponibilidad = nodo('strong', medicamento.stockBajo ? 'Stock bajo' : medicamento.disponible ? 'Disponible' : 'Agotado');
     const consultar = nodo('a', 'Consultar');
     consultar.className = 'btn-outline';

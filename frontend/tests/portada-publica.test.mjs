@@ -26,11 +26,11 @@ test('La portada muestra Stock bajo y excluye medicamentos despublicados', {
             stock int, stock_minimo int, imagen text, estado text
         );
         INSERT INTO categorias (id, nombre) VALUES (1, 'Prueba');
-        INSERT INTO medicamentos (id, nombre, categoria_id, stock, stock_minimo, imagen, estado) VALUES
-            (1, 'Medicamento bajo', 1, 2, 5, '/images/medicamentos/default.svg', 'DISPONIBLE'),
-            (2, 'Medicamento disponible', 1, 10, 5, NULL, 'DISPONIBLE'),
-            (3, 'Medicamento agotado', 1, 0, 0, NULL, 'AGOTADO'),
-            (4, 'Medicamento despublicado', 1, 10, 5, NULL, 'INACTIVO');
+        INSERT INTO medicamentos (id, nombre, categoria_id, precio, stock, stock_minimo, imagen, estado) VALUES
+            (1, 'Medicamento bajo', 1, 7500, 2, 5, '/images/medicamentos/default.svg', 'DISPONIBLE'),
+            (2, 'Medicamento disponible', 1, 12000, 10, 5, NULL, 'DISPONIBLE'),
+            (3, 'Medicamento agotado', 1, 9000, 0, 0, NULL, 'AGOTADO'),
+            (4, 'Medicamento despublicado', 1, 6500, 10, 5, NULL, 'INACTIVO');
         INSERT INTO medicamentos (id, nombre, categoria_id, stock, stock_minimo, estado)
         SELECT i, 'Zeta ' || i, 1, 10, 5, 'DISPONIBLE' FROM generate_series(10, 19) AS i;
     `);
@@ -73,6 +73,8 @@ test('La portada muestra Stock bajo y excluye medicamentos despublicados', {
         ['Medicamento bajo', 'Stock bajo', 'Medicamento bajo'],
         ['Medicamento disponible', 'Disponible', 'Medicamento disponible']
     ]);
+    const precioVisible = await edge.evaluate(` [...document.querySelectorAll('#catalogo-publico-lista article')].find(card=>card.querySelector('h3').textContent==='Medicamento bajo')?.textContent.includes('7.500') ?? false`);
+    assert.equal(precioVisible, true);
     await edge.until(() => edge.evaluate('document.querySelector(".home-hero-photo")?.naturalWidth > 0'));
     assert.equal(await edge.evaluate(`getComputedStyle(document.querySelector('#servicios .grid-servicios')).gridTemplateColumns.split(' ').length`), 3);
     await edge.evaluate(`document.querySelector('#catalogo-publico-siguiente').click()`);

@@ -28,6 +28,10 @@ function createController({repo=getRepository(),emit=()=>{},directory}={}) {
         visitorConversation:wrap(async req=>repo.visitorConversation(req.visitorHash,req.query.antes?v.id(req.query.antes):undefined)),
         visitorMessage:wrap(async req=>{const input=v.message(req.body,true);return repo.visitorMessage(req.visitorHash,input.contenido,input.key);},true),
         visitorRead:wrap(async req=>repo.visitorRead(req.visitorHash,v.id(req.body.hasta)),true),
+        visitorRevoke:wrap(async req=>{
+            if(!await repo.revokeVisitor(req.visitorHash))throw Object.assign(new Error('La sesiÃ³n ya no estÃ¡ activa.'),{status:410,public:true});
+            return {revocada:true,evento:{revokeVisitorHash:req.visitorHash}};
+        },true),
         dashboard:wrap(async req=>{const stats=await repo.dashboard(actor(req));return {estadisticas:{...stats,directorio:await getDirectory().summary()}};}),
         users:wrap(async req=>await getDirectory().list(req.query)),
         localUsers:wrap(async req=>await repo.users(v.filters(req.query))),

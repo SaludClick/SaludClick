@@ -16,9 +16,10 @@ async function buscarPublicados(buscar, pagina) {
     const { rows } = await pool.query(`${select(true)} WHERE ${publicados} AND strpos(lower(m.nombre), lower($1)) > 0
         ORDER BY m.nombre, m.id LIMIT $2 OFFSET $3`, [buscar, tamano + 1, (pagina - 1) * tamano]);
     return {
-        medicamentos: rows.slice(0, tamano).map(({id,nombre,descripcion,presentacion,imagen,estado,stock,stock_minimo}) => {
+        medicamentos: rows.slice(0, tamano).map(({id,nombre,descripcion,presentacion,precio,imagen,estado,stock,stock_minimo}) => {
             const disponible=estado==='DISPONIBLE'&&stock>0;
-            return {id,nombre,descripcion,presentacion,imagen,disponible,stockBajo:disponible&&stock<=stock_minimo};
+            const precioReal=Number(precio);
+            return {id,nombre,descripcion,presentacion,precio:Number.isFinite(precioReal)&&precioReal>0?precioReal:null,imagen,disponible,stockBajo:disponible&&stock<=stock_minimo};
         }),
         siguiente: rows.length > tamano
     };

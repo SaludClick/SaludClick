@@ -22,6 +22,7 @@ function attachAdministrativeSocket(io,app,{guard=createSessionGuard(),visitorLo
     namespace.on('connection',socket=>{
         if(socket.data.visitorCase){
             const id = socket.data.visitorCase;
+            socket.join(`administrativo:visitante-token:${socket.data.visitorHash}`);
             const peers = visitors.get(id) || new Set();
             peers.add(socket);
             visitors.set(id, peers);
@@ -32,6 +33,10 @@ function attachAdministrativeSocket(io,app,{guard=createSessionGuard(),visitorLo
                 peers.delete(socket);
                 if (!peers.size) visitors.delete(id);
             });
+            // Join the revocation room before rechecking to close the handshake race.
+            Promise.resolve().then(()=>visitorLookup(socket.data.visitorHash)).then(activeId=>{
+                if(activeId!==id)socket.disconnect(true);
+            }).catch(()=>socket.disconnect(true));
             return;
         }
         const user=socket.data.usuario;
@@ -43,6 +48,10 @@ function attachAdministrativeSocket(io,app,{guard=createSessionGuard(),visitorLo
     // Only staff and the owning client learn that this conversation changed.
     // Message bodies are fetched through the HTTP ownership/session guards.
     app.set('administrativeEvents',(event={})=>{
+        if(typeof event.revokeVisitorHash==='string'&&/^[a-f0-9]{64}$/.test(event.revokeVisitorHash)){
+            namespace.in(`administrativo:visitante-token:${event.revokeVisitorHash}`).disconnectSockets(true);
+            return;
+        }
         let target=namespace.to('administrativo:staff');
         const client=event.cliente_id||event.actor_id;
         if(Number.isSafeInteger(client)&&client>0)target=target.to(`administrativo:cliente:${client}`);

@@ -4,6 +4,8 @@ async function connectAdministrativeSocket(origin,token,namespace='/administrati
     const url=origin.replace(/^http/,'ws')+'/socket.io/?EIO=4&transport=websocket';
     const prefix=namespace==='/'?'':namespace+',';
     const ws=new WebSocket(url),events=[];
+    let isClosed=false;
+    const closed=new Promise(resolve=>ws.addEventListener('close',event=>{isClosed=true;resolve(event);},{once:true}));
     let resolveReady,rejectReady;
     const ready=new Promise((resolve,reject)=>{resolveReady=resolve;rejectReady=reject;});
     const timer=setTimeout(()=>rejectReady(new Error('Socket.IO handshake timed out')),8000);
@@ -17,7 +19,7 @@ async function connectAdministrativeSocket(origin,token,namespace='/administrati
     });
     ws.addEventListener('error',()=>{clearTimeout(timer);rejectReady(new Error('Socket.IO transport failed'));});
     try{await ready;}catch(error){ws.close();throw error;}
-    return {events,close:()=>ws.close(),closed:new Promise(resolve=>ws.addEventListener('close',resolve,{once:true})),async until(predicate){
+    return {events,close:()=>ws.close(),closed,get isClosed(){return isClosed;},async until(predicate){
       const end=Date.now()+5000;
       while(Date.now()<end){const value=events.find(predicate);if(value)return value;await new Promise(resolve=>setTimeout(resolve,20));}
       throw new Error('Expected Socket.IO event did not arrive');

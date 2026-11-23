@@ -197,6 +197,11 @@ function createRepository(prisma) {
         const marked=await q(db,'UPDATE administrative_messages m SET leido_at=coalesce(leido_at,clock_timestamp()) WHERE caso_id=$1 AND id<=$2 AND EXISTS(SELECT 1 FROM usuarios u WHERE u.id=m.remitente_id AND u.rol_id=1) RETURNING id',c.id,lastId);
         return {leidos:marked.length,evento:{caso_id:c.id}};
     });
+    const revokeVisitor=hash=>chatTx(async db=>{
+        await q(db,'SELECT pg_advisory_xact_lock(hashtextextended($1,72411016))::text AS locked',hash);
+        const revoked=await q(db,'UPDATE administrative_cases SET visitante_expira_at=clock_timestamp() WHERE visitante_hash=$1 AND visitante_expira_at>clock_timestamp() RETURNING id',hash);
+        return revoked.length>0;
+    });
     const markRead=(actor,staff,id,lastId)=>chatTx(async db=>{
         const [owned]=await q(db,`SELECT c.id,c.cliente_id FROM administrative_cases c WHERE c.id=$2 AND ${access(actor,staff)} AND $1::int>0 FOR UPDATE`,actor,id);
         if(!owned)throw Object.assign(new Error('Conversacion no encontrada.'),{status:404,public:true});
@@ -266,7 +271,7 @@ function createRepository(prisma) {
         ]);
         return {tipo:type,columnas:columns[type],filas:data.slice(0,1000),resumen:summary,limitado:data.length>1000,limite:1000,generadoEn:new Date().toISOString(),filtros:f};
     }
-    return {visitorConversation,visitorMessage,visitorRead,visitorCaseId,dashboard,users,userDetail,createUser,updateUser,cases,caseDetail,createCase,ensureConversation,reopenConversation,receiveVitalix,currentConversation,updateCase,send,markRead,notifications,readNotification,readAllNotifications,administrators,audits,settings,saveSetting,preferences,savePreferences,profile,saveProfile,passwordHash,changePassword,report,recordExport:(actor,type)=>audit(prisma,actor,'INFORME_EXPORTADO','INFORME',type,[]),recordFailure:(actor,action)=>audit(prisma,actor,action,'SEGURIDAD','0',[],'RECHAZADO')};
+    return {visitorConversation,visitorMessage,visitorRead,revokeVisitor,visitorCaseId,dashboard,users,userDetail,createUser,updateUser,cases,caseDetail,createCase,ensureConversation,reopenConversation,receiveVitalix,currentConversation,updateCase,send,markRead,notifications,readNotification,readAllNotifications,administrators,audits,settings,saveSetting,preferences,savePreferences,profile,saveProfile,passwordHash,changePassword,report,recordExport:(actor,type)=>audit(prisma,actor,'INFORME_EXPORTADO','INFORME',type,[]),recordFailure:(actor,action)=>audit(prisma,actor,action,'SEGURIDAD','0',[],'RECHAZADO')};
 }
 let instance;
 module.exports={createRepository,getRepository:()=>instance??=createRepository(require('../config/prisma'))};
