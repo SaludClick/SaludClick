@@ -31,7 +31,7 @@ async function crearPedido(req, res) {
         });
 
     } catch (error) {
-        console.error("Error al crear pedido.");
+        console.error("Error al crear pedido");
 
         const status = [400, 409, 503].includes(error.status)
             ? error.status
@@ -61,7 +61,7 @@ async function listarPedidos(req, res) {
         });
 
     } catch (error) {
-        console.error("Error al listar pedidos.");
+        console.error("Error al listar pedidos");
 
         res.status(500).json({
             ok: false,
@@ -106,7 +106,7 @@ async function detallePedido(req, res) {
         });
 
     } catch (error) {
-        console.error("Error al consultar pedido.");
+        console.error("Error al consultar pedido");
 
         res.status(500).json({
             ok: false,

@@ -3,9 +3,10 @@ const { test } = require('node:test'),
   assert = require('node:assert/strict');
 const fs = require('node:fs'),
   path = require('node:path'),
+  os = require('node:os'),
   http = require('node:http');
-const { spawnSync } = require('node:child_process'),
-  { randomUUID } = require('node:crypto');
+const { randomUUID, randomBytes } = require('node:crypto');
+const bcrypt = require('bcrypt');
 const { Pool } = require('pg'),
   { PrismaClient } = require('@prisma/client'),
   { PrismaPg } = require('@prisma/adapter-pg');
@@ -62,7 +63,7 @@ test(
       }
       process.env.JWT_SECRET = 'four-role-isolated-only';
       const priorUploadDir = process.env.FORMULA_UPLOAD_DIR;
-      const formulaDir = path.join(tmp, 'formulas');
+      const formulaDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saludclick-eps-formulas-'));
       process.env.FORMULA_UPLOAD_DIR = formulaDir;
       t.after(() => {
         if (priorUploadDir === undefined) delete process.env.FORMULA_UPLOAD_DIR;
@@ -100,7 +101,7 @@ test(
             tipo_documento: 'CC',
             rol_id: rol,
             estado: 'ACTIVO',
-            password: 'not-a-real-account',
+            password: await bcrypt.hash(randomBytes(32).toString('base64url'), 10),
           },
         });
       const token = (id) =>
@@ -121,11 +122,11 @@ test(
       }
       const entityInput = (id) => ({
         id,
-        nombre: 'Entity ' + id,
-        nit: id,
-        correo: '',
-        telefono: '',
-        direccion: '',
+        nombre: id === 'A' ? 'VidaPlena - SIMULACION SIN VALIDEZ OPERATIVA' : 'Entity ' + id,
+        nit: id === 'A' ? 'PRUEBA-VIDAPLENA' : id,
+        correo: id === 'A' ? 'vidaplena@example.test' : '',
+        telefono: id === 'A' ? '0000000000' : '',
+        direccion: id === 'A' ? 'Direccion ficticia de prueba' : '',
         ciudad: 'Local',
       });
       const affiliateInput = (id) => ({
@@ -141,7 +142,7 @@ test(
         regimen: 'Subsidiado',
         estado: 'Activo',
       });
-      let a, b, linkA, order, authorization;
+      let a, b, linkA, linkB, order, authorization;
       const category = await db.categoria.create({ data: { nombre: 'Fixture category' } }),
         drug = await db.medicamento.create({
           data: { nombre: 'Fixture medicine', requiere_formula: false, categoria_id: category.id, precio: 20, stock: 10 },
@@ -240,7 +241,7 @@ test(
               body: { farmacia_id: 3, activa: true },
             })
           ).vinculo;
-          (
+          linkB = (
             await req('/integracion/admin/eps/B/farmacia', {
               method: 'PUT',
               body: { farmacia_id: 6, activa: true },
@@ -248,6 +249,64 @@ test(
           ).vinculo;
         },
       );
+      await t.test('VidaPlena pilot provisions 50 synthetic patient links without duplicates', async () => {
+        async function provisionPatient(id) {
+          const input = affiliateInput(id);
+          let account = await db.usuario.findUnique({ where: { cedula: input.documento } });
+          if (!account) {
+            const password = randomBytes(32).toString('base64url');
+            account = await db.usuario.create({
+              data: {
+                id, cedula: input.documento, tipo_documento: input.tipo_documento,
+                nombre: input.nombres, apellido: input.apellidos, correo: input.correo,
+                rol_id: 2, estado: 'ACTIVO', password: await bcrypt.hash(password, 10),
+              },
+            });
+            assert.equal(await bcrypt.compare(password, account.password), true);
+          }
+          assert.equal(account.id, id);
+          assert.equal(account.correo, input.correo);
+          assert.equal(account.rol_id, 2);
+          assert.equal(account.estado, 'ACTIVO');
+          const affiliate = await db.afiliado.findUnique({ where: { documento: input.documento } })
+            ?? (await req('/eps/afiliados', { id: 4, method: 'POST', status: 201, body: input })).afiliado;
+          assert.equal(affiliate.eps_id, 'A');
+          assert.ok(affiliate.usuario_id == null || affiliate.usuario_id === id);
+          const authorized = await db.pacienteAutorizado.findFirst({ where: { cedula: input.documento } });
+          if (!authorized) {
+            await db.pacienteAutorizado.create({
+              data: {
+                nombres: input.nombres, apellidos: input.apellidos,
+                tipo_documento: input.tipo_documento, cedula: input.documento, estado: 'AUTORIZADO',
+              },
+            });
+          }
+          await req('/integracion/admin/eps/A/paciente', {
+            method: 'PUT', body: { afiliado_id: affiliate.id, usuario_id: id },
+          });
+        }
+
+        const ids = [2, ...Array.from({ length: 49 }, (_, index) => index + 100)];
+        for (const id of ids) await provisionPatient(id);
+        const snapshot = () => db.afiliado.findMany({
+          where: { eps_id: 'A' },
+          orderBy: { id: 'asc' },
+          select: { id: true, usuario_id: true, eps_version: true, verificado_at: true },
+        });
+        const first = await snapshot();
+        assert.deepEqual(first.map((row) => row.usuario_id).sort((a, b) => a - b), ids);
+        const eventCount = await db.epsEvento.count();
+        for (const id of ids) await provisionPatient(id);
+        assert.deepEqual(await snapshot(), first);
+        assert.equal(await db.epsEvento.count(), eventCount);
+        assert.equal(await db.usuario.count({ where: { id: { in: ids }, rol_id: 2 } }), 50);
+        const entity = await db.epsEntidad.findUnique({ where: { id: 'A' } });
+        assert.match(entity.nombre, /SIMULACION SIN VALIDEZ OPERATIVA/);
+        assert.deepEqual(
+          [entity.nit, entity.correo, entity.telefono, entity.direccion],
+          ['PRUEBA-VIDAPLENA', 'vidaplena@example.test', '0000000000', 'Direccion ficticia de prueba'],
+        );
+      });
       await t.test('simulated rejection, empty cart and insufficient stock never persist payment or order', async () => {
         const payment = {numero:'4000000000000002',vencimiento:'12/30',cvv:'123',titular:'Titular de prueba'};
         const beforeOrders = await db.solicitud.count(), beforePayments = await db.pago.count();
@@ -509,6 +568,16 @@ test(
             const simulationMode = process.env.PEDIDOS_SIMULADOS;
             try {
               process.env.PEDIDOS_SIMULADOS = 'true';
+              const [existing] = (await req('/integracion/farmacia/existencias', { id: 3 })).datos;
+              const inventory = (await req('/integracion/farmacia/existencias', {
+                id: 3, method: 'PUT',
+                body: {
+                  vinculo_id: linkA.id, medicamento_id: drug.id, stock: 8, minimo: 5,
+                  actualizado_at: existing.actualizado_at,
+                },
+              })).existencia;
+              assert.equal(inventory.stock, 8);
+              assert.equal((await req('/eps/inventario', { id: 4 })).datos[0].stock, 8);
               const pending = await req('/integracion/farmacia/pedidos/' + order, { id: 3 });
               assert.equal(pending.pedido.operacion.simulacion, true);
               assert.equal(pending.pedido.operacion.siguienteEstado, 'PREPARANDO');
@@ -534,7 +603,7 @@ test(
             const stats = (await req('/eps/dashboard', { id: 4 })).estadisticas;
             assert.equal(stats.solicitudes, 1);
             assert.equal(stats.autorizaciones, 1);
-            assert.equal(stats.pacientes, 1);
+            assert.equal(stats.pacientes, 50);
             assert.ok(
               (await req('/integracion/notificaciones', { id: 2 })).datos.some(
                 (n) => n.tipo === 'SOLICITUD',
@@ -682,7 +751,7 @@ test(
                 await evaluate(
                   'document.querySelector("[data-eps-integration]").textContent.includes(' +
                     JSON.stringify(
-                      id === 1 ? 'Entity A' : id === 2 ? 'PRIVATE_CONCEPT' : 'Fixture medicine',
+                      id === 1 ? 'VidaPlena - SIMULACION SIN VALIDEZ OPERATIVA' : id === 2 ? 'PRIVATE_CONCEPT' : 'Fixture medicine',
                     ) +
                     ')',
                 ),

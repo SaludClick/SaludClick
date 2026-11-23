@@ -621,12 +621,12 @@ test(
             await applyInventoryFilters({ buscar: 'isolated MEDICINE', estado: 'BAJO' });
             assert.match(await inventoryText(), /1 registros \/ Pagina 1 de 1/);
 
-            for (const width of [390, 320]) {
+            for (const width of [1440, 820, 390, 320]) {
               await send('Emulation.setDeviceMetricsOverride', {
                 width,
                 height: 844,
                 deviceScaleFactor: 1,
-                mobile: true,
+                mobile: width <= 390,
               });
               assert.ok(
                 await evaluate('document.documentElement.scrollWidth <= innerWidth'),
