@@ -278,7 +278,8 @@ test('navegador: directorio EPS de solo lectura, búsqueda, paginación, cambio 
         assert.match(await evaluate('document.querySelector("#farmaciaLinkedEps").textContent'),/EPS Beta/);
         assert.equal(await evaluate('document.querySelectorAll("#farmaciaUsuariosRows button").length'),0);
         state.links.forEach(f=>{f.activa=false;});const before=affiliateReads;
-        await evaluate('document.querySelector("#farmaciaUsuariosRefresh").click()');await until(()=>evaluate('document.querySelector("#farmaciaUsuariosTable").hidden===true&&document.querySelector("#farmaciaUsuariosBuscar").disabled'));
+        await evaluate('document.querySelector("#farmaciaUsuariosRefresh").click()');
+        await until(()=>evaluate('document.querySelector("#farmaciaUsuariosTable").hidden && document.querySelector("#farmaciaUsuariosBuscar").disabled && /No tienes una EPS/.test(document.querySelector("#farmaciaUsuariosStatus").textContent)'));
         assert.equal(affiliateReads,before);assert.equal(await evaluate('document.querySelectorAll("#farmaciaUsuariosRows tr").length'),0);
         assert.match(await evaluate('document.querySelector("#farmaciaUsuariosStatus").textContent'),/No tienes una EPS/);
         assert.deepEqual(browser.errores,[]);
