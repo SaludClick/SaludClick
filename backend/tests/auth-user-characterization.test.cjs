@@ -157,6 +157,11 @@ test('login valida contraseña/estado y firma el JWT actual de ocho horas', asyn
         findUser('ana@example.test').estado = 'INACTIVO';
         await assert.rejects(authService.login({ correo: 'ana@example.test', password: 'correcta' }), /La cuenta se encuentra inactiva/);
     });
+    await t.test('estado indeterminado y credenciales de tipo inválido no emiten sesión', async () => {
+        findUser('ana@example.test').estado = null;
+        await assert.rejects(authService.login({ correo: 'ana@example.test', password: 'correcta' }), /cuenta se encuentra inactiva/);
+        await assert.rejects(authService.login({ correo: 'ana@example.test', password: { texto: 'correcta' } }), /Correo o contraseña incorrectos/);
+    });
 });
 
 test('Google verifica audiencia y correo antes de crear o iniciar sesión', async t => {

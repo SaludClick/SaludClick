@@ -177,7 +177,10 @@ const invitarCuenta = async ({ correo, rol_id }) => {
 
 const login = async (data) => {
 
-    const correo = normalizarCorreo(data.correo);
+    const correo = typeof data?.correo === "string" ? normalizarCorreo(data.correo) : "";
+    if (!correo || correo.length > 254 || typeof data?.password !== "string" || !data.password) {
+        throw new PublicError("Correo o contraseña incorrectos");
+    }
 
     const usuario = await authRepository.login(correo);
 
@@ -198,7 +201,7 @@ const login = async (data) => {
         );
     }
 
-    if (usuario.estado === "INACTIVO") {
+    if (usuario.estado !== "ACTIVO") {
         throw new PublicError(
             "La cuenta se encuentra inactiva"
         );
