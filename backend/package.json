@@ -7,6 +7,7 @@
         "dev": "nodemon server.js",
         "start": "node server.js",
         "test": "node --test tests/*.test.cjs",
+        "resend:verificar": "node scripts/check-resend.cjs",
         "test:integration:administrative": "node --test tests/administrative.postgres.cjs",
         "test:integration:administrative-chat": "node --test tests/administrative-chat.isolated.cjs",
         "test:integration:postgres": "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.js\" tests/postgres.integration.cjs",

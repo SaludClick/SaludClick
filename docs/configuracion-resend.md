@@ -13,6 +13,8 @@ Si ambas variables se dejan sin valor, se conserva SMTP para recuperación e inv
 
 La verificación de un envío real requiere un remitente verificado y una cuenta de prueba autorizada con acceso al buzón. Solicita una recuperación para esa cuenta y verifica la recepción y el uso único del enlace.
 
+Ejecuta `npm run resend:verificar` desde `backend` para comprobar que el formato de la clave y del remitente estén presentes. El comando no muestra sus valores ni envía mensajes. Crea una clave con permiso de envío restringida al dominio de SaludClick. [Permisos de claves de Resend](https://resend.com/changelog/new-api-key-permissions)
+
 ## Inicio de sesión con Google
 
 Configura `GOOGLE_CLIENT_ID` en el backend con el mismo cliente público que usa el botón de Google del formulario de acceso. Registra el origen del frontend en el cliente OAuth web. Aplica primero la migración `20261123230000_google_subject` a la base del entorno de despliegue, después de revisarla.
