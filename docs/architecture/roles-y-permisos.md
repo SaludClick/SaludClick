@@ -43,6 +43,20 @@ existencias. No se añadió edición de stock o precios.
 - Los errores async no capturados reciben JSON genérico 500; las APIs inexistentes
   reciben 404 y los cuerpos por encima del límite reciben 413 sin stacks internos.
 
+## Datos mínimos para el alta
+
+El alta operativa pasa por una persona autorizada. El correo identifica la cuenta y permite verificar el canal o recuperar el acceso. La contraseña la establece el titular mediante una invitación de un solo uso cuando ese flujo esté habilitado. La verificación de identidad se realiza manualmente durante esta etapa.
+
+| Rol | Campos y finalidad |
+| --- | --- |
+| Paciente | Nombre, apellido, correo y tipo y número de documento para el cotejo con la afiliación. Teléfono y dirección se recogen cuando se necesitan para una entrega. |
+| Farmacia | Nombre, apellido y correo de la persona operadora, más la membresía autorizada que delimita su farmacia. |
+| IPS | Nombre, apellido y correo de la persona operadora, más la membresía autorizada que delimita su IPS. Se propone una habilitación separada para la autorización clínica. |
+| Administración | Nombre, apellido y correo institucional. El rol requiere aprovisionamiento y aprobación administrativa. |
+| Domiciliario | Nombre, apellido y correo de la persona asignada. Se registra el vínculo con la entidad que puede asignar visitas. |
+
+Esta matriz define el alta objetivo. Los formularios existentes todavía deben ajustarse a estos campos por rol. Las evidencias clínicas y los datos de la visita corresponden al trámite en el que se usan.
+
 ## API de farmacia
 
 Todas estas rutas requieren `Authorization: Bearer <JWT>` con rol de farmacia.
