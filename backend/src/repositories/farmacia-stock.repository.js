@@ -66,6 +66,32 @@ function createRepository(db,origen){
             return {medicamentos,resumen:await resumen(c,id),paginacion:{pagina:o.pagina,tamano:o.take,total,paginas:Math.ceil(total/o.take)},alcance:{tipo:'FARMACIA_PROPIA',titularidadVerificada:true,movimientosHabilitados:false,umbralOrientativo:UMBRAL_BAJO}};
         });},
         detalle(id,medicamentoId){return scoped(id,false,async c=>{const medicamento=(await c.query(`SELECT ${columns} FROM farmacia_existencias x JOIN medicamentos m ON m.id=x.medicamento_id WHERE x.farmacia_id=$1 AND m.id=$2`,[id,medicamentoId])).rows[0];if(!medicamento)throw fallo(404,'EXISTENCIAS_NO_DISPONIBLES');return {medicamento};});},
+        movimientoManual(actorId,farmaciaId,input){return tx(actorId,1,true,async c=>{
+            const farmacia=(await c.query("SELECT id FROM usuarios WHERE id=$1 AND rol_id=3 AND estado='ACTIVO' FOR SHARE",[farmaciaId])).rows[0];
+            if(!farmacia)throw fallo(403,'FARMACIA_NO_VIGENTE');
+            const {medicamentoId,tipo,cantidad,clave,referencia,motivo}=input;
+            const huella=createHash('sha256').update(JSON.stringify({farmaciaId,...input})).digest('hex');
+            const {rows:previos}=await c.query('SELECT huella FROM farmacia_stock_eventos WHERE farmacia_id=$1 AND clave=$2',[farmaciaId,clave]);
+            if(previos.length){
+                if(previos.some(e=>e.huella!==huella))throw fallo(409,'CLAVE_REUTILIZADA');
+                return {repetido:true};
+            }
+            const {rows:[med]}=await c.query(`SELECT ${stockFields} FROM medicamentos m WHERE id=$1 FOR SHARE`,[medicamentoId]);
+            if(!med)throw fallo(404,'MEDICAMENTO_NO_ENCONTRADO');
+            const delta=tipo==='AJUSTE_MAS'?cantidad:-cantidad;
+            const {rows:[saldo]}=await c.query(`UPDATE farmacia_existencias
+                SET cantidad=cantidad+$3,updated_at=now()
+                WHERE farmacia_id=$1 AND medicamento_id=$2
+                  AND cantidad::bigint+$3::int BETWEEN reservado AND 2147483647
+                RETURNING cantidad-reservado AS stock`,[farmaciaId,medicamentoId,delta]);
+            if(!saldo)throw fallo(409,'MOVIMIENTO_SALDO_INVALIDO','El saldo acreditado no permite el movimiento.');
+            const {rows:[evento]}=await c.query(`INSERT INTO farmacia_stock_eventos
+                (farmacia_id,medicamento_id,actor_id,tipo,cantidad,clave,huella,referencia,motivo)
+                VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+                [farmaciaId,medicamentoId,actorId,tipo,cantidad,clave,huella,referencia,motivo]);
+            const notificada=await registrarStock(c,farmaciaId,'inventario',evento.id,{...med,stock:saldo.stock-delta},{...med,stock:saldo.stock});
+            return {repetido:false,...(notificada?{destinatarios:[farmaciaId]}:{})};
+        });},
         ingresar(actorId,farmaciaId,input){return tx(actorId,1,true,async c=>{
             const f=(await c.query("SELECT id FROM usuarios WHERE id=$1 AND rol_id=3 AND estado='ACTIVO' FOR SHARE",[farmaciaId])).rows[0];
             if(!f)throw fallo(403,'FARMACIA_NO_VIGENTE');

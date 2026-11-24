@@ -45,9 +45,13 @@ test('PostgreSQL: transiciones, pago real, evidencia, historial, idempotencia y 
     const p=(await repo.detalle(3,1)).pedido;assert.equal(p.historial.length,3);assert.equal(p.historial[2].responsable,'Farma Uno');
     assert.equal((await db.query('SELECT stock FROM medicamentos WHERE id=1')).rows[0].stock,10);
     const stats=await repo.estadisticas(3,v.periodo({}));
-    assert.deepEqual(stats.indicadores,{solicitudesRecibidas:3,pacientesAtendidos:1,solicitudesPendientes:2,solicitudesCompletadas:1,medicamentosEntregados:3,medicamentosDisponibles:null});
+    assert.deepEqual(stats.indicadores,{solicitudesRecibidas:3,pacientesAtendidos:1,solicitudesPendientes:2,solicitudesPreparadas:1,solicitudesCompletadas:1,medicamentosEntregados:3,medicamentosDisponibles:null});
     assert.equal(stats.graficos.medicamentos[0].total,4);assert.equal(stats.actividad.length,3);
-    assert.equal((await repo.estadisticas(4,v.periodo({}))).indicadores.medicamentosEntregados,0);
+    const otherPharmacy = await repo.estadisticas(4,v.periodo({}));
+    assert.equal(otherPharmacy.indicadores.medicamentosEntregados,0);
+    assert.equal(otherPharmacy.indicadores.solicitudesPreparadas,0);
+    const past = await repo.estadisticas(3,{desde:'2026-01-01',hasta:'2026-01-31'});
+    assert.equal(past.indicadores.solicitudesPreparadas,0);
 });
 test('PostgreSQL: fórmula exige vínculo al pedido del mismo paciente y autorización de farmacia',async()=>{
     await db.exec(`INSERT INTO formulas_medicas(id,usuario_id,nombre_archivo,nombre_original,tipo_mime,ruta_archivo,tamano) VALUES(1,2,'00000000-0000-4000-8000-000000000000.pdf','formula.pdf','application/pdf','private',10);`);

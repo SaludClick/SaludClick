@@ -1,4 +1,5 @@
 import { apiFetch } from './api.js';
+import { insigniaEstado } from './eps-presentation.js';
 import { getToken } from './auth.js';
 
 const ruta = '/api/eps/notificaciones';
@@ -51,8 +52,16 @@ export function iniciarNotificaciones() {
 
     function tarjeta(aviso) {
         const fila = nodo('li', '');
-        fila.append(nodo('h3', aviso.titulo), nodo('p', aviso.mensaje),
-            nodo('p', `${tipos[aviso.tipo]} · ${fecha.format(new Date(aviso.fecha))} · ${aviso.leida_at ? 'Leída' : 'No leída'}`));
+        fila.className = 'eps-surface';
+        fila.dataset.unread = String(!aviso.leida_at);
+        const meta = nodo('p', '');
+        meta.className = 'eps-notice-meta';
+        const momento = nodo('time', fecha.format(new Date(aviso.fecha)));
+        momento.dateTime = new Date(aviso.fecha).toISOString();
+        meta.append(nodo('span', tipos[aviso.tipo]), momento, insigniaEstado(aviso.leida_at ? 'Leída' : 'No leída'));
+        const titulo = nodo('h3', aviso.titulo);
+        titulo.setAttribute('aria-level', '2');
+        fila.append(titulo, meta, nodo('p', aviso.mensaje));
         const acciones = nodo('div', '');
         acciones.className = 'eps-avisos-controles';
         if (secciones[aviso.enlace]) {

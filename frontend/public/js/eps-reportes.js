@@ -10,7 +10,8 @@ function csvCelda(valor) {
 
 function tabla(titulo, filas) {
     const seccion = document.createElement('section');
-    const encabezado = document.createElement('h3');
+    seccion.className = 'eps-surface';
+    const encabezado = document.createElement('h2');
     encabezado.textContent = titulo;
     seccion.append(encabezado);
     if (!filas.length) {
@@ -24,6 +25,7 @@ function tabla(titulo, filas) {
     const cuerpo = document.createElement('table').createTBody();
     for (const [etiqueta, valor] of filas) {
         const fila = cuerpo.insertRow();
+        if (etiqueta === 'Total') fila.dataset.total = '';
         const campo = document.createElement('th');
         campo.scope = 'row';
         campo.textContent = etiqueta;

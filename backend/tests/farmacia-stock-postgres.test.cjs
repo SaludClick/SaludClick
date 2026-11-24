@@ -12,6 +12,7 @@ before(async()=>{
     f=await require('./support/farmacia-postgres.cjs').preparar();
     await f.db.exec(fs.readFileSync(path.resolve(__dirname,'../prisma/migrations/20261117180000_farmacia_inventario_propio/migration.sql'),'utf8'));
     await f.db.exec(fs.readFileSync(path.resolve(__dirname,'../prisma/migrations/20261117200000_farmacia_ingreso_referencia_unica/migration.sql'),'utf8'));
+    await f.db.exec(fs.readFileSync(path.resolve(__dirname,'../prisma/migrations/20261123190000_farmacia_movimientos_manuales/migration.sql'),'utf8'));
     process.env.FARMACIA_OPERACION_ENABLED='true';process.env.FARMACIA_INVENTARIO_PROPIO_ENABLED='true';
     stock=require('../src/repositories/farmacia-stock.repository').createRepository(f.pool,f.origen);
     service=require('../src/services/farmacia-stock.service').createService(stock);
@@ -130,4 +131,80 @@ test('Stock propio: reserva agota, ingreso repone y el reintento no duplica avis
 test('Stock: revocación retira lectura y no destruye historial',async()=>{
     await f.db.query('UPDATE eps_farmacias SET activa=false WHERE farmacia_id=3');await assert.rejects(service.listar({id:3},{}),{status:403});
     assert.equal((await f.db.query("SELECT count(*)::int AS n FROM farmacia_stock_eventos WHERE farmacia_id=3 AND tipo='ENTREGA'")).rows[0].n,4);
+});
+
+test('EPS and pharmacy share authorization, order history and stock transitions',async()=>{
+    await f.db.query('UPDATE eps_farmacias SET activa=true WHERE farmacia_id=3');
+    const ops=require('../src/services/farmacia-operacion.service').createService(f.repo,f.catalogo);
+    const integration=require('../src/services/eps-integration.service').createService({
+        epsAutorizacion:{findFirst:async({where})=>where.farmacia_vinculo.farmacia_id===3?{id:50}:null}
+    },{advanceOrder:(id,input,notify,actorId)=>ops.avanzarEps({id:actorId},id,input,notify)});
+    const advance=(id,input)=>integration.avanzarFarmacia({id,rol:3},21,input);
+    await f.db.exec(`
+        INSERT INTO solicitudes(id,usuario_id,estado) VALUES(21,2,'APROBADA');
+        INSERT INTO detalle_solicitud(solicitud_id,medicamento_id,cantidad,precio,subtotal) VALUES(21,1,1,10,10);
+        INSERT INTO pagos(solicitud_id,usuario_id,referencia,metodo,marca,ultimos_digitos,monto,estado,simulacion)
+        VALUES(21,2,'r21','TARJETA','test','0000',10,'APROBADO',false);
+        INSERT INTO eps_autorizaciones(id,solicitud_id,estado,eps_id,responsable_id,afiliado_id,farmacia_vinculo_id)
+        VALUES(50,21,'PENDIENTE','A',1,'a',1);`);
+    await stock.ingresar(1,3,supply([{medicamentoId:1,cantidad:2}]));
+    const preparando={estadoActual:'APROBADA',estado:'PREPARANDO'};
+    await assert.rejects(advance(4,preparando),{status:404});
+    await assert.rejects(advance(3,preparando),{codigo:'AUTORIZACION_EPS_NO_VIGENTE'});
+    assert.equal((await f.db.query('SELECT * FROM farmacia_asignaciones WHERE solicitud_id=21')).rows.length,0);
+    await f.db.query("UPDATE eps_autorizaciones SET estado='APROBADA' WHERE id=50");
+    const [first,retry]=await Promise.all([advance(3,preparando),advance(3,preparando)]);
+    assert.deepEqual(first,retry);
+    await assert.rejects(f.repo.detalle(4,21),{status:404});
+    await f.db.query("UPDATE eps_autorizaciones SET estado='RECHAZADA' WHERE id=50");
+    await assert.rejects(f.repo.avanzar(3,21,next('PREPARANDO','LISTA',2)),{codigo:'AUTORIZACION_EPS_NO_VIGENTE'});
+    await f.db.query("UPDATE eps_autorizaciones SET estado='APROBADA' WHERE id=50");
+    await f.repo.avanzar(3,21,next('PREPARANDO','LISTA',2));
+    const entrega={estadoActual:'LISTA',estado:'ENTREGADA'};
+    await assert.rejects(advance(3,entrega),{status:400});
+    const confirmada={...entrega,recepcion:'Paciente autorizado'};
+    await advance(3,confirmada);
+    await advance(3,confirmada);
+    const {pedido}=await f.repo.detalle(3,21);
+    assert.deepEqual(pedido.historial.map(e=>e.estado),['PREPARANDO','LISTA','ENTREGADA']);
+    const {rows}=await f.db.query('SELECT tipo FROM farmacia_stock_eventos WHERE solicitud_id=21 ORDER BY id');
+    assert.deepEqual(rows.map(e=>e.tipo),['RESERVA','ENTREGA']);
+});
+
+test('Manual stock operations preserve reserves, audit the reason and reject duplicate documents',async()=>{
+    const original=await row();
+    await f.db.query('UPDATE farmacia_existencias SET reservado=cantidad WHERE farmacia_id=3 AND medicamento_id=1');
+    const input={tipo:'SALIDA',medicamentoId:1,cantidad:1,clave:randomUUID(),referencia:'Acta de prueba',motivo:'Retiro documentado'};
+    await assert.rejects(service.movimientoManual({id:3},3,{},input),{status:403});
+    await assert.rejects(service.movimientoManual({id:1},3,{},input),{codigo:'MOVIMIENTO_SALDO_INVALIDO'});
+    await f.db.query('UPDATE farmacia_existencias SET reservado=$1 WHERE farmacia_id=3 AND medicamento_id=1',[original.reservado]);
+    const add={...input,tipo:'AJUSTE_MAS',clave:randomUUID(),referencia:'Acta de conteo'};
+    await service.movimientoManual({id:1},3,{},add);
+    await service.movimientoManual({id:1},3,{},input);
+    assert.equal((await service.movimientoManual({id:1},3,{},input)).repetido,true);
+    await assert.rejects(service.movimientoManual({id:1},3,{}, {...input,clave:randomUUID(),referencia:input.referencia.toUpperCase()}),{status:409});
+    assert.deepEqual(await row(),original);
+    const audit=(await f.db.query("SELECT actor_id,motivo,tipo FROM farmacia_stock_eventos WHERE referencia='Acta de prueba'")).rows;
+    assert.deepEqual(audit,[{actor_id:1,motivo:input.motivo,tipo:'SALIDA'}]);
+});
+
+test('Two assigned requests cannot reserve the same last free unit',async()=>{
+    await f.db.exec(`
+        INSERT INTO medicamentos(id,nombre,categoria_id,precio,stock,requiere_formula,estado)
+        VALUES(22,'Last free unit',1,10,30,false,'DISPONIBLE');
+        INSERT INTO solicitudes(id,usuario_id,estado) VALUES(22,2,'APROBADA'),(23,2,'APROBADA');
+        INSERT INTO detalle_solicitud(solicitud_id,medicamento_id,cantidad,precio,subtotal)
+        VALUES(22,22,1,10,10),(23,22,1,10,10);
+        INSERT INTO pagos(solicitud_id,usuario_id,referencia,metodo,marca,ultimos_digitos,monto,estado,simulacion)
+        VALUES(22,2,'r22','TARJETA','test','0000',10,'APROBADO',false),
+              (23,2,'r23','TARJETA','test','0000',10,'APROBADO',false);`);
+    await stock.ingresar(1,3,supply([{medicamentoId:22,cantidad:1}]));
+    await f.repo.asignar(1,22,3);
+    await f.repo.asignar(1,23,3);
+    const results=await Promise.allSettled([22,23].map(id=>f.repo.avanzar(3,id,next('APROBADA','PREPARANDO',1))));
+    assert.equal(results.filter(result=>result.status==='fulfilled').length,1);
+    assert.equal(results.find(result=>result.status==='rejected').reason.codigo,'STOCK_PROPIO_INSUFICIENTE');
+    assert.deepEqual(await row(22),{cantidad:1,reservado:1});
+    const events=(await f.db.query("SELECT solicitud_id FROM farmacia_stock_eventos WHERE medicamento_id=22 AND tipo='RESERVA'")).rows;
+    assert.equal(events.length,1);
 });

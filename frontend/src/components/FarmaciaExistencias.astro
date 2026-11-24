@@ -19,22 +19,28 @@ const prefijo = catalogo ? 'catalogoFarmacia' : 'inventarioFarmacia';
   <p class="farmacia-existencias-note" data-existencias-part="nota">Indicadores de todo el catálogo, independientes de los filtros. Disponible significa estado disponible y stock mayor que cero.</p>
   <p data-existencias-part="integridad" role="status"></p>
   <form id="buscarInventario" data-existencias-part="form" class="farmacia-existencias-filters">
-    <label for="buscarFarmacia">Buscar medicamento</label>
-    <input id="buscarFarmacia" data-existencias-part="buscar" type="search" maxlength="150" placeholder="Nombre, principio activo, presentación o registro" />
-    <label for={`${prefijo}Disponibilidad`}>Disponibilidad</label>
-    <select id={`${prefijo}Disponibilidad`} data-existencias-part="disponibilidad">
-      <option value="todas">Todas</option><option value="disponibles">Disponibles</option><option value="bajos">Stock bajo (1-5)</option><option value="agotados">Agotados</option><option value="inactivos">Inactivos</option><option value="inconsistentes">Inconsistencias</option><option value="desconocidos">Estado desconocido</option>
-    </select>
-    <label for={`${prefijo}Formula`}>Fórmula</label>
-    <select id={`${prefijo}Formula`} data-existencias-part="formula">
-      <option value="todas">Todos los requisitos</option><option value="requiere">Requiere fórmula</option><option value="no-requiere">No requiere fórmula</option><option value="desconocido">Requisito desconocido</option>
-    </select>
+    <div class="farmacia-field farmacia-field-wide">
+      <label for="buscarFarmacia">Buscar medicamento</label>
+      <input id="buscarFarmacia" data-existencias-part="buscar" type="search" maxlength="150" placeholder="Nombre, principio activo, presentación o registro" />
+    </div>
+    <div class="farmacia-field">
+      <label for={`${prefijo}Disponibilidad`}>Disponibilidad</label>
+      <select id={`${prefijo}Disponibilidad`} data-existencias-part="disponibilidad">
+        <option value="todas">Todas</option><option value="disponibles">Disponibles</option><option value="bajos">Stock bajo (1-5)</option><option value="agotados">Agotados</option><option value="inactivos">Inactivos</option><option value="inconsistentes">Inconsistencias</option><option value="desconocidos">Estado desconocido</option>
+      </select>
+    </div>
+    <div class="farmacia-field">
+      <label for={`${prefijo}Formula`}>Fórmula</label>
+      <select id={`${prefijo}Formula`} data-existencias-part="formula">
+        <option value="todas">Todos los requisitos</option><option value="requiere">Requiere fórmula</option><option value="no-requiere">No requiere fórmula</option><option value="desconocido">Requisito desconocido</option>
+      </select>
+    </div>
     <button type="submit" data-existencias-part="actualizar">Buscar / actualizar</button>
     <button type="button" data-existencias-part="limpiar">Limpiar filtros</button>
   </form>
   </>}
   <p id={catalogo ? 'catalogoFarmaciaEstado' : 'inventoryEmpty'} data-existencias-part="estado" role="status" aria-live="polite">Cargando información…</p>
-  <div class="farmacia-table">
+  <div class="farmacia-table" role="region" tabindex="0" aria-label={catalogo ? "Tabla del catálogo de medicamentos" : "Tabla de existencias"}>
     <table class="farmacia-existencias-table">
       <caption class:list={{"farmacia-catalogo-caption": catalogo}}>{catalogo ? 'Catálogo de medicamentos' : 'Existencias registradas'}</caption>
       <thead><tr>{(catalogo ? ['Fotografía y nombre', 'Presentación', 'Cantidad disponible', 'Stock mínimo', 'Publicación', 'Disponibilidad', 'Acciones'] : ['Código', 'Medicamento', 'Descripción', 'Presentación', 'Cantidad disponible', 'Unidades entregadas', 'Estado de existencias', 'Detalle']).map(titulo => <th scope="col">{titulo}</th>)}</tr></thead>

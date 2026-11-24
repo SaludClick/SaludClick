@@ -26,12 +26,14 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', async () => 
     try { const accessInfo=await apiFetch('/api/farmacia/verificar-acceso'); app.dataset.operacion=String(accessInfo.operacionHabilitada===true);app.dataset.solicitudes=String(accessInfo.solicitudesHabilitadas===true||accessInfo.operacionHabilitada===true);app.dataset.notificaciones=String(accessInfo.notificacionesHabilitadas===true);app.dataset.inventarioPropio=String(accessInfo.inventarioPropioHabilitado===true); }
     catch (error) {
         access.textContent = error.message || 'No se pudo verificar el acceso a Farmacia.';
+        access.classList.add('admin-message');
         access.setAttribute('role', 'alert');
         const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Reintentar acceso';
         retry.addEventListener('click', () => location.reload()); access.append(' ', retry);
         return;
     }
     access.hidden = true;
+    access.textContent = '';
     document.getElementById('farmaciaMain').hidden = false;
     app.dataset.authorized = 'true';
     const module = app.dataset.farmaciaModule;

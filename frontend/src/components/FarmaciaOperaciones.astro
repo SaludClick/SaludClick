@@ -10,25 +10,31 @@
   <p class="farmacia-orders-note">Totales de la cola, independientes de los filtros. Pendientes de preparar corresponde a solicitudes aprobadas; no incluye solicitudes pendientes de aprobación.</p>
   <p id="farmaciaOrdersSummaryStatus" role="status" aria-live="polite"></p>
   <form id="filtroPedidos" class="farmacia-filters">
-    <label for="documentoSolicitudFarmacia">Buscar por cédula (CC)</label>
-    <input id="documentoSolicitudFarmacia" name="documento" type="search" inputmode="numeric" maxlength="30" placeholder="Ingresa el número de cédula" />
-    <label for="buscarSolicitudFarmacia">Identificador de solicitud</label>
-    <input id="buscarSolicitudFarmacia" name="id" inputmode="numeric" maxlength="10" pattern="[1-9][0-9]{0,9}" />
-    <label for="estadoFarmacia">Estado</label>
-    <select id="estadoFarmacia" name="estado">
-      <option value="todas">Todas las operativas</option>
-      <option value="APROBADA">Aprobadas</option>
-      <option value="PREPARANDO">En preparación</option>
-      <option value="LISTA">Listas</option>
-      <option value="ENTREGADA">Entregadas</option>
-    </select>
+    <div class="farmacia-field farmacia-field-wide">
+      <label for="documentoSolicitudFarmacia">Buscar por cédula (CC)</label>
+      <input id="documentoSolicitudFarmacia" name="documento" type="search" inputmode="numeric" maxlength="30" placeholder="Ingresa el número de cédula" />
+    </div>
+    <div class="farmacia-field">
+      <label for="buscarSolicitudFarmacia">Identificador de solicitud</label>
+      <input id="buscarSolicitudFarmacia" name="id" inputmode="numeric" maxlength="10" pattern="[1-9][0-9]{0,9}" />
+    </div>
+    <div class="farmacia-field">
+      <label for="estadoFarmacia">Estado</label>
+      <select id="estadoFarmacia" name="estado">
+        <option value="todas">Todas las operativas</option>
+        <option value="APROBADA">Aprobadas</option>
+        <option value="PREPARANDO">En preparación</option>
+        <option value="LISTA">Listas</option>
+        <option value="ENTREGADA">Entregadas</option>
+      </select>
+    </div>
     <button type="submit" id="farmaciaOrdersRefresh">Buscar</button>
     <button type="button" id="farmaciaOrdersClear">Borrar búsqueda</button>
   </form>
   <button id="retryFarmaciaOrders" type="button" hidden>Reintentar consulta de pedidos</button>
   <button id="retryFarmaciaStats" type="button" hidden>Reintentar indicadores</button>
   <p id="farmaciaOrdersStatus" role="status" aria-live="polite"></p>
-  <div id="farmaciaOrders" aria-live="polite" aria-busy="false"></div>
+  <div id="farmaciaOrders" role="region" tabindex="0" aria-label="Solicitudes asignadas" aria-live="polite" aria-busy="false"></div>
   <nav class="farmacia-pagination" aria-label="Páginas de solicitudes"><button type="button" id="ordersPrevious" disabled>Anterior</button><span id="ordersPage"></span><button type="button" id="ordersNext" disabled>Siguiente</button></nav>
   <dialog id="farmaciaSolicitudDetalle" class="farmacia-orders-dialog" aria-labelledby="farmaciaSolicitudDetalleTitle">
     <div class="farmacia-orders-dialog-heading"><h2 id="farmaciaSolicitudDetalleTitle">Detalle de solicitud</h2><button id="farmaciaSolicitudCerrar" type="button">Cerrar detalle</button></div>

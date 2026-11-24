@@ -12,4 +12,17 @@ function operacion(pedido) {
     return { siguienteEstado: bloqueos.length ? null : SIGUIENTE[pedido.estado] || null, bloqueos, ...(pagoSimulado ? { simulacion: true } : {}) };
 }
 
-module.exports = { operacion };
+function operacionConPagoReal(pedido, subtotales) {
+    const condiciones = operacion(pedido);
+    const centavos = value => Math.round(Number(value) * 100);
+    const total = subtotales.reduce((sum, value) => sum + centavos(value), 0);
+    const pagado = pedido.pagos
+        .filter(pago => pago.estado === 'APROBADO' && pago.simulacion === false)
+        .reduce((sum, pago) => sum + centavos(pago.monto), 0);
+    if (!Number.isSafeInteger(total) || total <= 0 || !Number.isSafeInteger(pagado) || pagado < total) {
+        condiciones.bloqueos.push('PAGO_REAL_INSUFICIENTE');
+        condiciones.siguienteEstado = null;
+    }
+    return condiciones;
+}
+module.exports = { operacion, operacionConPagoReal };

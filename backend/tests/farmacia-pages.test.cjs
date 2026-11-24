@@ -39,8 +39,11 @@ test('contexto de Farmacia limita retornos a sus rutas y migra enlaces antiguos 
 test('navegador: siete pantallas independientes, permisos, módulos aislados, llamadas únicas y responsive', { timeout: 120000 }, async t => {
     if (!fs.existsSync(process.env.EDGE_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe')) { t.skip('Edge no disponible'); return; }
     const root = path.resolve(__dirname, '../../frontend/dist');
+    let releaseAccess;
+    const pendingAccess = new Promise(resolve => { releaseAccess = resolve; });
+    let waitForAccess = true;
     const calls = []; let access = 200, denyOrders = false, dashboardPopulated = false;
-    const server = http.createServer((req, res) => {
+    const server = http.createServer(async (req, res) => {
         const url = new URL(req.url, 'http://localhost');
         if (url.pathname.startsWith('/api/')) {
             calls.push(url.pathname + url.search);
@@ -50,13 +53,13 @@ test('navegador: siete pantallas independientes, permisos, módulos aislados, ll
             if (url.pathname === '/api/farmacia/dashboard/estadisticas') {
                 const recent = url.searchParams.get('hasta').slice(0,7);
                 const data = dashboardPopulated ? [{mes:recent,total:2}] : [];
-                return send({ok:true,disponible:true,indicadores:{solicitudesRecibidas:dashboardPopulated?2:0,pacientesAtendidos:0,solicitudesPendientes:0,solicitudesCompletadas:0,medicamentosEntregados:0,medicamentosDisponibles:dashboardPopulated?1:null},graficos:{evolucion:data,meses:data,estados:dashboardPopulated?[{estado:'APROBADA',total:2}]:[],pacientes:[],medicamentos:[]},actividad:[],destacados:dashboardPopulated?[{id:1,nombre:'Medicamento de prueba',estado:'DISPONIBLE',stock:3,disponibles:2}]:null,tendencia:dashboardPopulated?{actual:2,anterior:1,variacionPorcentual:100}:null});
+                return send({ok:true,disponible:true,indicadores:{solicitudesRecibidas:dashboardPopulated?2:0,solicitudesPreparadas:0,pacientesAtendidos:0,solicitudesPendientes:0,solicitudesCompletadas:0,medicamentosEntregados:0,medicamentosDisponibles:dashboardPopulated?1:null},graficos:{evolucion:data,meses:data,estados:dashboardPopulated?[{estado:'APROBADA',total:2}]:[],pacientes:[],medicamentos:[]},actividad:[],destacados:dashboardPopulated?[{id:1,nombre:'Medicamento de prueba',estado:'DISPONIBLE',stock:3,disponibles:2}]:null,tendencia:dashboardPopulated?{actual:2,anterior:1,variacionPorcentual:100}:null});
             }
             if (url.pathname === '/api/farmacia/dashboard/usuarios-vinculados') return send({ok:true,total:0});
             if (url.pathname === '/api/farmacia/medicamentos/permisos') return send({ok:true,puedeCrear:false,ambitos:[],categorias:[]});
             if (url.pathname === '/api/farmacia/eps') return send({ ok: true, vinculacion });
             if (url.pathname === '/api/farmacia/usuarios') return send({ ok: true, vinculacion, pacientes: [], totalActivos: 0, paginacion: { pagina: 1, tamano: 25, total: 0, paginas: 0 } });
-            if (url.pathname === '/api/farmacia/verificar-acceso') { res.statusCode = access; return send({ ok: access === 200, mensaje: 'Acceso no vigente.' }); }
+            if (url.pathname === '/api/farmacia/verificar-acceso') { if (waitForAccess) await pendingAccess; res.statusCode = access; return send({ ok: access === 200, mensaje: 'Acceso no vigente.' }); }
             if (url.pathname === '/api/integracion/farmacia/pedidos') {
                 if (denyOrders) { res.statusCode = 503; return send({ ok: false, codigo: 'FARMACIA_PEDIDOS_TITULARIDAD_PENDIENTE', mensaje: 'Falta titularidad verificable del pedido.' }); }
                 return send({ ok: true, resumen: { pendientes: 0, preparando: 0, listas: 0, entregadas: 0 }, pedidos: [], paginacion: { pagina: 1, tamano: 25, total: 0, paginas: 0 } });
@@ -86,6 +89,19 @@ test('navegador: siete pantallas independientes, permisos, módulos aislados, ll
         for (const module of modules) {
             const before = calls.length;
             await send('Page.navigate', { url: origin + route(module) });
+            if (waitForAccess) {
+                try {
+                    await until(() => calls.length > before && evaluate('document.readyState === "complete" && !!document.querySelector("#farmaciaAccessStatus")'));
+                    assert.deepEqual(await evaluate(`(() => {
+                        const status = document.querySelector('#farmaciaAccessStatus');
+                        return { role: status.getAttribute('role'), styledAsError: status.classList.contains('admin-message'), hidden: status.hidden };
+                    })()`), { role: 'status', styledAsError: false, hidden: false });
+                    assert.deepEqual(calls.slice(before), ['/api/farmacia/verificar-acceso']);
+                } finally {
+                    waitForAccess = false;
+                    releaseAccess();
+                }
+            }
             await until(() => evaluate('document.querySelector("#farmaciaApp")?.dataset.authorized === "true"'));
             if (module === 'dashboard') await until(() => evaluate('document.querySelector("#farmaciaDashboardOrdersStatus").textContent.includes("actualizados")'));
             if (module === 'solicitudes') await until(() => evaluate('document.querySelector("#farmaciaOrders").getAttribute("aria-busy") === "false"'));
@@ -120,7 +136,13 @@ test('navegador: siete pantallas independientes, permisos, módulos aislados, ll
             }
             if (module === 'dashboard') {
                 await until(() => evaluate('document.querySelector("#farmaciaDashboardMetrics").getAttribute("aria-busy") === "false"'));
-                assert.deepEqual(await evaluate('[...document.querySelectorAll("#farmaciaDashboardMetrics strong")].map(el=>el.textContent)'), ['0','0','—','0']);
+                assert.deepEqual(await evaluate(`Object.fromEntries(
+                    [...document.querySelectorAll('#farmaciaDashboardMetrics [data-dashboard-metric]')]
+                        .map(el => [el.dataset.dashboardMetric, el.textContent])
+                )`), {
+                    solicitudesRecibidas: '0', solicitudesPreparadas: '0', solicitudesCompletadas: '0',
+                    medicamentosDisponibles: '—', usuariosVinculados: '0'
+                });
                 assert.match(await evaluate('document.querySelector("#farmaciaDashboardEvolucion").textContent'), /No hay solicitudes en estos 12 meses/);
                 assert.match(await evaluate('document.querySelector("#farmaciaDashboardEstados").textContent'), /No hay solicitudes/);
                 assert.equal(await evaluate('document.querySelector("#farmaciaDashboardTrend").hidden'), true);
@@ -186,6 +208,7 @@ test('navegador: siete pantallas independientes, permisos, módulos aislados, ll
             const before = calls.length;
             await send('Page.navigate', { url: origin + route(module) });
             await until(() => evaluate('document.querySelector("#farmaciaAccessStatus")?.getAttribute("role") === "alert"'));
+            assert.equal(await evaluate('document.querySelector("#farmaciaAccessStatus").classList.contains("admin-message")'), true);
             assert.equal(await evaluate('document.querySelector("#farmaciaMain").hidden'), true);
             assert.deepEqual(calls.slice(before), ['/api/farmacia/verificar-acceso']);
         }

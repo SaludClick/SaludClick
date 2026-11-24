@@ -242,7 +242,7 @@ test('navegador: directorio EPS de solo lectura, búsqueda, paginación, cambio 
         await until(()=>evaluate('document.querySelectorAll("#farmaciaUsuariosRows tr").length===1'));
         await send('Page.reload');await until(()=>evaluate('document.querySelectorAll("#farmaciaUsuariosRows tr").length===1&&document.querySelector("#farmaciaUsuariosEstado").value==="activos"'));
         await evaluate('document.querySelector("#farmaciaUsuariosEstado").value="inactivos";document.querySelector("#farmaciaUsuariosFilter").requestSubmit()');
-        await until(()=>evaluate('document.querySelectorAll("#farmaciaUsuariosRows tr").length===0'));
+        await until(()=>evaluate('document.querySelector("#farmaciaUsuariosRows").getAttribute("aria-busy")==="false" && document.querySelectorAll("#farmaciaUsuariosRows tr").length===0'));
         await evaluate('document.querySelector("#farmaciaUsuariosClear").click()');await until(()=>evaluate('document.querySelectorAll("#farmaciaUsuariosRows tr").length===25'));
         await evaluate('document.querySelector("#farmaciaUsuariosBuscar").value="900000";document.querySelector("#farmaciaUsuariosFilter").requestSubmit()');
         await until(()=>evaluate('document.querySelectorAll("#farmaciaUsuariosRows tr").length===1'));
@@ -278,7 +278,7 @@ test('navegador: directorio EPS de solo lectura, búsqueda, paginación, cambio 
         assert.match(await evaluate('document.querySelector("#farmaciaLinkedEps").textContent'),/EPS Beta/);
         assert.equal(await evaluate('document.querySelectorAll("#farmaciaUsuariosRows button").length'),0);
         state.links.forEach(f=>{f.activa=false;});const before=affiliateReads;
-        await evaluate('document.querySelector("#farmaciaUsuariosRefresh").click()');await until(()=>evaluate('document.querySelector("#farmaciaUsuariosTable").hidden===true&&document.querySelector("#farmaciaUsuariosBuscar").disabled'));
+        await evaluate('document.querySelector("#farmaciaUsuariosRefresh").click()');await until(()=>evaluate('document.querySelector("#farmaciaUsuariosRows").getAttribute("aria-busy")==="false" && document.querySelector("#farmaciaUsuariosTable").hidden && document.querySelector("#farmaciaUsuariosBuscar").disabled'));
         assert.equal(affiliateReads,before);assert.equal(await evaluate('document.querySelectorAll("#farmaciaUsuariosRows tr").length'),0);
         assert.match(await evaluate('document.querySelector("#farmaciaUsuariosStatus").textContent'),/No tienes una EPS/);
         assert.deepEqual(browser.errores,[]);

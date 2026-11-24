@@ -38,6 +38,9 @@ test(
         }
         await memory.exec(fs.readFileSync(path.join(migrations, name, 'migration.sql'), 'utf8'));
       }
+      for (const name of ['20261118230000_medicamento_stock_minimo','20261120180000_presentacion_medicamento_texto']) {
+        await memory.exec(fs.readFileSync(path.join(migrations,name,'migration.sql'),'utf8'));
+      }
       const pending = await memory.query("SELECT to_regclass('farmacia_catalogo_autorizaciones') AS tabla");
       assert.equal(pending.rows[0].tabla, null);
       await socket.start();
@@ -488,6 +491,7 @@ test(
           });
         },
       );
+      await memory.exec(fs.readFileSync(path.join(migrations, '20261116180000_farmacia_operacion_autorizada', 'migration.sql'), 'utf8'));
       process.env.FARMACIA_OPERACION_ENABLED = 'true';
       try {
         await t.test(
@@ -558,44 +562,31 @@ test(
           },
         );
         await t.test(
-          'simulation mode lets the assigned pharmacy deliver without converting the payment to real',
+          'EPS transition uses the main payment policy, idempotency and delivery evidence',
           async () => {
-            await req('/integracion/farmacia/solicitudes/' + order + '/estado', {
-              id: 3, method: 'PATCH', status: 409,
-              body: { estadoActual: 'APROBADA', estado: 'PREPARANDO' },
-            });
-            assert.equal((await db.solicitud.findUnique({ where: { id: order } })).estado, 'APROBADA');
+            const path = '/integracion/farmacia/solicitudes/' + order + '/estado';
+            const preparar = { estadoActual: 'APROBADA', estado: 'PREPARANDO' };
             const simulationMode = process.env.PEDIDOS_SIMULADOS;
             try {
               process.env.PEDIDOS_SIMULADOS = 'true';
-              const [existing] = (await req('/integracion/farmacia/existencias', { id: 3 })).datos;
-              const inventory = (await req('/integracion/farmacia/existencias', {
-                id: 3, method: 'PUT',
-                body: {
-                  vinculo_id: linkA.id, medicamento_id: drug.id, stock: 8, minimo: 5,
-                  actualizado_at: existing.actualizado_at,
-                },
-              })).existencia;
-              assert.equal(inventory.stock, 8);
-              assert.equal((await req('/eps/inventario', { id: 4 })).datos[0].stock, 8);
-              const pending = await req('/integracion/farmacia/pedidos/' + order, { id: 3 });
-              assert.equal(pending.pedido.operacion.simulacion, true);
-              assert.equal(pending.pedido.operacion.siguienteEstado, 'PREPARANDO');
-              for (const [actual, next] of [
-                ['APROBADA', 'PREPARANDO'],
-                ['PREPARANDO', 'LISTA'],
-                ['LISTA', 'ENTREGADA'],
-              ])
-                await req('/integracion/farmacia/solicitudes/' + order + '/estado', {
-                  id: 3,
-                  method: 'PATCH',
-                  body: { estadoActual: actual, estado: next },
-                });
+              await req(path, { id: 3, method: 'PATCH', status: 409, body: preparar });
+              assert.equal((await db.solicitud.findUnique({ where: { id: order } })).estado, 'APROBADA');
             } finally {
               if (simulationMode === undefined) delete process.env.PEDIDOS_SIMULADOS;
               else process.env.PEDIDOS_SIMULADOS = simulationMode;
             }
-            assert.equal((await db.pago.findFirst({ where: { solicitud_id: order } })).simulacion, true);
+            await pool.query(`
+              INSERT INTO pagos(solicitud_id,usuario_id,referencia,metodo,marca,ultimos_digitos,monto,estado,simulacion)
+              SELECT solicitud_id,usuario_id,'real-fixture',metodo,marca,ultimos_digitos,monto,'APROBADO',false
+              FROM pagos WHERE solicitud_id=$1 AND simulacion LIMIT 1`,[order]);
+            await req(path, { id: 6, method: 'PATCH', status: 404, body: preparar });
+            const first=await req(path, { id: 3, method: 'PATCH', body: preparar });
+            assert.deepEqual(await req(path, { id: 3, method: 'PATCH', body: preparar }),first);
+            await req(path, { id: 3, method: 'PATCH', body: { estadoActual: 'PREPARANDO', estado: 'LISTA' } });
+            const entregar={ estadoActual: 'LISTA', estado: 'ENTREGADA' };
+            await req(path, { id: 3, method: 'PATCH', status: 400, body: entregar });
+            await req(path, { id: 3, method: 'PATCH', body: { ...entregar, recepcion: 'Paciente de prueba' } });
+            assert.equal((await db.farmaciaSolicitudEvento.count({ where: { solicitud_id: order } })),3);
             assert.equal(
               (await req('/integracion/paciente/solicitudes', { id: 2 })).datos[0].estado,
               'ENTREGADA',

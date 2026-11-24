@@ -4,7 +4,7 @@ import FarmaciaLayout from '../../layouts/FarmaciaLayout.astro';
 <FarmaciaLayout modulo="usuarios" titulo="Usuarios" descripcion="Pacientes activos afiliados a tu única EPS vinculada. Consulta de solo lectura.">
   <section id="farmaciaUsuarios" aria-labelledby="usuariosFarmaciaTitle">
     <h2 id="usuariosFarmaciaTitle">Pacientes activos de <span id="farmaciaUsuariosEps">tu EPS</span></h2>
-    <p>Total de pacientes activos autorizados para consulta: <strong id="farmaciaUsuariosTotal">—</strong></p>
+    <p class="farmacia-count"><strong id="farmaciaUsuariosTotal">—</strong> pacientes activos autorizados para consulta</p>
     <form id="farmaciaUsuariosFilter" class="farmacia-filters">
       <div class="usuarios-filter-fields">
         <label for="farmaciaUsuariosBuscar">Buscar usuario
@@ -22,7 +22,7 @@ import FarmaciaLayout from '../../layouts/FarmaciaLayout.astro';
     </form>
     <button id="farmaciaUsuariosRefresh" type="button">Actualizar consulta</button>
     <p id="farmaciaUsuariosStatus" role="status" aria-live="polite">Verificando EPS vinculada…</p>
-    <div class="farmacia-table" id="farmaciaUsuariosTable" hidden><table class="farmacia-existencias-table"><caption>Pacientes activos autorizados · Fuente original EPS · Solo lectura</caption><thead><tr><th scope="col">Nombre</th><th scope="col">Apellidos</th><th scope="col">Tipo de documento</th><th scope="col">Documento</th><th scope="col">Correo</th><th scope="col">EPS</th><th scope="col">Estado</th><th scope="col">Identificador de afiliación</th></tr></thead><tbody id="farmaciaUsuariosRows" aria-busy="true"></tbody></table></div>
+    <div class="farmacia-table" id="farmaciaUsuariosTable" role="region" tabindex="0" aria-label="Tabla de pacientes activos" hidden><table class="farmacia-existencias-table"><caption>Pacientes activos autorizados · Fuente original EPS · Solo lectura</caption><thead><tr><th scope="col">Nombre</th><th scope="col">Apellidos</th><th scope="col">Tipo de documento</th><th scope="col">Documento</th><th scope="col">Correo</th><th scope="col">EPS</th><th scope="col">Estado</th><th scope="col">Identificador de afiliación</th></tr></thead><tbody id="farmaciaUsuariosRows" aria-busy="true"></tbody></table></div>
     <nav class="farmacia-pagination" aria-label="Páginas de pacientes activos"><button id="farmaciaUsuariosPrevious" type="button" disabled>Anterior</button><span id="farmaciaUsuariosPage"></span><button id="farmaciaUsuariosNext" type="button" disabled>Siguiente</button></nav>
   </section>
 </FarmaciaLayout>

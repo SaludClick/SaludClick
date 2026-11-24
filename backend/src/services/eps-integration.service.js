@@ -1,4 +1,4 @@
-const { operacion } = require('./farmacia.service');
+const { operacionConPagoReal } = require('./farmacia-operacion.rules');
 const v = require('../validators/eps.validator');
 const pharmacySelect = { id: true, nombre: true, apellido: true, estado: true };
 const ownRole = (c, role) => {
@@ -18,7 +18,8 @@ const same = (a, u, p) =>
   p.tipo_documento === a.tipo_documento;
 function createService(
   db,
-  { advanceOrder = (id, input, actorId) => require('./farmacia.service').avanzarPedido(id, input, undefined, actorId) } = {},
+  { advanceOrder = (id, input, notify, actorId) =>
+    require('./farmacia-operacion.service').createService().avanzarEps({ id: actorId }, id, input, notify) } = {},
 ) {
   const event = (tx, c, epsId, tipo, id, titulo, detalle = {}) =>
     tx.epsEvento.create({
@@ -400,9 +401,9 @@ function createService(
           select: {
             id: true,
             estado: true,
-            pagos: { select: { estado: true, simulacion: true } },
+            pagos: { select: { estado: true, simulacion: true, monto: true } },
             detalles: {
-              select: { cantidad: true, medicamento: { select: { id: true, nombre: true, requiere_formula: true } } },
+              select: { cantidad: true, subtotal: true, medicamento: { select: { id: true, nombre: true, requiere_formula: true } } },
             },
           },
         },
@@ -411,7 +412,7 @@ function createService(
         if (!row.solicitud) return row;
         const { id, estado, detalles } = row.solicitud;
         return { ...row, solicitud: {
-          id, estado, operacion: operacion(row.solicitud),
+          id, estado, operacion: operacionConPagoReal(row.solicitud, detalles.map(item => item.subtotal)),
           detalles: detalles.map(({ cantidad, medicamento }) => ({
             cantidad, medicamento: { id: medicamento.id, nombre: medicamento.nombre },
           })),

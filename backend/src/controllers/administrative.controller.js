@@ -28,7 +28,14 @@ function createController({repo=getRepository(),emit=()=>{},directory}={}) {
         visitorConversation:wrap(async req=>repo.visitorConversation(req.visitorHash,req.query.antes?v.id(req.query.antes):undefined)),
         visitorMessage:wrap(async req=>{const input=v.message(req.body,true);return repo.visitorMessage(req.visitorHash,input.contenido,input.key);},true),
         visitorRead:wrap(async req=>repo.visitorRead(req.visitorHash,v.id(req.body.hasta)),true),
-        dashboard:wrap(async req=>{const stats=await repo.dashboard(actor(req));return {estadisticas:{...stats,directorio:await getDirectory().summary()}};}),
+        dashboard:wrap(async req=>{
+            const statsRequest = repo.dashboard(actor(req));
+            const directoryRequest = Promise.resolve().then(() => getDirectory().summary());
+            // Preserve the statistics error if both reads fail.
+            void directoryRequest.catch(() => {});
+            const stats = await statsRequest;
+            return {estadisticas:{...stats,directorio:await directoryRequest}};
+        }),
         users:wrap(async req=>await getDirectory().list(req.query)),
         localUsers:wrap(async req=>await repo.users(v.filters(req.query))),
         directoryDetail:wrap(async req=>({registro:await getDirectory().detail(req.params.clave)})),

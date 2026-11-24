@@ -1,4 +1,5 @@
 import { apiFetch } from './api.js';
+import { insigniaEstado } from './eps-presentation.js';
 
 const porId = id => document.getElementById(id);
 const fecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' });
@@ -77,8 +78,9 @@ export function iniciarSolicitudes() {
             for (const solicitud of solicitudes) {
                 const fila = filas.insertRow();
                 const valores = [`#${solicitud.id}`, nombrePaciente(solicitud.paciente), documentoPaciente(solicitud.paciente),
-                    eps.nombre, farmaciaVisible(solicitud.farmacia), fechaVisible(solicitud.fecha), estadoVisible(solicitud.estado)];
+                    eps.nombre, farmaciaVisible(solicitud.farmacia), fechaVisible(solicitud.fecha)];
                 for (const valor of valores) fila.insertCell().textContent = valor;
+                fila.insertCell().append(insigniaEstado(estadoVisible(solicitud.estado)));
                 const medicamentos = document.createElement('ul');
                 pintarLista(medicamentos, solicitud.medicamentos.map(medicamentoVisible), 'Sin medicamentos registrados.');
                 fila.insertCell().append(medicamentos);

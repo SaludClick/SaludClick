@@ -1,4 +1,5 @@
 import { apiFetch } from './api.js';
+import { insigniaEstado } from './eps-presentation.js';
 
 const porId = id => document.getElementById(id);
 const nombreVisible = farmacia => farmacia.nombre || 'Nombre sin registrar';
@@ -69,7 +70,7 @@ export function iniciarFarmacias() {
                 identificador.className = 'eps-farmacia-id';
                 identificador.textContent = `ID ${farmacia.id}`;
                 fila.insertCell().append(nombre, identificador);
-                fila.insertCell().textContent = convenioVisible(farmacia);
+                fila.insertCell().append(insigniaEstado(convenioVisible(farmacia)));
                 const boton = document.createElement('button');
                 boton.type = 'button';
                 boton.className = 'btn-outline';

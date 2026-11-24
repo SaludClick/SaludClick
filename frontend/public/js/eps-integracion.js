@@ -454,6 +454,7 @@ export function mountIntegration(root) {
         const next = r.solicitud?.operacion?.siguienteEstado;
         const labels = {
           PAGO_REAL_NO_APROBADO: 'No hay un pago aprobado habilitado para este entorno',
+          PAGO_REAL_INSUFICIENTE: 'El pago real aprobado no cubre la solicitud',
           SIN_MEDICAMENTOS: 'Solicitud sin medicamentos',
           VALIDACION_FARMACEUTICA_PENDIENTE: 'Validaci?n farmac?utica pendiente',
           REQUISITO_FORMULA_DESCONOCIDO: 'Requisito de f?rmula desconocido',
@@ -466,11 +467,14 @@ export function mountIntegration(root) {
           r.solicitud?.detalles.map((d) => d.medicamento.nombre + ' x' + d.cantidad).join(', '),
           next && operacionHabilitada
             ? button('Avanzar a ' + next, async () => {
-                await request(
-                  '/farmacia/solicitudes/' + r.solicitud_id + '/estado',
-                  { estadoActual: r.solicitud.estado, estado: next },
-                  'PATCH',
-                );
+                const path = '/farmacia/solicitudes/' + r.solicitud_id + '/estado';
+                const transicion = { estadoActual: r.solicitud.estado, estado: next };
+                if (next === 'ENTREGADA') {
+                  form('Confirmar entrega', [['recepcion', 'Persona que recibió la solicitud', 'text']],
+                    ({ recepcion }) => request(path, { ...transicion, recepcion }, 'PATCH'));
+                  return;
+                }
+                await request(path, transicion, 'PATCH');
                 await load();
               })
             : bloqueos?.length ? bloqueos.join('. ') : 'Sin transici?n pendiente',

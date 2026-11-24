@@ -7,6 +7,7 @@ router.get('/farmacias/:id/eps',farmaciaEps.administrar);
 router.put('/farmacias/:id/eps',farmaciaEps.vincular);
 // Administración de asignaciones y permisos; no consulta ni revisión clínica.
 const operacionFarmacia=require('../controllers/farmacia-operacion.controller');
+router.post('/farmacias/:farmaciaId/existencias/movimientos',require('../controllers/farmacia-stock.controller').movimientoManual);
 router.post('/farmacias/:farmaciaId/existencias/ingresos',require('../controllers/farmacia-stock.controller').ingresar);
 router.post('/farmacias/solicitudes/:id/asignacion',operacionFarmacia.asignar);
 router.put('/farmacias/:farmaciaId/catalogo-autorizaciones',operacionFarmacia.autorizarCatalogo);

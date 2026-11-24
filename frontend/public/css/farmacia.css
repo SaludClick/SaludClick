@@ -1,6 +1,6 @@
 .farmacia-main { max-width: 1100px; padding-top: 2rem; padding-bottom: 3rem; }
 .farmacia-section-heading { display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap; }
-.farmacia-dashboard-metrics { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;margin-top:1.5rem; }
+.farmacia-dashboard-metrics { display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1rem;margin-top:1.5rem; }
 @media(max-width:1200px){.farmacia-dashboard-metrics{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:520px){.farmacia-dashboard-metrics{grid-template-columns:1fr;}}
 .farmacia-metric { display:flex;flex-direction:column;gap:.6rem;border:1px solid #d7e7df;border-radius:14px;background:linear-gradient(135deg,#eff8f3,#fff);padding:1.25rem;min-width:0; }

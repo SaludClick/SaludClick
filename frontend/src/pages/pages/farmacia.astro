@@ -2,6 +2,7 @@
 import FarmaciaLayout from '../../layouts/FarmaciaLayout.astro';
 const indicadores = [
   ['solicitudesRecibidas', 'Solicitudes recibidas', 'fa-inbox', 'En el periodo seleccionado'],
+  ['solicitudesPreparadas', 'Solicitudes preparadas', 'fa-box-open', 'Marcadas como listas en el periodo'],
   ['solicitudesCompletadas', 'Solicitudes entregadas', 'fa-clipboard-check', 'Entregas confirmadas en el periodo'],
   ['medicamentosDisponibles', 'Medicamentos disponibles', 'fa-capsules', 'Referencias con stock propio libre'],
   ['usuariosVinculados', 'Usuarios vinculados', 'fa-user-group', 'Afiliados activos de la EPS vinculada']
@@ -55,11 +56,11 @@ const indicadores = [
   </section>
   <details class="farmacia-dashboard-card farmacia-dashboard-featured">
     <summary>Ver más detalles de la operación</summary>
-    <p class="farmacia-completed-summary">
-      Solicitudes pendientes: <strong data-dashboard-metric="solicitudesPendientes">—</strong>
-      · Pacientes atendidos: <strong data-dashboard-metric="pacientesAtendidos">—</strong>
-      · Medicamentos entregados: <strong data-dashboard-metric="medicamentosEntregados">—</strong>
-    </p>
+    <dl class="farmacia-completed-summary">
+      <div><dt>Solicitudes pendientes</dt><dd><strong data-dashboard-metric="solicitudesPendientes">—</strong></dd></div>
+      <div><dt>Pacientes atendidos</dt><dd><strong data-dashboard-metric="pacientesAtendidos">—</strong></dd></div>
+      <div><dt>Medicamentos entregados</dt><dd><strong data-dashboard-metric="medicamentosEntregados">—</strong></dd></div>
+    </dl>
     <section aria-labelledby="farmaciaMonthlyTitle">
       <div class="farmacia-section-heading"><h2 id="farmaciaMonthlyTitle">Pendientes y completadas</h2><p>Pendientes por fecha de solicitud y completadas por fecha de entrega confirmada.</p></div>
       <div id="farmaciaDashboardMensual" class="farmacia-monthly-chart" aria-live="polite"></div>
@@ -70,6 +71,6 @@ const indicadores = [
     <section aria-labelledby="farmaciaLowStockTitle"><div class="farmacia-section-heading"><h2 id="farmaciaLowStockTitle">Alertas de existencias bajas</h2><a href="/pages/farmacia-inventario.html?disponibilidad=bajos">Revisar inventario</a></div><p>Saldo actual propio. Aviso orientativo: 1–5 unidades libres.</p><div id="farmaciaDashboardStock" role="status" aria-live="polite"></div></section>
     <section aria-labelledby="farmaciaActividadTitle"><div class="farmacia-section-heading"><h2 id="farmaciaActividadTitle">Actividad reciente</h2><a href="/pages/farmacia-solicitudes.html">Consultar solicitudes</a></div><div id="farmaciaDashboardActividad"></div></section>
   </details>
-  <section id="integracionEPS" data-eps-integration class="card admin-dashboard-card"><h2>Integracion EPS</h2></section>
+  <section id="integracionEPS" data-eps-integration class="card admin-dashboard-card"><h2>Integración EPS</h2></section>
   <script is:inline type="module" src="/js/eps-integracion.js"></script>
 </FarmaciaLayout>

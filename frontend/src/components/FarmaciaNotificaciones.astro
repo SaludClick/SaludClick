@@ -4,10 +4,12 @@
     <button type="button" id="farmaciaReadAll" disabled>Marcar todas como leídas</button>
   </div>
   <form id="farmaciaNotificationsFilter" class="farmacia-notifications-filters">
-    <label for="farmaciaNotificationsState">Mostrar</label>
-    <select id="farmaciaNotificationsState" name="estado">
-      <option value="todas">Todas</option><option value="no-leidas">No leídas</option><option value="leidas">Leídas</option>
-    </select>
+    <div class="farmacia-field">
+      <label for="farmaciaNotificationsState">Mostrar</label>
+      <select id="farmaciaNotificationsState" name="estado">
+        <option value="todas">Todas</option><option value="no-leidas">No leídas</option><option value="leidas">Leídas</option>
+      </select>
+    </div>
     <button type="submit" id="farmaciaNotificationsRefresh">Actualizar notificaciones</button>
   </form>
   <p id="farmaciaNotificationsStatus" role="status" aria-live="polite">Cargando notificaciones…</p>

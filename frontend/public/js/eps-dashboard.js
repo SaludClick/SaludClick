@@ -1,4 +1,5 @@
 import { apiFetch } from './api.js';
+import { insigniaEstado } from './eps-presentation.js';
 
 const porId = id => document.getElementById(id);
 const fecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' });
@@ -56,8 +57,9 @@ function pintarRecientes(solicitudes) {
         enlace.href = `#solicitudes/${solicitud.id}`;
         enlace.setAttribute('aria-label', `Ver solicitud #${solicitud.id}`);
         fila.insertCell().append(enlace);
-        for (const valor of [fechaVisible(solicitud.fecha), solicitud.estado ?? 'Sin estado',
-            solicitud.farmacia?.nombre ?? 'Sin farmacia vigente']) fila.insertCell().textContent = valor;
+        fila.insertCell().textContent = fechaVisible(solicitud.fecha);
+        fila.insertCell().append(insigniaEstado(solicitud.estado ?? 'Sin estado'));
+        fila.insertCell().textContent = solicitud.farmacia?.nombre ?? 'Sin farmacia vigente';
     }
     zona.replaceChildren(tabla);
 }

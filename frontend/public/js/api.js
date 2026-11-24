@@ -25,7 +25,10 @@ export async function apiFetch(url, options = {}) {
     }
     let data = null;
     try { data = await response.json(); } catch { data = {}; }
-    if (response.status === 401) { logout(); throw new Error('Tu sesión expiró. Inicia sesión nuevamente.'); }
+    if (response.status === 401) {
+        if (!options.signal?.aborted && getToken() === token) logout();
+        throw new Error('Tu sesión expiró. Inicia sesión nuevamente.');
+    }
     if (!response.ok || data.ok === false) {
         const error = new Error(data.mensaje || 'No se pudo completar la operación.');
         error.status = response.status;

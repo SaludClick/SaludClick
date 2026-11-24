@@ -1,7 +1,7 @@
 const { registrarEvento } = require('./farmacia-notificacion-eventos.repository');
 const { createHash } = require('node:crypto');
 const { fallo } = require('../config/farmacia-operacion');
-const { operacion } = require('../services/farmacia-operacion.rules');
+const { operacionConPagoReal } = require('../services/farmacia-operacion.rules');
 // El ámbito depende de asignación persistente Y vínculo EPS vigente Y afiliación
 // verificada a la cuenta del paciente. Nunca se deduce de un parámetro del cliente.
 const AMBITO = `fa.farmacia_id=$1 AND fa.activa=true AND EXISTS (
@@ -63,11 +63,8 @@ function createRepository(db = require('../config/database'), notificationsEnabl
           FROM farmacia_solicitud_eventos e JOIN usuarios u ON u.id=e.actor_id
           WHERE e.solicitud_id=$1 AND e.farmacia_id=$2 ORDER BY e.id`,[id,farmaciaId]);
         const detalles=details.rows.map(({cantidad,subtotal,...medicamento})=>({cantidad,medicamento}));
-        const condiciones=operacion({...order,detalles,pagos:pagos.rows});
+        const condiciones=operacionConPagoReal({...order,detalles,pagos:pagos.rows},details.rows.map(d=>d.subtotal));
         if(require('../config/farmacia-stock').habilitado()&&order.estado==='APROBADA'&&detalles.some(d=>d.medicamento.estado!=='DISPONIBLE')){condiciones.bloqueos.push('MEDICAMENTO_NO_DISPONIBLE');condiciones.siguienteEstado=null;}
-        const total=details.rows.reduce((n,d)=>n+Math.round(Number(d.subtotal)*100),0);
-        const pagado=pagos.rows.filter(p=>p.estado==='APROBADO'&&p.simulacion===false).reduce((n,p)=>n+Math.round(Number(p.monto)*100),0);
-        if(!Number.isSafeInteger(total)||total<=0||!Number.isSafeInteger(pagado)||pagado<total){condiciones.bloqueos.push('PAGO_REAL_INSUFICIENTE');condiciones.siguienteEstado=null;}
         if(detalles.some(d=>!Number.isSafeInteger(d.cantidad)||d.cantidad<1)){condiciones.bloqueos.push('CANTIDADES_INVALIDAS');condiciones.siguienteEstado=null;}
         return {id:order.id,fecha:order.fecha,estado:order.estado,tipo_entrega:order.tipo_entrega,
           version:order.version,observaciones:order.observaciones,updated_at:order.updated_at,
@@ -169,12 +166,39 @@ function createRepository(db = require('../config/database'), notificationsEnabl
             return {pedidos,resumen:{pendientes:count.APROBADA||0,preparando:count.PREPARANDO||0,listas:count.LISTA||0,entregadas:count.ENTREGADA||0},paginacion:{pagina:o.pagina,tamano:o.take,total,paginas:Math.ceil(total/o.take)}};
         });},
         detalle:(farmaciaId,id)=>scoped(farmaciaId,false,async c=>({pedido:await pedido(c,farmaciaId,id)})),
-        avanzar(farmaciaId,id,input){return scoped(farmaciaId,true,async c=>{
-            const p=await pedido(c,farmaciaId,id,true);
+        avanzar(farmaciaId,id,input,{ requiereAutorizacionEps = false } = {}){return scoped(farmaciaId,true,async c=>{
+            let p;
+            if (!requiereAutorizacionEps) p=await pedido(c,farmaciaId,id,true);
+            const {rows: autorizaciones} = await c.query(`
+                SELECT a.estado, a.responsable_id, (
+                    f.farmacia_id=$2 AND f.activa AND f.eps_id=a.eps_id AND
+                    af.eps_id=a.eps_id AND af.afiliado_id=a.afiliado_id AND af.verificado_at IS NOT NULL AND
+                    af.afiliado_id IN (SELECT jsonb_array_elements_text(current_setting('saludclick.afiliados')::jsonb))
+                ) AS corresponde
+                FROM eps_autorizaciones a
+                JOIN solicitudes s ON s.id=a.solicitud_id
+                LEFT JOIN eps_farmacias f ON f.id=a.farmacia_vinculo_id
+                LEFT JOIN afiliado_cuentas_origen af ON af.usuario_id=s.usuario_id
+                WHERE a.solicitud_id=$1
+                FOR SHARE OF a`, [id,farmaciaId]);
+            const autorizacion = autorizaciones.find(a => a.estado === 'APROBADA' && a.corresponde);
+            if ((requiereAutorizacionEps || autorizaciones.length) && !autorizacion) {
+                throw fallo(409,'AUTORIZACION_EPS_NO_VIGENTE','Se requiere una autorizacion EPS aprobada para esta farmacia.');
+            }
+            let asignada = false;
+            if (requiereAutorizacionEps) {
+                const {rows} = await c.query(`
+                    INSERT INTO farmacia_asignaciones(solicitud_id,farmacia_id,asignado_por)
+                    SELECT id,$2,$3 FROM solicitudes WHERE id=$1 AND estado='APROBADA'
+                    ON CONFLICT(solicitud_id) DO NOTHING RETURNING solicitud_id`,
+                    [id,farmaciaId,autorizacion.responsable_id]);
+                asignada = rows.length > 0;
+                p=await pedido(c,farmaciaId,id,true);
+            }
             const huella=createHash('sha256').update(JSON.stringify({id,...input})).digest('hex');
             const old=(await c.query('SELECT * FROM farmacia_solicitud_eventos WHERE farmacia_id=$1 AND clave=$2',[farmaciaId,input.clave])).rows[0];
             if(old){if(old.huella!==huella)throw fallo(409,'CLAVE_REUTILIZADA');return {pedido:{id,estado:old.estado},repetido:true,destinatarios:[]};}
-            if(p.version!==input.version||p.estado!==input.estadoActual||p.operacion.siguienteEstado!==input.estado)throw fallo(409,'SOLICITUD_CONFLICTO','El estado o las condiciones cambiaron. Actualiza la solicitud.');
+            if((input.version!==null&&p.version!==input.version)||p.estado!==input.estadoActual||p.operacion.siguienteEstado!==input.estado)throw fallo(409,'SOLICITUD_CONFLICTO','El estado o las condiciones cambiaron. Actualiza la solicitud.');
             const avisoStock=require('../config/farmacia-stock').habilitado()
                 && await require('./farmacia-stock.repository').mover(c,farmaciaId,p,input);
             await c.query('UPDATE solicitudes SET estado=$2,updated_at=now() WHERE id=$1',[id,input.estado]);
@@ -183,8 +207,9 @@ function createRepository(db = require('../config/database'), notificationsEnabl
             await c.query(`INSERT INTO farmacia_solicitud_eventos(solicitud_id,farmacia_id,actor_id,estado_anterior,estado,clave,huella,recepcion,observaciones,cantidades)
               VALUES($1,$2,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)`,[id,farmaciaId,p.estado,input.estado,input.clave,huella,input.recepcion||null,input.observaciones||null,JSON.stringify(cantidades)]);
             // Stock propio solo tras activación explícita; stock global intacto.
+            const avisoAsignacion=asignada ? await aviso(c,farmaciaId,id,'NUEVA_SOLICITUD','asignada') : [];
             const destinatarios=await aviso(c,farmaciaId,id,'SOLICITUD_ESTADO',`estado:${input.estado}`);
-            return {pedido:{id,estado:input.estado},repetido:false,destinatarios:avisoStock?[farmaciaId]:destinatarios};
+            return {pedido:{id,estado:input.estado},repetido:false,destinatarios:(avisoStock||avisoAsignacion.length)?[farmaciaId]:destinatarios};
         });},
         asignar(actorId,id,farmaciaId){return tx(actorId,1,true,async c=>{
             await sourceScope(c,farmaciaId);
@@ -215,8 +240,13 @@ function createRepository(db = require('../config/database'), notificationsEnabl
         estadisticas(farmaciaId,{desde,hasta}){return scoped(farmaciaId,false,async c=>{
             const base=`FROM solicitudes s JOIN farmacia_asignaciones fa ON fa.solicitud_id=s.id WHERE ${AMBITO}`;
             const intervalo=`e.created_at >= $2::date AND e.created_at < ($3::date+interval '1 day')`;
-            const completadas=`FROM farmacia_solicitud_eventos e JOIN solicitudes s ON s.id=e.solicitud_id JOIN farmacia_asignaciones fa ON fa.solicitud_id=s.id WHERE ${AMBITO} AND e.farmacia_id=$1 AND e.estado='ENTREGADA' AND ${intervalo}`;
-            const summary=(await c.query(`SELECT count(DISTINCT s.usuario_id)::int AS pacientes,count(*)::int AS completadas ${completadas}`,[farmaciaId,desde,hasta])).rows[0];
+            const eventosPeriodo=`FROM farmacia_solicitud_eventos e JOIN solicitudes s ON s.id=e.solicitud_id JOIN farmacia_asignaciones fa ON fa.solicitud_id=s.id WHERE ${AMBITO} AND e.farmacia_id=$1 AND ${intervalo}`;
+            const completadas=`${eventosPeriodo} AND e.estado='ENTREGADA'`;
+            const summary=(await c.query(`SELECT
+              count(DISTINCT s.usuario_id) FILTER (WHERE e.estado='ENTREGADA')::int AS pacientes,
+              count(*) FILTER (WHERE e.estado='ENTREGADA')::int AS completadas,
+              count(DISTINCT s.id) FILTER (WHERE e.estado='LISTA')::int AS preparadas
+              ${eventosPeriodo}`,[farmaciaId,desde,hasta])).rows[0];
             const unidades=(await c.query(`SELECT coalesce(sum((item->>'cantidad')::int),0)::int AS n FROM farmacia_solicitud_eventos e JOIN solicitudes s ON s.id=e.solicitud_id JOIN farmacia_asignaciones fa ON fa.solicitud_id=s.id CROSS JOIN LATERAL jsonb_array_elements(e.cantidades) item WHERE ${AMBITO} AND e.farmacia_id=$1 AND e.estado='ENTREGADA' AND ${intervalo}`,[farmaciaId,desde,hasta])).rows[0].n;
             const period=` AND s.fecha >= $2::date AND s.fecha < ($3::date+interval '1 day')`;
             const estados=(await c.query(`SELECT s.estado,count(*)::int AS total ${base}${period} GROUP BY s.estado ORDER BY s.estado`,[farmaciaId,desde,hasta])).rows;
@@ -243,7 +273,7 @@ function createRepository(db = require('../config/database'), notificationsEnabl
             const anteriores=(await c.query(`SELECT count(*)::int AS n ${base} AND s.fecha>=($2::date-(($3::date-$2::date)+1)) AND s.fecha<$2::date`,[farmaciaId,desde,hasta])).rows[0].n;
             const recibidas=estados.reduce((n,g)=>n+g.total,0);
             const tendencia=anteriores>0?{metrica:'SOLICITUDES_RECIBIDAS',actual:recibidas,anterior:anteriores,variacionPorcentual:Math.round((recibidas/anteriores-1)*1000)/10}:null;
-            return {periodo:{desde,hasta},indicadores:{solicitudesRecibidas:recibidas,pacientesAtendidos:summary.pacientes,solicitudesPendientes:estados.filter(g=>['PENDIENTE','APROBADA','PREPARANDO','LISTA'].includes(g.estado)).reduce((n,g)=>n+g.total,0),solicitudesCompletadas:summary.completadas,medicamentosEntregados:unidades,medicamentosDisponibles:existencias?.disponibles??null},graficos:{evolucion,meses,pendientesMes,completadasMes,estados,pacientes,medicamentos},actividad,existencias,alertasStock,destacados,alcance:'ASIGNACIONES_VERIFICADAS',tendencia};
+            return {periodo:{desde,hasta},indicadores:{solicitudesRecibidas:recibidas,pacientesAtendidos:summary.pacientes,solicitudesPendientes:estados.filter(g=>['PENDIENTE','APROBADA','PREPARANDO','LISTA'].includes(g.estado)).reduce((n,g)=>n+g.total,0),solicitudesPreparadas:summary.preparadas,solicitudesCompletadas:summary.completadas,medicamentosEntregados:unidades,medicamentosDisponibles:existencias?.disponibles??null},graficos:{evolucion,meses,pendientesMes,completadasMes,estados,pacientes,medicamentos},actividad,existencias,alertasStock,destacados,alcance:'ASIGNACIONES_VERIFICADAS',tendencia};
         });}
     };
 }

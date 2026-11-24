@@ -9,6 +9,7 @@ let db,pool,repo,catalogo;
     // Fixtures mínimas de EPS: NO son una reconstrucción de migraciones faltantes.
     await db.exec(`CREATE TABLE eps_entidades(id text PRIMARY KEY,nombre text,activa boolean);
       CREATE TABLE eps_farmacias(id serial PRIMARY KEY,eps_id text REFERENCES eps_entidades(id),farmacia_id int REFERENCES usuarios(id),activa boolean,version int DEFAULT 1);
+      CREATE TABLE eps_autorizaciones(id serial PRIMARY KEY,solicitud_id int,estado text,eps_id text,responsable_id int,afiliado_id text,farmacia_vinculo_id int REFERENCES eps_farmacias(id));
       INSERT INTO roles(id,nombre) VALUES(1,'ADMINISTRADOR'),(2,'PACIENTE'),(3,'FARMACIA'),(4,'EPS');
       INSERT INTO usuarios(id,nombre,apellido,correo,password,rol_id) VALUES(1,'Admin','Prueba','a@test','hash',1),(2,'Ana','Uno','p@test','hash',2),(3,'Farma','Uno','f@test','hash',3),(4,'Farma','Dos','f2@test','hash',3),(5,'Beto','Dos','p2@test','hash',2),(6,'Farma','Sin vinculo','f3@test','hash',3);
       UPDATE usuarios SET estado='ACTIVO';

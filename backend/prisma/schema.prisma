@@ -689,6 +689,7 @@ model FarmaciaExistencia {
  @@map("farmacia_existencias")
 }
 model FarmaciaStockEvento {
+  motivo String? @db.VarChar(500)
  id Int @id @default(autoincrement())
  farmacia_id Int
  medicamento_id Int

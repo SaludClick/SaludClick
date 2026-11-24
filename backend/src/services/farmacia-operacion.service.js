@@ -10,6 +10,7 @@ async function conArchivos(pedido) {
         })
     };
 }
+const { createHash } = require('node:crypto');
 const v=require('../validators/farmacia-operacion.validator');
 const {disponible}=require('../config/farmacia-operacion');
 function createService(repo=require('../repositories/farmacia-operacion.repository').createRepository(),catalogo=require('../repositories/farmacia-catalogo.repository').createCatalogoRepository(),available=disponible,catalogoDisponible=available===disponible?require('../config/farmacia-catalogo').disponible:available) {
@@ -29,6 +30,18 @@ function createService(repo=require('../repositories/farmacia-operacion.reposito
             return {pedido:await conArchivos(pedido)};
         },
         async avanzar(user,id,q,body,notify){v.objeto(q,[]);id=v.entero(id);const input=v.transicion(body);solicitudesDisponibles();const result=await repo.avanzar(user.id,id,input);if(result.destinatarios.length&&notify)try{await notify(result.destinatarios);}catch{}const {destinatarios,...data}=result;return data;},
+        async avanzarEps(user,id,body,notify){
+            id=v.entero(id);
+            v.objeto(body,['estadoActual','estado','recepcion','observaciones']);
+            // The legacy contract has no key. Each forward transition can occur once per order.
+            const hex=createHash('sha256').update(`eps:${user.id}:${id}:${body.estado}`).digest('hex');
+            const clave=`${hex.slice(0,8)}-${hex.slice(8,12)}-4${hex.slice(13,16)}-8${hex.slice(17,20)}-${hex.slice(20,32)}`;
+            const input=v.transicion({...body,version:1,clave});
+            solicitudesDisponibles();
+            const result=await repo.avanzar(user.id,id,{...input,version:null},{requiereAutorizacionEps:true});
+            if(result.destinatarios.length&&notify)try{await notify(result.destinatarios);}catch{}
+            return result.pedido;
+        },
         async asignar(user,id,q,body,notify){v.objeto(q,[]);v.objeto(body,['farmaciaId']);const pharmacy=v.entero(body.farmaciaId);id=v.entero(id);solicitudesDisponibles();const result=await repo.asignar(user.id,id,pharmacy);if(result.destinatarios.length&&notify)try{await notify(result.destinatarios);}catch{}return {solicitudId:id,farmaciaId:pharmacy};},
         estadisticas(user,q){const period=v.periodo(q);available();return repo.estadisticas(user.id,period);},
         permisos(user,q){v.objeto(q,[]);catalogoDisponible();return catalogo.permisos(user.id);},

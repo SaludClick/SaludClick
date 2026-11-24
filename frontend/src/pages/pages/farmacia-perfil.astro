@@ -3,17 +3,23 @@ import FarmaciaLayout from '../../layouts/FarmaciaLayout.astro';
 import PerfilFormulario from '../../components/PerfilFormulario.astro';
 ---
 <FarmaciaLayout modulo="perfil" titulo="Perfil" descripcion="Consulta y actualiza tus datos de contacto. El rol, el estado y los permisos no se modifican desde el perfil.">
-  <section class="perfil-card" aria-label="Datos de la cuenta"><p>Estado de cuenta: <strong>Activa y verificada</strong> · Rol: Farmacia</p><PerfilFormulario /></section>
-  <section aria-labelledby="farmaciaPasswordTitle"><h2 id="farmaciaPasswordTitle">Seguridad de la cuenta</h2>
-    <p>Al cambiar tu contraseña se revocan las sesiones anteriores de Farmacia.</p>
-    <form id="farmaciaPasswordForm" class="farmacia-editor-form">
-      <label>Contraseña actual<input id="farmaciaPasswordActual" type="password" autocomplete="current-password" required maxlength="72" /></label>
-      <label>Nueva contraseña<input id="farmaciaPasswordNueva" type="password" autocomplete="new-password" required minlength="12" maxlength="72" /></label>
-      <label>Confirmar nueva contraseña<input id="farmaciaPasswordConfirmar" type="password" autocomplete="new-password" required minlength="12" maxlength="72" /></label>
-      <p>Al menos 12 caracteres, con mayúscula, minúscula y número.</p>
-      <button id="farmaciaPasswordGuardar" type="submit" disabled>Cambiar contraseña</button>
-      <p id="farmaciaPasswordStatus" role="status" aria-live="polite">Cambio directo no disponible. Puedes restablecer tu contraseña mediante correo verificado.</p>
-      <a href="/recuperar.html">Restablecer contraseña mediante correo verificado</a>
-    </form>
-  </section>
+  <div class="farmacia-profile-layout">
+    <section class="perfil-card" aria-label="Datos de la cuenta">
+      <h2>Información personal</h2>
+      <p class="farmacia-account-meta">Estado de cuenta: <strong>Activa y verificada</strong> · Rol: Farmacia</p>
+      <PerfilFormulario />
+    </section>
+    <section aria-labelledby="farmaciaPasswordTitle"><h2 id="farmaciaPasswordTitle">Seguridad de la cuenta</h2>
+      <p>Al cambiar tu contraseña se revocan las sesiones anteriores de Farmacia.</p>
+      <form id="farmaciaPasswordForm" class="farmacia-editor-form">
+        <label>Contraseña actual<input id="farmaciaPasswordActual" type="password" autocomplete="current-password" required maxlength="72" /></label>
+        <label>Nueva contraseña<input id="farmaciaPasswordNueva" type="password" autocomplete="new-password" required minlength="12" maxlength="72" /></label>
+        <label>Confirmar nueva contraseña<input id="farmaciaPasswordConfirmar" type="password" autocomplete="new-password" required minlength="12" maxlength="72" /></label>
+        <p>Al menos 12 caracteres, con mayúscula, minúscula y número.</p>
+        <button id="farmaciaPasswordGuardar" type="submit" disabled>Cambiar contraseña</button>
+        <p id="farmaciaPasswordStatus" role="status" aria-live="polite">Cambio directo no disponible. Puedes restablecer tu contraseña mediante correo verificado.</p>
+        <a href="/recuperar.html">Restablecer contraseña mediante correo verificado</a>
+      </form>
+    </section>
+  </div>
 </FarmaciaLayout>

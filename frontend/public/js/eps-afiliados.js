@@ -1,4 +1,5 @@
 import { apiFetch } from './api.js';
+import { insigniaEstado } from './eps-presentation.js';
 
 export function iniciarAfiliados() {
     const porId = id => document.getElementById(id);
@@ -59,9 +60,10 @@ export function iniciarAfiliados() {
             for (const afiliado of afiliados) {
                 const fila = filas.insertRow();
                 const documento = `${afiliado.tipo_documento || ''} ${afiliado.documento || ''}`.trim();
-                for (const valor of [afiliado.id, afiliado.nombres, afiliado.apellidos, documento, afiliado.estado]) {
+                for (const valor of [afiliado.id, afiliado.nombres, afiliado.apellidos, documento]) {
                     fila.insertCell().textContent = valor || '—';
                 }
+                fila.insertCell().append(insigniaEstado(afiliado.estado || '—'));
                 const boton = document.createElement('button');
                 boton.type = 'button';
                 boton.className = 'btn-outline';

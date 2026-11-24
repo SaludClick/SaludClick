@@ -103,6 +103,7 @@ function createRouter({ db, guard, service } = {}) {
   r.patch(
     '/farmacia/solicitudes/:id/estado',
     allow(3),
+    require('../middlewares/farmacia-notificaciones.middleware').requireFarmaciaSolicitudes,
     handle(async (s, r) => {
       sinQuery(r.query);
       disponible();

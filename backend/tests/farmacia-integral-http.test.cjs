@@ -286,7 +286,15 @@ test('Edge: Medicamentos crea, edita, publica y retira en ambos catálogos con o
         assert.equal(await evaluate('document.querySelector("#medicamentos [data-existencias-part=form], #medicamentos [data-existencias-part=vista], #medicamentos [data-existencias-count]")===null'),true);
         assert.equal(await evaluate('document.querySelectorAll("#medicamentos thead th").length'),7);
         await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
-        assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth && getComputedStyle(document.querySelector("#farmaciaMedicamentos tr")).display === "block"'),true);
+        assert.equal(await evaluate(`(()=>{
+            const table=document.querySelector('#medicamentos .farmacia-table');
+            if(document.documentElement.scrollWidth>innerWidth || table.tabIndex!==0) return false;
+            if(getComputedStyle(table.querySelector('tbody tr')).display==='block') return true;
+            table.scrollLeft=table.scrollWidth;
+            const scrolls=table.scrollLeft>0;
+            table.scrollLeft=0;
+            return scrolls;
+        })()`),true);
         await evaluate('document.querySelector("#farmaciaMedicamentos button[data-medication-id]").click()');
         await until(()=>evaluate('document.querySelector("#medicamentos [data-existencias-part=contenido] h3") !== null'));
         await evaluate('document.querySelector("#medicamentos [data-existencias-part=cerrar]").click()');
@@ -724,7 +732,7 @@ test('navegador: inventario propio, nuevos indicadores, notificaciones contextua
         let snapshot;
         await until(async()=>{snapshot=await evaluate('({disponibles:document.querySelector("[data-dashboard-metric=medicamentosDisponibles]")?.textContent,completadas:document.querySelector("[data-dashboard-metric=solicitudesCompletadas]")?.textContent,tarjetas:document.querySelectorAll("#farmaciaDashboardMetrics > article").length,mensual:document.querySelector("#farmaciaDashboardMensual")?.textContent,stock:document.querySelector("#farmaciaDashboardStock")?.textContent})');return snapshot.disponibles==='2'&&snapshot.completadas==='1'&&snapshot.stock.includes('unidades libres');})
             .catch(error=>{throw new Error(error.message+' '+JSON.stringify(snapshot));});
-        assert.equal(snapshot.tarjetas,4);assert.match(snapshot.mensual,/Completadas: 1/);
+        assert.equal(snapshot.tarjetas,5);assert.match(snapshot.mensual,/Completadas: 1/);
         holdStats=true;await evaluate('document.querySelector("#refreshFarmacia").click()');await until(()=>held.length>0);
         assert.equal(await evaluate('document.querySelector("[data-dashboard-metric=medicamentosDisponibles]").textContent'),'2');
         holdStats=false;for(const id of held.splice(0))await send('Fetch.continueRequest',{requestId:id});
