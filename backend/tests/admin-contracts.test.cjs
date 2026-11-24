@@ -17,7 +17,9 @@ before(async()=>{
  process.env.JWT_SECRET='isolated-admin-routes-key';
  Module._load=function(request,parent,isMain){
   if(request.endsWith('/administrative-session.middleware'))return require('./support/administrative-session-fixture.cjs');
-  if(request==='../controllers/administrative.controller')return {createController:()=>createController({repo})};
+  if(request==='../controllers/administrative.controller')return {createController:()=>createController({
+    repo,alta:{validateActivation(){},invite:async()=>{}}
+  })};
   return originalLoad.call(this,request,parent,isMain);
  };
  const router=require('../src/routes/admin.routes');Module._load=originalLoad;
@@ -37,12 +39,21 @@ test('account list and mutations deny anonymous and non-admin roles',async()=>{
  assert.equal((await call('/cuentas')).data.usuarios[0].id,6);
  assert.equal((await call('/cuentas/6',{method:'DELETE'})).status,405);
 });
-test('new account contract validates document, hashes password and excludes privileged roles',async()=>{
- const input={nombre:'Ana',apellido:'Test',correo:'a@example.test',cedula:'0006',password:'long-test-password',rol_id:2};
- for(const rol_id of [2,3,4]){const r=await call('/cuentas',{method:'POST',body:{...input,rol_id}});assert.equal(r.status,201);assert.ok(!Object.hasOwn(r.data.usuario,'password'));assert.match(created.at(-1).data.password,/^\$2[aby]\$/);assert.equal(created.at(-1).actor,17);}
- assert.equal((await call('/cuentas',{method:'POST',body:{...input,rol_id:1}})).status,403);
- assert.equal((await call('/cuentas',{method:'POST',body:{...input,cedula:''}})).status,400);
- assert.equal((await call('/cuentas',{method:'POST',body:{...input,correo:'duplicate@example.test'}})).status,409);
+test('el alta valida los campos por rol y emite una invitación sin aceptar privilegios',async()=>{
+ const input={nombre:'Ana',apellido:'Test',correo:'a@example.test'};
+ for(const [tipo_alta,rol_id] of [['PACIENTE',2],['FARMACIA',3],['IPS',4],['DOMICILIARIO',5]]){
+   const documento=rol_id===2?{cedula:'0006',tipo_documento:'CC'}:{};
+   const r=await call('/cuentas',{method:'POST',body:{...input,tipo_alta,...documento}});
+   assert.equal(r.status,201);
+   assert.ok(!Object.hasOwn(r.data.usuario,'password'));
+   assert.equal(r.data.invitacion,'ACEPTADA');
+   assert.equal(created.at(-1).data.estado,'INACTIVO');
+   assert.equal(created.at(-1).data.rol_id,rol_id);
+   assert.equal(created.at(-1).actor,17);
+ }
+ assert.equal((await call('/cuentas',{method:'POST',body:{...input,tipo_alta:'IPS',rol_id:1}})).status,400);
+ assert.equal((await call('/cuentas',{method:'POST',body:{...input,tipo_alta:'PACIENTE',cedula:''}})).status,400);
+ assert.equal((await call('/cuentas',{method:'POST',body:{...input,tipo_alta:'IPS',correo:'duplicate@example.test'}})).status,409);
 });
 test('account updates activate, deactivate and change allowed roles without accepting passwords',async()=>{
  for(const body of [{estado:'ACTIVO'},{estado:'INACTIVO'},{rol_id:4}]){assert.equal((await call('/cuentas/6',{method:'PATCH',body})).status,200);assert.equal(updated.at(-1).actor,17);}

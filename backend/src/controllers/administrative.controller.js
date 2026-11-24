@@ -2,8 +2,8 @@ const {getRepository}=require('../repositories/administrative.repository');
 const {createService}=require('../services/administrative.service');
 const v=require('../validators/administrative.validator');
 const exportsService=require('../services/administrative-export.service');
-function createController({repo=getRepository(),emit=()=>{},directory}={}) {
-    const service=createService(repo),actor=req=>req.usuario?.id,staff=req=>req.usuario?.rol_id===1;
+function createController({repo=getRepository(),emit=()=>{},directory,alta}={}) {
+    const service=createService(repo,alta),actor=req=>req.usuario?.id,staff=req=>req.usuario?.rol_id===1;
     const getDirectory=()=>directory??=require('../services/administrative-directory.service').getDirectoryService();
     const wrap=(fn,mutation=false)=>async(req,res)=>{
         try {
