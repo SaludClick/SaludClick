@@ -37,6 +37,7 @@
             apply();
         });
         control.append(select);
-        document.body.append(control);
+        const panelContent = document.querySelector("[data-panel-menu] > :is(.admin-main, .ad-main)");
+        (panelContent || document.body).append(control);
     });
 })();
