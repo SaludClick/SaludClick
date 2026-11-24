@@ -202,6 +202,36 @@ test('recuperación oculta cuentas inexistentes, persiste hash y envía enlace d
     assert.equal(mailMessages.length, 1);
 });
 
+test('Resend envía la recuperación sin recurrir a SMTP', async t => {
+    const anterior = { key: process.env.RESEND_API_KEY, from: process.env.RESEND_FROM };
+    t.after(() => {
+        for (const [variable, valor] of [['RESEND_API_KEY', anterior.key], ['RESEND_FROM', anterior.from]]) {
+            if (valor === undefined) delete process.env[variable];
+            else process.env[variable] = valor;
+        }
+    });
+    process.env.RESEND_API_KEY = 're_prueba';
+    process.env.RESEND_FROM = 'SaludClick <cuentas@example.test>';
+    const cantidadSMTP = mailMessages.length;
+    const enviar = t.mock.method(globalThis, 'fetch', async () => Response.json({ id: 'mensaje-prueba' }));
+
+    await authService.solicitarRecuperacion('ana@example.test');
+    const [url, opciones] = enviar.mock.calls[0].arguments;
+    const mensaje = JSON.parse(opciones.body);
+    assert.equal(url, 'https://api.resend.com/emails');
+    assert.equal(opciones.method, 'POST');
+    assert.equal(opciones.headers.Authorization, 'Bearer re_prueba');
+    assert.equal(opciones.headers['Idempotency-Key'], 'saludclick-cuenta/' + recovery.tokenHash);
+    assert.equal(mensaje.from, process.env.RESEND_FROM);
+    assert.equal(mensaje.to, 'ana@example.test');
+    assert.match(mensaje.html, /restablecer\.html#token=/);
+    assert.equal(mailMessages.length, cantidadSMTP);
+
+    enviar.mock.mockImplementation(async () => new Response(null, { status: 503 }));
+    await assert.rejects(authService.solicitarRecuperacion('ana@example.test'), /Resend no aceptó/);
+    assert.equal(mailMessages.length, cantidadSMTP);
+});
+
 test('restablecimiento conserva validación, hash y consumo del token', async t => {
     await t.test('token ausente', async () => {
         await assert.rejects(authService.restablecerPassword('', 'abcdef'), /enlace de recuperación no es válido/);

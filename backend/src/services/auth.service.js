@@ -33,10 +33,42 @@ const transporter = nodemailer.createTransport({
 // ENVIAR CORREO DE RECUPERACIÓN
 // ==========================================
 
-const enviarCorreoRecuperacion = async (correo, enlace) => {
+async function enviarCorreoCuenta(mensaje, tokenHash) {
+    const apiKey = process.env.RESEND_API_KEY?.trim();
+    const from = process.env.RESEND_FROM?.trim();
 
-    await transporter.sendMail({
-        from: process.env.MAIL_FROM || process.env.SMTP_USER,
+    if (!apiKey && !from) {
+        const info = await transporter.sendMail({
+            from: process.env.MAIL_FROM || process.env.SMTP_USER,
+            ...mensaje
+        });
+        if (info.rejected?.length || !info.accepted?.length) {
+            throw new Error("SMTP no aceptó el correo de la cuenta.");
+        }
+        return;
+    }
+    if (!apiKey || !from) throw new Error("Configuración de Resend incompleta.");
+
+    const respuesta = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "Idempotency-Key": `saludclick-cuenta/${tokenHash}`
+        },
+        body: JSON.stringify({ from, ...mensaje }),
+        signal: AbortSignal.timeout(10000)
+    });
+    if (!respuesta.ok) throw new Error("Resend no aceptó el correo de la cuenta.");
+    const resultado = await respuesta.json();
+    if (typeof resultado.id !== "string" || !resultado.id.trim()) {
+        throw new Error("Resend no confirmó el correo de la cuenta.");
+    }
+}
+
+const enviarCorreoRecuperacion = async (correo, enlace, tokenHash) => {
+
+    await enviarCorreoCuenta({
         to: correo,
         subject: "Recuperación de contraseña - SaludClick",
         html: `
@@ -76,7 +108,7 @@ const enviarCorreoRecuperacion = async (correo, enlace) => {
                 </p>
             </div>
         `
-    });
+    }, tokenHash);
 
 };
 
@@ -321,15 +353,13 @@ const solicitarRecuperacion = async (correo) => {
         }${usuario.password === '!ACTIVACION_PENDIENTE' ? '&activacion=1' : ''}`;
 
     if (usuario.password === '!ACTIVACION_PENDIENTE') {
-        const info = await transporter.sendMail({
-            from: process.env.MAIL_FROM || process.env.SMTP_USER,
+        await enviarCorreoCuenta({
             to: usuario.correo,
             subject: 'Activa tu cuenta de SaludClick',
             text: `Verifica tu correo y establece tu contraseña para activar la cuenta: ${enlace}\nEl enlace es de un solo uso y vence en 15 minutos. Si vence, solicita otro desde Recuperar contraseña.`
-        });
-        if (info.rejected?.length || !info.accepted?.length) throw new Error('SMTP no aceptó la invitación. La cuenta continúa inactiva.');
+        }, tokenHash);
     } else {
-        await enviarCorreoRecuperacion(usuario.correo, enlace);
+        await enviarCorreoRecuperacion(usuario.correo, enlace, tokenHash);
     }
 
 };
