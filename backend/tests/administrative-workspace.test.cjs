@@ -148,12 +148,14 @@ test('Vitalix verifies the visitor session again before each WebSocket notificat
   const socket = {
     handshake: { auth: { visitorToken: 'a'.repeat(64) } },
     data: {},
+    join(room) { this.room = room; },
     on(_event, fn) { onDisconnect = fn; },
     disconnect() { disconnected = true; onDisconnect(); },
     emit(event, payload) { sent.push([event, payload]); }
   };
   await new Promise((resolve, reject) => middleware(socket, error => error ? reject(error) : resolve()));
   connect(socket);
+  assert.equal(socket.room, 'administrativo:visitante-token:' + socket.data.visitorHash);
   notify({ caso_id: 7 });
   await new Promise(setImmediate);
   assert.deepEqual(sent, [['administrativo:actualizado', { caso_id: 7 }]]);
