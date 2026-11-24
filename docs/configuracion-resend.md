@@ -1,6 +1,6 @@
 # Correo de cuentas con Resend
 
-Agrega estas variables al archivo local `backend/.env` o a la configuración del servidor.
+Usa el [archivo de ejemplo](ejemplos/correo-y-google.env.example) para agregar estas variables al archivo local `backend/.env` o a la configuración del servidor.
 
 ```dotenv
 RESEND_API_KEY=

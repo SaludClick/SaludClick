@@ -6,9 +6,9 @@ en PostgreSQL. La migración administrativa está preparada, sin ejecutarse.
 
 ## Matriz de acceso
 
-| Función | Usuario/paciente | Farmacia | Administrador | EPS |
+| Función | Usuario/paciente | Farmacia | Administrador | Institucional (4) |
 | --- | --- | --- | --- | --- |
-| Inicio tras login | Dashboard personal | Panel de farmacia | Administración | Panel EPS |
+| Inicio tras login | Dashboard personal | Panel de farmacia | Administración | Panel IPS con membresía vigente. Panel EPS con el acceso histórico. |
 | Perfil propio | Sí | Sí | Sí | Sí |
 | Pedidos, checkout e historial personales | Solo propios | No | No | No |
 | Cargar y consultar fórmulas personales | Solo propias | No | No | No |
@@ -27,6 +27,8 @@ existencias. No se añadió edición de stock o precios.
 
 ## Protección en el backend
 
+- El panel IPS verifica la cuenta activa, el rol institucional y la membresía vigente.
+  Los vínculos de aseguradora EPS se gestionan por separado. [Modelo IPS y etapas de dispensación](ips-y-dispensacion.md).
 - Las rutas personales de pedidos, fórmulas y dashboard requieren JWT y rol 2.
   Los repositorios conservan el filtro por propietario.
 - Administración mantiene su acceso exclusivo al rol 1 y farmacia al rol 3.
