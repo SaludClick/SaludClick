@@ -24,4 +24,10 @@ El domiciliario ve identificador de solicitud, dirección y vigencia de sus visi
 
 El responsable puede registrar `CONCILIAR_VISITA` con el identificador de visita y una referencia de verificación de la entrega cuando el domiciliario perdió acceso, la autorización sigue vigente y se conservaron las dos constancias. El evento identifica al responsable. Se descuentan las cantidades preparadas una sola vez y las constancias se conservan. Una discrepancia sobre la entrega o una autorización vencida requieren revisión antes de cerrar.
 
-Las confirmaciones usan textos de demostración. Para producción quedan por revisar los [documentos y el método de firma](borradores-entrega-domiciliaria.md) y la integración con existencias físicas. Las operaciones de IPS, administración y farmacia se prueban por API, mientras que Domiciliario y la constancia tienen pantallas propias.
+## Existencias físicas
+
+`PREPARAR` reserva unidades de la farmacia asignada y solo aplica la diferencia si se cambia la preparación. Cancelar, reprogramar o registrar una visita fallida sin constancias libera esa reserva. La entrega en farmacia, el resultado exitoso de la visita y la conciliación consumen la reserva y reducen la cantidad física. El cierre y su movimiento por medicamento comparten transacción, clave de operación y bloqueo de la solicitud. Un movimiento domiciliario conserva el identificador de visita, el domiciliario original y la persona que cerró o concilió.
+
+La migración `20261124010000_stock_dispensacion` extiende el libro de inventario existente y mantiene los índices de unicidad históricos. Se detiene si encuentra preparaciones o entregas por etapas anteriores a la integración que deban conciliarse. El flujo por etapas rechaza también los pedidos con movimientos históricos de inventario. El checkout histórico actualiza el stock global del catálogo en `medicamentos.stock`. La nueva entrega solo modifica `farmacia_existencias`, que representa el inventario acreditado de la farmacia.
+
+Las confirmaciones usan textos de demostración. Para producción quedan por revisar los [documentos y el método de firma](borradores-entrega-domiciliaria.md). Las operaciones de IPS, administración y farmacia se prueban por API, mientras que Domiciliario y la constancia tienen pantallas propias.

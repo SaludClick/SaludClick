@@ -29,6 +29,7 @@ model Rol {
 }
 
 model Usuario {
+  stock_domicilios FarmaciaStockEvento[] @relation("StockDomiciliario")
   farmacia_perfil_dispensacion FarmaciaPersonalDispensacion? @relation("DispensacionEmpleado")
   farmacia_equipo_dispensacion FarmaciaPersonalDispensacion[] @relation("DispensacionFarmacia")
   dispensaciones_asignadas DispensacionEtapa[] @relation("DispensacionAsignada")
@@ -715,14 +716,18 @@ model FarmaciaStockEvento {
  clave String @db.Uuid
  huella String @db.Char(64)
  referencia String @db.VarChar(200)
+ etapa Int?
+ visita_id String? @db.Uuid
+ domiciliario_id Int?
+ operacion_etapa String? @default(dbgenerated()) @db.Uuid
  created_at DateTime @default(now()) @db.Timestamptz
  farmacia Usuario @relation("StockFarmacia",fields:[farmacia_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
  actor Usuario @relation("StockActor",fields:[actor_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ domiciliario Usuario? @relation("StockDomiciliario",fields:[domiciliario_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
  medicamento Medicamento @relation(fields:[medicamento_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
  solicitud Solicitud? @relation(fields:[solicitud_id],references:[id],onDelete:Restrict,onUpdate:NoAction)
  existencia FarmaciaExistencia @relation(fields:[farmacia_id,medicamento_id],references:[farmacia_id,medicamento_id],onDelete:Restrict,onUpdate:NoAction)
- @@unique([farmacia_id,clave,medicamento_id])
- @@unique([solicitud_id,medicamento_id,tipo])
+ operacion DispensacionEvento? @relation(fields:[solicitud_id,operacion_etapa],references:[solicitud_id,clave],onDelete:NoAction,onUpdate:NoAction,map:"farmacia_stock_eventos_operacion_etapa_fkey")
  @@index([farmacia_id,created_at],map:"farmacia_stock_eventos_fecha_idx")
  @@map("farmacia_stock_eventos")
 }
@@ -836,6 +841,7 @@ model DispensacionEtapa {
 }
 
 model DispensacionEvento {
+  inventario FarmaciaStockEvento[]
   solicitud_id Int
   clave String @db.Uuid
   actor_id Int

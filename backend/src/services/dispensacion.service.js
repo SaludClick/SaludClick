@@ -1,5 +1,6 @@
 const { createHash, randomUUID } = require("node:crypto");
 const { fail, id, text } = require("../validators/administrative.validator");
+const { moverStock, verificarSinMovimientosHistoricos } = require("../repositories/dispensacion-stock.repository");
 
 const acciones = new Set(["AUTORIZAR", "CORREGIR", "RECHAZAR", "CANCELAR", "ASIGNAR", "PREPARAR",
     "ASIGNAR_VISITA", "REPROGRAMAR_VISITA", "INICIAR_VISITA", "AUTORIZAR_RECEPTOR",
@@ -296,6 +297,7 @@ function createDispensacion(pool) {
                 if (!["PENDIENTE", "APROBADA"].includes(solicitud.estado)) fail("El pedido ya está en otro proceso.", 409);
                 const legacy = await one(db, "SELECT 1 FROM farmacia_asignaciones WHERE solicitud_id=$1 AND activa", [pedidoId]);
                 if (legacy) fail("El pedido ya tiene una asignación histórica activa.", 409);
+                await verificarSinMovimientosHistoricos(db, pedidoId);
                 const covered = await one(db, `SELECT 1 FROM afiliado_cuentas_origen a JOIN ips_eps c ON c.eps_id=a.eps_id
                     JOIN eps_entidades e ON e.id=c.eps_id
                     WHERE a.usuario_id=$1 AND c.ips_id=$2 AND c.activa AND e.activa FOR SHARE OF a,c,e`, [solicitud.usuario_id, member.ips_id]);
@@ -317,9 +319,11 @@ function createDispensacion(pool) {
                 if (!order) fail("La vigencia debe estar en el futuro.", 409);
             } else {
                 const next = { ...order };
+                const inventario = { order, actorId: actor.id, clave, accion };
                 switch (accion) {
                     case "CANCELAR":
                         exige("AUTORIZADA", "ASIGNADA", "PREPARADA", "PARCIAL");
+                        if (Object.keys(order.preparadas).length) await moverStock(db, inventario);
                         next.estado = "CANCELADA";
                         next.preparadas = {};
                         break;
@@ -335,6 +339,7 @@ function createDispensacion(pool) {
                         exige("ASIGNADA", "PARCIAL", "PREPARADA");
                         dentroDe(data.cantidades, order.saldo);
                         dentroDe(data.cantidades, order.saldo_etapa);
+                        await moverStock(db, { ...inventario, nuevas: data.cantidades });
                         next.preparadas = data.cantidades;
                         next.estado = "PREPARADA";
                         break;
@@ -362,6 +367,7 @@ function createDispensacion(pool) {
                         if (await one(db, "SELECT 1 FROM dispensacion_constancias WHERE visita_id=$1", [order.visita_activa])) {
                             fail("La visita ya tiene constancias; registra su resultado antes de reprogramar.", 409);
                         }
+                        await moverStock(db, inventario);
                         next.estado = "ASIGNADA";
                         next.preparadas = {};
                         next.visita_activa = null;
@@ -405,9 +411,11 @@ function createDispensacion(pool) {
                         if (conciliacion || data.resultado === "ENTREGADA") {
                             if (order.vencida) fail("La autorización ya venció.", 409);
                             if (signed.cantidad !== 2) fail("Se requiere confirmación del paciente.", 409);
+                            await moverStock(db, { ...inventario, entrega: true });
                             descontar(next);
                         } else {
                             if (signed.cantidad) fail("La visita tiene constancias y requiere conciliación.", 409);
+                            await moverStock(db, inventario);
                             next.estado = "ASIGNADA";
                             next.preparadas = {};
                         }
@@ -419,6 +427,7 @@ function createDispensacion(pool) {
                     case "DISPENSAR":
                         exige("PREPARADA");
                         if (solicitud.tipo_entrega !== "RECOGER") fail("El pedido requiere visita.", 409);
+                        await moverStock(db, { ...inventario, entrega: true });
                         descontar(next);
                         break;
                 }
