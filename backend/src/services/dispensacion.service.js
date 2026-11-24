@@ -3,7 +3,7 @@ const { fail, id, text } = require("../validators/administrative.validator");
 
 const acciones = new Set(["AUTORIZAR", "CORREGIR", "RECHAZAR", "CANCELAR", "ASIGNAR", "PREPARAR",
     "ASIGNAR_VISITA", "REPROGRAMAR_VISITA", "INICIAR_VISITA", "AUTORIZAR_RECEPTOR",
-    "FIRMAR", "RESULTADO_VISITA", "DISPENSAR"]);
+    "FIRMAR", "RESULTADO_VISITA", "CONCILIAR_VISITA", "DISPENSAR"]);
 const fallosVisita = new Set(["AUSENCIA", "RECHAZO", "DIRECCION_INCORRECTA", "DEVOLUCION"]);
 const terminales = new Set(["ENTREGADA", "CANCELADA", "RECHAZADA"]);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -53,6 +53,9 @@ function normalizar(accion, input) {
         case "REPROGRAMAR_VISITA":
             campos(input, ["motivo", "visita_id"]);
             return { motivo: text(input.motivo, "Motivo", 500), visita_id: claveVisita(input.visita_id) };
+        case "CONCILIAR_VISITA":
+            campos(input, ["referencia", "visita_id"]);
+            return { referencia: text(input.referencia, "Referencia de verificación de entrega", 160), visita_id: claveVisita(input.visita_id) };
         case "ASIGNAR":
             campos(input, ["farmacia_id"]);
             return { farmacia_id: id(input.farmacia_id) };
@@ -266,7 +269,7 @@ function createDispensacion(pool) {
                 [data.visita_id, pedidoId, actor.id]);
             const autorizado = ["AUTORIZAR", "CORREGIR", "RECHAZAR", "CANCELAR"].includes(accion) ? clinico :
                 accion === "ASIGNAR" ? role === 1 :
-                ["ASIGNAR_VISITA", "REPROGRAMAR_VISITA"].includes(accion) ? farmacia && member.perfil === "RESPONSABLE" :
+                ["ASIGNAR_VISITA", "REPROGRAMAR_VISITA", "CONCILIAR_VISITA"].includes(accion) ? farmacia && member.perfil === "RESPONSABLE" :
                 ["INICIAR_VISITA", "RESULTADO_VISITA"].includes(accion) ? domicilio :
                 accion === "FIRMAR" ? paciente || receptor :
                 accion === "AUTORIZAR_RECEPTOR" ? paciente :
@@ -384,16 +387,27 @@ function createDispensacion(pool) {
                         if (!order.visita_iniciada) fail("La visita no ha iniciado.", 409);
                         await guardarConstancias(db, order, actor.id, paciente ? "PACIENTE" : "RECEPTOR_AUTORIZADO");
                         break;
+                    case "CONCILIAR_VISITA":
                     case "RESULTADO_VISITA": {
                         exige("EN_REPARTO");
-                        if (order.domiciliario_id !== actor.id || !order.visita_iniciada) fail("Visita no disponible.", 409);
-                        if (data.resultado === "ENTREGADA") {
+                        if (!order.visita_iniciada) fail("Visita no disponible.", 409);
+                        const conciliacion = accion === "CONCILIAR_VISITA";
+                        if (conciliacion) {
+                            const courier = await miembroFarmacia(db, order.domiciliario_id);
+                            const active = await one(db, "SELECT id FROM usuarios WHERE id=$1 AND rol_id=5 AND estado='ACTIVO' FOR SHARE",
+                                [order.domiciliario_id]);
+                            if (active && courier?.perfil === "DOMICILIARIO" && courier.farmacia_id === order.farmacia_id) {
+                                fail("El domiciliario aún puede registrar el resultado.", 409);
+                            }
+                        } else if (order.domiciliario_id !== actor.id) fail("Visita no disponible.", 409);
+                        const signed = await one(db, `SELECT count(*)::int AS cantidad FROM dispensacion_constancias
+                            WHERE visita_id=$1`, [order.visita_activa]);
+                        if (conciliacion || data.resultado === "ENTREGADA") {
                             if (order.vencida) fail("La autorización ya venció.", 409);
-                            const signed = await one(db, `SELECT count(*)::int AS cantidad FROM dispensacion_constancias
-                                WHERE visita_id=$1`, [order.visita_activa]);
                             if (signed.cantidad !== 2) fail("Se requiere confirmación del paciente.", 409);
                             descontar(next);
                         } else {
+                            if (signed.cantidad) fail("La visita tiene constancias y requiere conciliación.", 409);
                             next.estado = "ASIGNADA";
                             next.preparadas = {};
                         }

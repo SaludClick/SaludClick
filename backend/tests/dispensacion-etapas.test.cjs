@@ -102,9 +102,26 @@ test("la matriz aprobada controla convenios, etapas, visita y constancias", asyn
             assert.equal(createHash("sha256").update(copy.documento).digest("hex"), copy.sha256);
             assert.equal(JSON.parse(copy.documento).calidad, "RECEPTOR_AUTORIZADO");
         }
+        await step(3, 10, "PREPARAR", { cantidades: { 23: 5 } });
+        ({ visita_id } = await asignar());
+        await step(5, 10, "INICIAR_VISITA", { visita_id });
+        await step(2, 10, "FIRMAR", { ...signature, visita_id });
+        const reconciliacion = { visita_id, referencia: "verificación ficticia de recepción" };
+        await assert.rejects(step(7, 10, "CONCILIAR_VISITA", reconciliacion), { status: 403 });
+        await assert.rejects(step(3, 10, "CONCILIAR_VISITA", reconciliacion), { status: 409 });
+        await assert.rejects(step(5, 10, "RESULTADO_VISITA", { visita_id, resultado: "DEVOLUCION" }), { status: 409 });
         const revoked = await actor(5);
         await grant(3, 5, "DOMICILIARIO", false);
         await assert.rejects(operations.misVisitas(revoked), { status: 401 });
+        const reconciliationKey = randomUUID();
+        const result = await step(3, 10, "CONCILIAR_VISITA", reconciliacion, reconciliationKey);
+        assert.equal(result.estado, "ENTREGADA");
+        assert.deepEqual(result.saldo, { 23: 0 });
+        assert.deepEqual(await step(3, 10, "CONCILIAR_VISITA", reconciliacion, reconciliationKey),
+            JSON.parse(JSON.stringify(result)));
+        const audited = (await db.query("SELECT actor_id, entrada FROM dispensacion_eventos WHERE clave=$1", [reconciliationKey])).rows[0];
+        assert.deepEqual(audited, { actor_id: 3, entrada: reconciliacion });
+        assert.equal((await operations.documentos(await actor(2), 10, true)).length, 4);
         await grant(7, 5, "DOMICILIARIO");
         assert.equal((await operations.misVisitas(await actor(5))).length, 0);
 
