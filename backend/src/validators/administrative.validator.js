@@ -27,6 +27,33 @@ function account(input, creating=false) {
     if(!Object.keys(result).length) fail('No hay cambios para guardar.');
     return result;
 }
+const rolesAlta = new Map([['PACIENTE', 2], ['FARMACIA', 3], ['IPS', 4], ['DOMICILIARIO', 5]]);
+
+function altaCuenta(input) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) fail('Cuenta inválida.');
+    const rol_id = rolesAlta.get(input.tipo_alta);
+    if (!rol_id) fail('Selecciona un tipo de alta válido.');
+    const paciente = rol_id === 2;
+    const campos = ['tipo_alta', 'nombre', 'apellido', 'correo', ...(paciente ? ['cedula', 'tipo_documento'] : [])];
+    if (Object.keys(input).some(key => !campos.includes(key))) fail('El alta contiene campos no permitidos.');
+    const correo = text(input.correo, 'Correo', 150).toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(correo)) fail('Correo inválido.');
+    const datos = {
+        nombre: text(input.nombre, 'Nombre', 100),
+        apellido: text(input.apellido, 'Apellido', 100),
+        correo, rol_id, estado: 'INACTIVO', password: '!ACTIVACION_PENDIENTE',
+        cedula: null, tipo_documento: null
+    };
+    if (paciente) {
+        datos.tipo_documento = text(input.tipo_documento, 'Tipo de documento', 10).toUpperCase();
+        if (!['CC', 'CE', 'TI', 'RC', 'PA', 'PEP', 'PPT', 'NUIP', 'MS', 'AS', 'CD', 'SC', 'CN'].includes(datos.tipo_documento)) {
+            fail('Tipo de documento inválido.');
+        }
+        datos.cedula = text(input.cedula, 'Número de documento', 30);
+        if (!/^[A-Za-z0-9-]+$/.test(datos.cedula)) fail('Número de documento inválido.');
+    }
+    return datos;
+}
 function filters(query={}) {
     const result={buscar:text(query.buscar,'Búsqueda',120,false),estado:text(query.estado,'Estado',30,false),tipo:text(query.tipo,'Tipo',20,false),accion:text(query.accion,'Acción',60,false),page:id(query.page??1),limit:Math.min(id(query.limit??20),100)};
     if(result.page>100000) fail('Página fuera de rango.');
@@ -43,4 +70,4 @@ function filters(query={}) {
 }
 const transitions={ABIERTA:['EN_ATENCION','CERRADA'],EN_ATENCION:['RESUELTA','CERRADA'],RESUELTA:['EN_ATENCION','CERRADA'],CERRADA:[]};
 function transition(from,to) { if(!transitions[from]?.includes(to)) fail('La transición de estado no está permitida.',409); }
-module.exports={fail,text,id,account,filters,transition,message};
+module.exports={fail,text,id,account,altaCuenta,filters,transition,message};

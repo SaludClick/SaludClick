@@ -44,7 +44,7 @@ const login = async (req, res) => {
 
 const googleLogin = async (req, res) => {
     try {
-        const { credential } = req.body;
+        const { credential, password } = req.body;
 
         if (!credential) {
             return res.status(400).json({
@@ -54,7 +54,8 @@ const googleLogin = async (req, res) => {
         }
 
         const respuesta = await authService.googleLogin(
-            credential
+            credential,
+            password
         );
 
         return res.status(200).json(respuesta);

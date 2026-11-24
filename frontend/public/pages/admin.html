@@ -1,12 +1,14 @@
 <!doctype html>
 <html lang="es">
 <head>
+    <script src="/js/theme.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Administración · SaludClick</title>
 <link rel="stylesheet" href="/css/administrative.css">
 <link rel="stylesheet" href="/css/administrative-chat.css">
 <link rel="stylesheet" href="/css/panel-menu.css">
+    <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body class="ad-workspace">
 <div class="ad-shell" data-panel-menu="administrador">
@@ -70,7 +72,14 @@
 </label>
 <label>Correo<input name="correo" type="email" required maxlength="150" autocomplete="email">
 </label>
-<label>Documento<input name="cedula" required maxlength="30">
+<label>Tipo de alta<select name="tipo_alta">
+<option value="PACIENTE">Paciente</option><option value="IPS">Personal IPS</option>
+<option value="FARMACIA">Personal de farmacia</option><option value="DOMICILIARIO">Domiciliario</option>
+</select></label>
+<label>Tipo de documento<select name="tipo_documento">
+<option value="">Selecciona</option><option>CC</option><option>CE</option><option>TI</option><option>RC</option><option>PA</option><option>PEP</option><option>PPT</option><option>NUIP</option><option>MS</option><option>AS</option><option>CD</option><option>SC</option><option>CN</option>
+</select></label>
+<label>Documento<input name="cedula" maxlength="30">
 </label>
 <label>Teléfono<input name="telefono" maxlength="20" autocomplete="tel">
 </label>
@@ -87,8 +96,7 @@
 <option>INACTIVO</option>
 </select>
 </label>
-<label id="initialPasswordLabel" class="ad-wide">Contraseña inicial<input name="password" type="password" minlength="12" maxlength="72" autocomplete="new-password">
-</label>
+<p id="altaCuentaAyuda" class="ad-wide">La invitación verifica el correo. Los perfiles operativos requieren habilitación posterior.</p>
 <p id="userFormNotice" role="status" class="ad-wide">
 </p>
 <div class="ad-actions ad-wide">

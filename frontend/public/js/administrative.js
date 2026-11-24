@@ -5,7 +5,7 @@ import {checkAuthGuard,getCurrentUser,getToken,logout,actualizarUsuarioSesion} f
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?new Date(v).toLocaleString('es-CO'):'—';
-const role=v=>({1:'Administrador',2:'Cliente',3:'Farmacia',4:'EPS'}[v]||'Sin definir');
+const role=v=>({1:'Administrador',2:'Cliente',3:'Farmacia',4:'Institucional',5:'Domiciliario'}[v]||'Sin definir');
 const api=(path,options)=>apiFetch('/api/administrativo'+path,options);
 const mutate=(path,body,method='POST')=>api(path,{method,body:JSON.stringify(body)});
 const client=document.body.dataset.client==='true';
@@ -57,11 +57,27 @@ function bindUsers(){
     document.querySelectorAll('[data-user]').forEach(b=>b.addEventListener('click',()=>openUser(users.find(u=>u.id===Number(b.dataset.user)))));
     document.querySelectorAll('[data-user-detail]').forEach(b=>b.addEventListener('click',()=>run(()=>userDetail(b.dataset.userDetail),b)));
 }
+function fieldsAlta(form) {
+    const editing = Boolean(form.elements.id.value);
+    const patient = form.elements.tipo_alta.value === 'PACIENTE';
+    const display = (key, visible, required = false) => {
+        const field = form.elements[key];
+        field.closest('label').hidden = !visible;
+        field.disabled = !visible;
+        field.required = visible && required;
+    };
+    display('tipo_alta', !editing, true);
+    display('tipo_documento', !editing && patient, true);
+    display('cedula', editing || patient, !editing && patient);
+    for (const key of ['telefono', 'ciudad', 'rol_id', 'estado']) display(key, editing);
+    if (editing && !form.elements.rol_id.value) form.elements.rol_id.disabled = true;
+    $('altaCuentaAyuda').hidden = editing;
+}
 function openUser(user){
     const form=$('userForm');form.reset();$('userFormNotice').textContent='';
     for(const key of ['id','nombre','apellido','correo','cedula','telefono','ciudad','rol_id','estado']) if(user&&form.elements[key]) form.elements[key].value=user[key]??'';
     if(user&&!user.estado){form.elements.estado.value='INACTIVO';$('userFormNotice').textContent='Esta cuenta no tiene estado definido. Revisa su habilitación antes de guardar.';}
-    $('initialPasswordLabel').hidden=Boolean(user);form.elements.password.required=!user;form.elements.password.disabled=Boolean(user);
+    fieldsAlta(form);
     $('userDialogTitle').textContent=user?'Editar cuenta':'Crear usuario';$('userDialog').showModal();
 }
 const chat=createAdministrativeChat({api,mutate,client,notice,userId:()=>Number(getCurrentUser()?.id)});
@@ -121,7 +137,31 @@ async function start(){
     $('adminRefresh').addEventListener('click',()=>run(async()=>{notice();if(section==='solicitudes')await chat.refresh();else await load();}));
     if (client) $('adminMenu').addEventListener('click',()=>{const open=$('adminSidebar').classList.toggle('open');$('adminMenu').setAttribute('aria-expanded',String(open));});
     $('cancelUser')?.addEventListener('click',()=>$('userDialog').close());
-    $('userForm')?.addEventListener('submit',e=>{e.preventDefault();const form=e.currentTarget,button=form.querySelector('button[type=submit]');run(async()=>{const data=Object.fromEntries(new FormData(form)),id=data.id;delete data.id;data.rol_id=Number(data.rol_id);if(id){delete data.password;const old=users.find(u=>u.id===Number(id));if(old&&(data.rol_id!==old.rol_id||data.estado!==old.estado)&&!confirm('Confirmar cambio de rol o estado de la cuenta. Esta acci\u00f3n revoca sus sesiones administrativas.'))return;}try{await mutate('/usuarios'+(id?'/'+id:''),data,id?'PATCH':'POST');form.reset();$('userDialog').close();await load();notice('Cuenta guardada.');}catch(error){$('userFormNotice').textContent=error.message;}},button);});
+    $('userForm')?.elements.tipo_alta.addEventListener('change', event => fieldsAlta(event.target.form));
+    $('userForm')?.addEventListener('submit', e => {
+        e.preventDefault();
+        const form = e.currentTarget, button = form.querySelector('button[type=submit]');
+        run(async () => {
+            const data = Object.fromEntries(new FormData(form)), id = data.id;
+            delete data.id;
+            if (id) {
+                if (Object.hasOwn(data, 'rol_id')) data.rol_id = Number(data.rol_id);
+                if (!data.cedula) delete data.cedula;
+                const old = users.find(u => u.id === Number(id));
+                if (old && ((data.rol_id && data.rol_id !== old.rol_id) || data.estado !== old.estado) &&
+                    !confirm('El cambio de rol o estado revoca las sesiones. ¿Deseas continuar?')) return;
+            }
+            try {
+                const result = await mutate('/usuarios' + (id ? '/' + id : ''), data, id ? 'PATCH' : 'POST');
+                form.reset();
+                $('userDialog').close();
+                await load();
+                notice(result.invitacion === 'PENDIENTE'
+                    ? 'Cuenta creada. La persona puede pedir otro enlace desde Recuperar contraseña.'
+                    : id ? 'Cuenta guardada.' : 'Cuenta creada e invitación aceptada para envío.');
+            } catch (error) { $('userFormNotice').textContent = error.message; }
+        }, button);
+    });
     window.addEventListener('hashchange',navigate);await navigate();
     // Poll only counters: never replace an unsent reply or an edited form.
     const refreshCounts=refreshNotificationCount;

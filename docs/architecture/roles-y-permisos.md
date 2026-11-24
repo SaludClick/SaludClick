@@ -6,9 +6,9 @@ en PostgreSQL. La migración administrativa está preparada, sin ejecutarse.
 
 ## Matriz de acceso
 
-| Función | Usuario/paciente | Farmacia | Administrador | EPS |
+| Función | Usuario/paciente | Farmacia | Administrador | Institucional (4) |
 | --- | --- | --- | --- | --- |
-| Inicio tras login | Dashboard personal | Panel de farmacia | Administración | Panel EPS |
+| Inicio tras login | Dashboard personal | Panel de farmacia | Administración | Panel IPS con membresía vigente. Panel EPS con el acceso histórico. |
 | Perfil propio | Sí | Sí | Sí | Sí |
 | Pedidos, checkout e historial personales | Solo propios | No | No | No |
 | Cargar y consultar fórmulas personales | Solo propias | No | No | No |
@@ -27,6 +27,8 @@ existencias. No se añadió edición de stock o precios.
 
 ## Protección en el backend
 
+- El panel IPS verifica la cuenta activa, el rol institucional y la membresía vigente.
+  Los vínculos de aseguradora EPS se gestionan por separado. [Modelo IPS y etapas de dispensación](ips-y-dispensacion.md).
 - Las rutas personales de pedidos, fórmulas y dashboard requieren JWT y rol 2.
   Los repositorios conservan el filtro por propietario.
 - Administración mantiene su acceso exclusivo al rol 1 y farmacia al rol 3.
@@ -40,6 +42,22 @@ existencias. No se añadió edición de stock o precios.
   conserva; el frontend permite editarla expresamente. El correo es solo lectura.
 - Los errores async no capturados reciben JSON genérico 500; las APIs inexistentes
   reciben 404 y los cuerpos por encima del límite reciben 413 sin stacks internos.
+
+## Datos mínimos para el alta
+
+El alta operativa pasa por una persona autorizada. El correo identifica la cuenta y permite verificar el canal o recuperar el acceso. La contraseña la establece el titular mediante una invitación de un solo uso cuando ese flujo esté habilitado. La verificación de identidad se realiza manualmente durante esta etapa.
+
+| Rol | Campos y finalidad |
+| --- | --- |
+| Paciente | Nombre, apellido, correo y tipo y número de documento para el cotejo con la afiliación. Teléfono y dirección se recogen cuando se necesitan para una entrega. |
+| Farmacia | Nombre, apellido y correo de la persona operadora, más la membresía autorizada que delimita su farmacia. |
+| IPS | Nombre, apellido y correo de la persona operadora, más la membresía autorizada que delimita su IPS. Se propone una habilitación separada para la autorización clínica. |
+| Administración | Nombre, apellido y correo institucional. El rol requiere aprovisionamiento y aprobación administrativa. |
+| Domiciliario | Nombre, apellido y correo de la persona asignada. Se registra el vínculo con la entidad que puede asignar visitas. |
+
+El formulario de Usuarios envía `tipo_alta` y los campos de identidad que corresponden. El servidor deriva el rol y crea la cuenta inactiva. La invitación expira a los 15 minutos y su consumo registra la verificación del correo. El paciente puede iniciar sesión tras establecer su contraseña. Las cuentas nuevas de IPS, Farmacia y Domiciliario quedan inactivas hasta su habilitación operativa separada. Las evidencias clínicas y los datos de la visita se registrarán en el trámite donde se usen.
+
+La migración `20261123235500_alta_diferenciada` reserva el rol 5. Revisa que ese identificador esté libre antes de aplicarla. Los controles de las cuentas históricas se conservan y el alta nueva no crea membresías. Si falla el proveedor de correo, la cuenta sigue pendiente y la persona puede pedir otro enlace en Recuperar contraseña.
 
 ## API de farmacia
 

@@ -822,6 +822,12 @@ if (checkAuthGuard()) {
                                         value;
                                 }
                             );
+                            if (pedido.tipo_entrega === "DOMICILIO" && Number.isSafeInteger(pedido.id)) {
+                                const link = document.createElement("a");
+                                link.href = `/pages/constancia-entrega.html?solicitud=${pedido.id}`;
+                                link.textContent = "Constancia";
+                                row.cells[0].append(" · ", link);
+                            }
                         }
                     );
 

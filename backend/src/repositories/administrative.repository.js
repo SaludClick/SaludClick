@@ -46,17 +46,25 @@ function createRepository(prisma) {
         // Serialize administrative writers; database constraints remain the final guard.
         await q(db,'SELECT pg_advisory_xact_lock(72411012)::text AS locked');
         await duplicate(db,data);
-        const [u]=await q(db,`INSERT INTO usuarios(nombre,apellido,correo,cedula,telefono,ciudad,rol_id,estado,password) VALUES($1,$2,$3,$4,$5,$6,$7,$8::"EstadoUsuario",$9) RETURNING ${userFields}`,data.nombre,data.apellido,data.correo,data.cedula,data.telefono||null,data.ciudad||null,data.rol_id,data.estado,data.password);
+        const [u]=await q(db,`INSERT INTO usuarios(nombre,apellido,correo,cedula,rol_id,estado,password,tipo_documento,alta_diferenciada) VALUES($1,$2,$3,$4,$5,$6::"EstadoUsuario",$7,$8,true) RETURNING ${userFields}`,data.nombre,data.apellido,data.correo,data.cedula,data.rol_id,data.estado,data.password,data.tipo_documento);
         await audit(db,actor,'USUARIO_CREADO','USUARIO',u.id,Object.keys(data).filter(k=>k!=='password'));
         await notify(db,null,'CUENTA','Se creó una cuenta administrativa',null,actor);
         return u;
     });
     const updateUser=(actor,id,data)=>tx(async db=>{
         await q(db,'SELECT pg_advisory_xact_lock(72411012)::text AS locked');
-        const [old]=await q(db,`SELECT ${userFields} FROM usuarios WHERE id=$1 FOR UPDATE`,id);
+        const [old]=await q(db,`SELECT ${userFields}, alta_diferenciada, correo_verificado_at, password = '!ACTIVACION_PENDIENTE' AS invitacion_pendiente FROM usuarios WHERE id=$1 FOR UPDATE`,id);
         if(!old) throw Object.assign(new Error('Cuenta no encontrada.'),{status:404,public:true});
         if(old.rol_id===1 || id===actor) throw Object.assign(new Error('Las cuentas administrativas no se modifican desde la gestión de clientes. Usa tu perfil para tus datos.'),{status:403,public:true});
-        const next={...old,...data}; await duplicate(db,next,id);
+        const next={...old,...data};
+        if (old.alta_diferenciada && (next.rol_id !== old.rol_id || next.correo !== old.correo)) {
+            throw Object.assign(new Error('El rol y el correo del alta requieren un proceso de verificación separado.'),{status:403,public:true});
+        }
+        if (next.estado === 'ACTIVO' && old.estado !== 'ACTIVO' &&
+            (old.invitacion_pendiente || (old.alta_diferenciada && (old.rol_id !== 2 || !old.correo_verificado_at)))) {
+            throw Object.assign(new Error('La cuenta requiere verificación o habilitación operativa.'),{status:403,public:true});
+        }
+        await duplicate(db,next,id);
         const [u]=await q(db,`UPDATE usuarios SET nombre=$1,apellido=$2,correo=$3,cedula=$4,telefono=$5,ciudad=$6,rol_id=$7,estado=$8::"EstadoUsuario",updated_at=now() WHERE id=$9 RETURNING ${userFields}`,next.nombre,next.apellido,next.correo,next.cedula,next.telefono,next.ciudad,next.rol_id,next.estado,id);
         if(next.rol_id!==old.rol_id || next.estado!==old.estado) await q(db,`INSERT INTO administrative_preferences(usuario_id,sesiones_revocadas_at) VALUES($1,now()) ON CONFLICT(usuario_id) DO UPDATE SET sesiones_revocadas_at=now() RETURNING usuario_id`,id);
         await audit(db,actor,'USUARIO_ACTUALIZADO','USUARIO',id,Object.keys(data));

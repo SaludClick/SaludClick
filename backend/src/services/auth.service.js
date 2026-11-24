@@ -33,10 +33,42 @@ const transporter = nodemailer.createTransport({
 // ENVIAR CORREO DE RECUPERACIÓN
 // ==========================================
 
-const enviarCorreoRecuperacion = async (correo, enlace) => {
+async function enviarCorreoCuenta(mensaje, tokenHash) {
+    const apiKey = process.env.RESEND_API_KEY?.trim();
+    const from = process.env.RESEND_FROM?.trim();
 
-    await transporter.sendMail({
-        from: process.env.MAIL_FROM || process.env.SMTP_USER,
+    if (!apiKey && !from) {
+        const info = await transporter.sendMail({
+            from: process.env.MAIL_FROM || process.env.SMTP_USER,
+            ...mensaje
+        });
+        if (info.rejected?.length || !info.accepted?.length) {
+            throw new Error("SMTP no aceptó el correo de la cuenta.");
+        }
+        return;
+    }
+    if (!apiKey || !from) throw new Error("Configuración de Resend incompleta.");
+
+    const respuesta = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "Idempotency-Key": `saludclick-cuenta/${tokenHash}`
+        },
+        body: JSON.stringify({ from, ...mensaje }),
+        signal: AbortSignal.timeout(10000)
+    });
+    if (!respuesta.ok) throw new Error("Resend no aceptó el correo de la cuenta.");
+    const resultado = await respuesta.json();
+    if (typeof resultado.id !== "string" || !resultado.id.trim()) {
+        throw new Error("Resend no confirmó el correo de la cuenta.");
+    }
+}
+
+const enviarCorreoRecuperacion = async (correo, enlace, tokenHash) => {
+
+    await enviarCorreoCuenta({
         to: correo,
         subject: "Recuperación de contraseña - SaludClick",
         html: `
@@ -76,7 +108,7 @@ const enviarCorreoRecuperacion = async (correo, enlace) => {
                 </p>
             </div>
         `
-    });
+    }, tokenHash);
 
 };
 
@@ -145,7 +177,10 @@ const invitarCuenta = async ({ correo, rol_id }) => {
 
 const login = async (data) => {
 
-    const correo = normalizarCorreo(data.correo);
+    const correo = typeof data?.correo === "string" ? normalizarCorreo(data.correo) : "";
+    if (!correo || correo.length > 254 || typeof data?.password !== "string" || !data.password) {
+        throw new PublicError("Correo o contraseña incorrectos");
+    }
 
     const usuario = await authRepository.login(correo);
 
@@ -166,7 +201,7 @@ const login = async (data) => {
         );
     }
 
-    if (usuario.estado === "INACTIVO") {
+    if (usuario.estado !== "ACTIVO") {
         throw new PublicError(
             "La cuenta se encuentra inactiva"
         );
@@ -193,9 +228,9 @@ const login = async (data) => {
 // LOGIN CON GOOGLE
 // ==========================================
 
-const googleLogin = async (idToken) => {
+const googleLogin = async (idToken, password) => {
 
-    if (!idToken) {
+    if (typeof idToken !== "string" || !idToken || !process.env.GOOGLE_CLIENT_ID?.trim()) {
         throw new Error(
             "Token de Google requerido"
         );
@@ -216,30 +251,28 @@ const googleLogin = async (idToken) => {
         );
     }
 
-    if (!payload.email_verified) {
+    if (payload.email_verified !== true) {
         throw new Error(
             "El correo de Google no está verificado"
         );
     }
 
-    const correo = payload.email
-        .trim()
-        .toLowerCase();
-
-    // Buscar usuario existente.
-    let usuario =
-        await authRepository.buscarPorCorreo(correo);
-
-    if (!usuario) {
-        throw new Error(
-            "No existe una cuenta asociada a este correo de Google."
-        );
+    const subject = payload.sub;
+    if (typeof subject !== "string" || !subject.trim() || subject.length > 255) {
+        throw new Error("Identificador de Google inválido.");
     }
 
-    if (usuario.estado === "INACTIVO") {
-        throw new PublicError(
-            "La cuenta se encuentra inactiva"
-        );
+    let usuario = await authRepository.buscarPorGoogle(subject);
+    if (!usuario && typeof password === "string" && password && Buffer.byteLength(password) <= 72) {
+        const cuenta = await authRepository.buscarPorCorreo(normalizarCorreo(payload.email));
+        if (cuenta?.rol_id === 2 && cuenta.estado === "ACTIVO" && !cuenta.google_subject &&
+            await bcrypt.compare(password, cuenta.password)) {
+            usuario = await authRepository.vincularGoogle(cuenta, subject);
+        }
+    }
+
+    if (usuario?.rol_id !== 2 || usuario.estado !== "ACTIVO") {
+        throw new Error("Acceso con Google no autorizado.");
     }
 
     // Crear el JWT propio de SaludClick.
@@ -321,15 +354,13 @@ const solicitarRecuperacion = async (correo) => {
         }${usuario.password === '!ACTIVACION_PENDIENTE' ? '&activacion=1' : ''}`;
 
     if (usuario.password === '!ACTIVACION_PENDIENTE') {
-        const info = await transporter.sendMail({
-            from: process.env.MAIL_FROM || process.env.SMTP_USER,
+        await enviarCorreoCuenta({
             to: usuario.correo,
             subject: 'Activa tu cuenta de SaludClick',
             text: `Verifica tu correo y establece tu contraseña para activar la cuenta: ${enlace}\nEl enlace es de un solo uso y vence en 15 minutos. Si vence, solicita otro desde Recuperar contraseña.`
-        });
-        if (info.rejected?.length || !info.accepted?.length) throw new Error('SMTP no aceptó la invitación. La cuenta continúa inactiva.');
+        }, tokenHash);
     } else {
-        await enviarCorreoRecuperacion(usuario.correo, enlace);
+        await enviarCorreoRecuperacion(usuario.correo, enlace, tokenHash);
     }
 
 };

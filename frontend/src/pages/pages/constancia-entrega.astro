@@ -1,0 +1,27 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+<Layout title="Constancia de entrega | SaludClick" bodyClass="ad-workspace">
+  <link slot="head" rel="stylesheet" href="/css/administrative.css" />
+  <main class="ad-main">
+    <p><a href="/pages/pedidos.html">Volver a mis pedidos</a></p>
+    <h1>Constancia de entrega</h1>
+    <p id="constanciaEstado" role="status"></p>
+    <form id="autorizarReceptor" class="ad-card" hidden>
+      <label>Identificador de la cuenta del receptor<input name="receptor" type="number" min="1" max="2147483647" required /></label>
+      <button type="submit">Autorizar receptor para esta visita</button>
+    </form>
+    <form id="confirmarEntrega" class="ad-card" hidden>
+      <p id="constanciaVersion"></p>
+      <label><span id="textoTratamiento"></span><input name="tratamiento" type="checkbox" required /></label>
+      <p id="cantidadesRecibidas"></p>
+      <label><span id="textoRecepcion"></span><input name="recepcion" type="checkbox" required /></label>
+      <button class="ad-primary" type="submit">Confirmar documentos</button>
+    </form>
+    <section class="ad-card" id="copiasEntrega" hidden>
+      <h2>Documentos confirmados</h2>
+      <ul id="copiasEntregaLista"></ul>
+    </section>
+  </main>
+  <script is:inline type="module" src="/js/constancia-entrega.js"></script>
+</Layout>

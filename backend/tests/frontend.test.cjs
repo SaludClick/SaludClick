@@ -33,13 +33,16 @@ test('las rutas Astro no colisionan con public y conservan las páginas HTML esp
         'pages/admin.html',
         'pages/chat-farmacia.html',
         'pages/chat.html',
+        'pages/constancia-entrega.html',
         'pages/dashboard.html',
+        'pages/domiciliario.html',
         'pages/eps-v1.html',
         'pages/eps.html',
         'pages/farmacia.html',
         ...['chat','entregas','inventario','medicamentos','notificaciones','perfil','solicitudes','usuarios'].map(name => `pages/farmacia-${name}.html`),
         'pages/formulas.html',
         'pages/historial.html',
+        'pages/ips.html',
         'pages/medicamentos.html',
         'pages/pedidos.html',
         'pages/perfil.html',
@@ -65,6 +68,7 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
         : publicRoot;
     let loginCorrecto = false;
     let loginRole = 2;
+    let ipsActiva = false;
     let loginRequests = 0;
     let orderRequests = 0;
     let adminAccountCreates = 0;
@@ -125,6 +129,14 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
         if (pathname === '/api/farmacia/eps' || pathname === '/api/farmacia/usuarios') {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true, vinculacion: { estado: 'SIN_VINCULO', eps: null, mensaje: 'No tienes una EPS vinculada.' }, pacientes: [], totalActivos: 0, paginacion: { pagina: 1, tamano: 25, total: 0, paginas: 0 } })); return;
+        }
+        if (pathname === '/api/ips/verificar-acceso') {
+            const autorizada = ipsActiva && req.headers.authorization === 'Bearer frontend-test-only';
+            res.writeHead(autorizada ? 200 : 403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(autorizada
+                ? { ok: true, ips: { id: 'ips-prueba', nombre: 'IPS de prueba' } }
+                : { ok: false, mensaje: 'Sin membresía IPS' }));
+            return;
         }
         if (pathname === '/api/farmacia/verificar-acceso') {
             res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -346,7 +358,7 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
         let file = path.resolve(staticRoot, '.' + (pathname === '/' ? '/index.html' : pathname));
         if (
             !fs.existsSync(file) &&
-            (pathname === '/' || pathname === '/pages/admin-afiliados.html' || pathname === '/login.html' || pathname === '/index.html' || pathname === '/pages/admin-cuentas.html' || pathname === '/pages/admin-pacientes.html' || pathname === '/pages/chat.html' || pathname === '/pages/chat-farmacia.html' || pathname === '/pages/farmacia.html' || pathname === '/pages/perfil.html' || pathname.startsWith('/pages/farmacia-') || ['/pages/eps.html', '/pages/eps-v1.html'].includes(pathname) || pathname.startsWith('/_astro/'))
+            (pathname === '/' || pathname === '/pages/admin-afiliados.html' || pathname === '/login.html' || pathname === '/index.html' || pathname === '/pages/admin-cuentas.html' || pathname === '/pages/admin-pacientes.html' || pathname === '/pages/chat.html' || pathname === '/pages/chat-farmacia.html' || pathname === '/pages/farmacia.html' || pathname === '/pages/perfil.html' || pathname.startsWith('/pages/farmacia-') || ['/pages/eps.html', '/pages/eps-v1.html', '/pages/ips.html'].includes(pathname) || pathname.startsWith('/_astro/'))
         ) {
             staticRoot = builtRoot;
             file = path.resolve(staticRoot, '.' + (pathname === '/' ? '/index.html' : pathname));
@@ -942,6 +954,17 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
         await until(() => evaluate('document.querySelector("#epsDashboardDatos")?.hidden === false'));
         assert.equal(await evaluate('document.querySelector("#epsDashboardEntidad").textContent'), 'EPS de prueba');
         await click('#logout'); await esperarPagina('/login.html');
+    });
+    await t.test('el login institucional con membresía activa abre el panel IPS', async () => {
+        ipsActiva = true;
+        try {
+            await go('/index.html'); await sinSesion(); await go('/login.html');
+            await login(4); await esperarPagina('/pages/ips.html');
+            await until(() => evaluate('document.querySelector("#ipsNombre").textContent === "IPS de prueba"'));
+            await click('#btnLogout'); await esperarPagina('/login.html');
+        } finally {
+            ipsActiva = false;
+        }
     });
     await t.test('login fallido y recarga conservan destino; Ã©xito lo consume una sola vez', async () => {
         await go('/index.html'); await sinSesion(); await click('[data-action="pedido"]'); await esperarPagina('/login.html');

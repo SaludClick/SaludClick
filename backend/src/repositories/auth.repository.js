@@ -9,6 +9,25 @@ const buscarPorCorreo = async (correo) => {
     return rows[0];
 };
 
+const buscarPorGoogle = async (subject) => {
+    const { rows } = await pool.query(
+        "SELECT id, nombre, apellido, correo, estado, rol_id, session_version FROM usuarios WHERE google_subject = $1",
+        [subject]
+    );
+    return rows[0];
+};
+
+const vincularGoogle = async (usuario, subject) => {
+    const { rows } = await pool.query(
+        `UPDATE usuarios SET google_subject = $1
+         WHERE id = $2 AND password = $3 AND correo = $4
+           AND rol_id = 2 AND estado = 'ACTIVO' AND google_subject IS NULL
+         RETURNING id, nombre, apellido, correo, estado, rol_id, session_version`,
+        [subject, usuario.id, usuario.password, usuario.correo]
+    );
+    return rows[0];
+};
+
 const register = async (usuario) => {
     const resultado = await pool.query(
         `INSERT INTO usuarios
@@ -38,48 +57,12 @@ const login = async (correo) => {
     return rows[0];
 };
 
-const crearTokenRecuperacion = async (usuarioId, tokenHash, expiraEn) => {
-    await pool.query(
-        "DELETE FROM tokens_recuperacion WHERE usuario_id = $1 OR expira_en < NOW()",
-        [usuarioId]
-    );
-    await pool.query(
-        "INSERT INTO tokens_recuperacion (usuario_id, token_hash, expira_en) VALUES ($1, $2, $3::timestamptz AT TIME ZONE 'UTC')",
-        [usuarioId, tokenHash, expiraEn.toISOString()]
-    );
-};
-
-const buscarTokenRecuperacion = async (tokenHash) => {
-    const { rows } = await pool.query(
-        `SELECT tr.id AS token_id, tr.usuario_id, u.correo, u.password
-         FROM tokens_recuperacion tr
-         INNER JOIN usuarios u ON u.id = tr.usuario_id
-         WHERE tr.token_hash = $1 AND tr.expira_en > NOW()
-         LIMIT 1`,
-        [tokenHash]
-    );
-    return rows[0];
-};
-
-const actualizarPassword = async (usuarioId, passwordHash, tokenId) => {
+async function transaccionRecuperacion(usuarioId, operacion) {
     const connection = await pool.connect();
     try {
         await connection.query("BEGIN");
-        const consumed = await connection.query(
-            "DELETE FROM tokens_recuperacion WHERE id = $1 AND usuario_id = $2 AND expira_en > NOW() RETURNING id",
-            [tokenId, usuarioId]
-        );
-        if (!consumed.rows.length) throw new PublicError("El enlace es inválido o ya expiró.");
-        await connection.query(
-            `UPDATE usuarios SET password = $1,
-             estado = CASE WHEN password = '!ACTIVACION_PENDIENTE' THEN 'ACTIVO' ELSE estado END
-             WHERE id = $2`,
-            [passwordHash, usuarioId]
-        );
-        await connection.query(
-            "DELETE FROM tokens_recuperacion WHERE usuario_id = $1",
-            [usuarioId]
-        );
+        await connection.query("SELECT id FROM usuarios WHERE id = $1 FOR UPDATE", [usuarioId]);
+        await operacion(connection);
         await connection.query("COMMIT");
     } catch (error) {
         await connection.query("ROLLBACK");
@@ -87,7 +70,49 @@ const actualizarPassword = async (usuarioId, passwordHash, tokenId) => {
     } finally {
         connection.release();
     }
+}
+
+const crearTokenRecuperacion = (usuarioId, tokenHash, expiraEn) =>
+    transaccionRecuperacion(usuarioId, async connection => {
+        await connection.query("DELETE FROM tokens_recuperacion WHERE usuario_id = $1", [usuarioId]);
+        await connection.query(
+            "INSERT INTO tokens_recuperacion (usuario_id, token_hash, expira_en) VALUES ($1, $2, $3::timestamptz AT TIME ZONE 'UTC')",
+            [usuarioId, tokenHash, expiraEn.toISOString()]
+        );
+    });
+
+const buscarTokenRecuperacion = async (tokenHash) => {
+    const { rows } = await pool.query(
+        `SELECT tr.id AS token_id, tr.usuario_id, u.correo, u.password
+         FROM tokens_recuperacion tr
+         INNER JOIN usuarios u ON u.id = tr.usuario_id
+         WHERE tr.token_hash = $1 AND tr.expira_en > (NOW() AT TIME ZONE 'UTC')
+         LIMIT 1`,
+        [tokenHash]
+    );
+    return rows[0];
 };
+
+const actualizarPassword = (usuarioId, passwordHash, tokenId) =>
+    transaccionRecuperacion(usuarioId, async connection => {
+        const consumed = await connection.query(
+            "DELETE FROM tokens_recuperacion WHERE id = $1 AND usuario_id = $2 AND expira_en > (clock_timestamp() AT TIME ZONE 'UTC') RETURNING id",
+            [tokenId, usuarioId]
+        );
+        if (!consumed.rows.length) throw new PublicError("El enlace es inválido o ya expiró.");
+        await connection.query(
+            `UPDATE usuarios SET password = $1,
+             correo_verificado_at = CASE WHEN password = '!ACTIVACION_PENDIENTE' THEN clock_timestamp() ELSE correo_verificado_at END,
+             estado = CASE WHEN password = '!ACTIVACION_PENDIENTE' AND (NOT alta_diferenciada OR rol_id = 2)
+                           THEN 'ACTIVO' ELSE estado END
+             WHERE id = $2`,
+            [passwordHash, usuarioId]
+        );
+        await connection.query(
+            "DELETE FROM tokens_recuperacion WHERE usuario_id = $1",
+            [usuarioId]
+        );
+    });
 
 const buscarPerfil = async (usuarioId) => {
     const { rows } = await pool.query(
@@ -121,6 +146,8 @@ const actualizarPerfil = async (usuarioId, data) => {
 
 module.exports = {
     buscarPorCorreo,
+    buscarPorGoogle,
+    vincularGoogle,
     register,
     login,
     crearTokenRecuperacion,

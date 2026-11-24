@@ -1,5 +1,6 @@
 const { authorize } = require('../middlewares/farmacia-notificaciones.middleware');
 const { habilitadas } = require('../config/farmacia-notificaciones');
+const { canReceive } = require('../services/session-authority');
 
 function attachFarmaciaNotifications(io, app, { authenticate = authorize, enabled = habilitadas } = {}) {
     const namespace = io.of('/farmacia-notificaciones');
@@ -24,6 +25,7 @@ function attachFarmaciaNotifications(io, app, { authenticate = authorize, enable
             try {
                 const user = await authenticate(socket.handshake.auth?.token);
                 if (!ids.has(user.id) || user.id !== socket.data.farmacia.id) return socket.disconnect();
+                if (!await canReceive(socket)) return;
                 socket.emit('farmacia:notificaciones:actualizadas');
             } catch { socket.disconnect(); }
         }));

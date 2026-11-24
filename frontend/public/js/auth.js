@@ -11,6 +11,10 @@ export function validarDestino(destino) {
         const url = new URL(destino, window.location.origin);
         if (url.origin !== window.location.origin) return null;
         if (PAGINAS_PRIVADAS.has(url.pathname)) {
+            if (url.pathname === "/pages/constancia-entrega.html") {
+                const id = url.searchParams.get("solicitud");
+                return /^[1-9]\d{0,9}$/.test(id || "") ? `${url.pathname}?solicitud=${id}` : null;
+            }
             const buscar = url.pathname === "/pages/medicamentos.html" ? url.searchParams.get("buscar") : null;
             return url.pathname + (buscar !== null ? `?buscar=${encodeURIComponent(buscar)}` : "");
         }

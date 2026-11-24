@@ -24,7 +24,7 @@ function createFixture(){
         const input=chunks.length?JSON.parse(Buffer.concat(chunks).toString()):{};
         let data={};
         if(path==='/dashboard')data={estadisticas:{usuarios:{total:users.length},directorio:await directory.summary(),solicitudes:{abiertas:4,atendidas:6,pendientes:3,en_atencion:1,resueltas:4,cerradas:2},notificaciones:{sin_leer:1}}};
-        else if(path==='/usuarios'&&req.method==='POST'){const {password,...safe}=input;data={usuario:{id:users.length+2,...safe,created_at:now}};users.push(data.usuario);}
+        else if(path==='/usuarios'&&req.method==='POST'){const {tipo_alta,...safe}=input;data={invitacion:'ACEPTADA',usuario:{id:users.length+2,...safe,rol_id:{PACIENTE:2,FARMACIA:3,IPS:4,DOMICILIARIO:5}[tipo_alta],estado:'INACTIVO',created_at:now}};users.push(data.usuario);}
         else if(path.startsWith('/usuarios/')&&req.method==='PATCH'){const user=users.find(u=>u.id===Number(path.split('/')[2]));Object.assign(user,input);data={usuario:user};}
         else if(path.startsWith('/usuarios/directorio/'))data={registro:await directory.detail(decodeURIComponent(path.slice('/usuarios/directorio/'.length)))};
         else if(path.startsWith('/usuarios/'))data={usuario:users.find(u=>u.id===Number(path.split('/')[2]))};
@@ -99,7 +99,7 @@ async function testWorkspace({t,evaluate,go,click,value,until,send,fixture}){
         await send('Emulation.clearDeviceMetricsOverride');
         await evaluate(`location.hash='usuarios'`);await until(()=>evaluate(`!!document.querySelector('#newUser')`));await click('#newUser');
         assert.equal(await evaluate(`document.querySelector('#userDialog').open`),true);
-        for(const [key,text] of Object.entries({nombre:'Ana',apellido:'Prueba',correo:'ana@example.test',cedula:'0009',password:'long-test-password',rol_id:'4'}))await value(`#userForm [name=${key}]`,text);
+        for(const [key,text] of Object.entries({nombre:'Ana',apellido:'Prueba',correo:'ana@example.test',cedula:'0009',tipo_documento:'CC'}))await value(`#userForm [name=${key}]`,text);
         await click('#userForm button[type=submit]');await until(()=>evaluate(`document.querySelector('#adminView').textContent.includes('ana@example.test')`));
         assert.equal(fixture.users.at(-1).cedula,'0009');assert.ok(!Object.hasOwn(fixture.users.at(-1),'password'));
         await click(`[data-user="${fixture.users.at(-1).id}"]`);await value('#userForm [name=estado]','INACTIVO');await click('#userForm button[type=submit]');

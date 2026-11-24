@@ -2,8 +2,8 @@ const {getRepository}=require('../repositories/administrative.repository');
 const {createService}=require('../services/administrative.service');
 const v=require('../validators/administrative.validator');
 const exportsService=require('../services/administrative-export.service');
-function createController({repo=getRepository(),emit=()=>{},directory}={}) {
-    const service=createService(repo),actor=req=>req.usuario?.id,staff=req=>req.usuario?.rol_id===1;
+function createController({repo=getRepository(),emit=()=>{},directory,alta}={}) {
+    const service=createService(repo,alta),actor=req=>req.usuario?.id,staff=req=>req.usuario?.rol_id===1;
     const getDirectory=()=>directory??=require('../services/administrative-directory.service').getDirectoryService();
     const wrap=(fn,mutation=false)=>async(req,res)=>{
         try {
@@ -37,7 +37,7 @@ function createController({repo=getRepository(),emit=()=>{},directory}={}) {
         localUsers:wrap(async req=>await repo.users(v.filters(req.query))),
         directoryDetail:wrap(async req=>({registro:await getDirectory().detail(req.params.clave)})),
         userDetail:wrap(async req=>({usuario:await repo.userDetail(v.id(req.params.id))})),
-        createUser:wrap(async(req,res)=>{const usuario=await service.createUser(actor(req),req.body);res.status(201);return {usuario};},true),
+        createUser:wrap(async(req,res)=>{const alta=await service.createUser(actor(req),req.body);res.status(201);return alta;},true),
         updateUser:wrap(async req=>({usuario:await service.updateUser(actor(req),req.params.id,req.body)}),true),
         administrators:wrap(async()=>({administradores:await repo.administrators()})),
         cases:wrap(async req=>await repo.cases(actor(req),staff(req),v.filters(req.query))),

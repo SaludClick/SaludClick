@@ -8,7 +8,7 @@ function verificarToken(token) {
     if (!Number.isSafeInteger(payload?.exp) || !Number.isSafeInteger(payload.iat) ||
         payload.iat > Math.floor(Date.now() / 1000) || payload.iat >= payload.exp ||
         !Number.isSafeInteger(payload.id) || payload.id < 1 ||
-        ![1, 2, 3, 4].includes(role) ||
+        ![1, 2, 3, 4, 5].includes(role) ||
         (payload.rol_id !== undefined && payload.rol !== undefined && payload.rol_id !== payload.rol)) {
         throw new jwt.JsonWebTokenError("Atributos de sesión inválidos");
     }
@@ -21,7 +21,8 @@ const generarToken = (usuario) => {
         {
             id: usuario.id,
             correo: usuario.correo,
-            rol: usuario.rol_id
+            rol: usuario.rol_id,
+            sv: usuario.session_version
         },
         process.env.JWT_SECRET,
         {

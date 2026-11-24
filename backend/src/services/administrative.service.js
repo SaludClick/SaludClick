@@ -2,8 +2,17 @@ const bcrypt=require('bcrypt');
 const v=require('../validators/administrative.validator');
 const reportTypes=['usuarios','pacientes','estados','clientes','roles','solicitudes','atendidas','tiempos','conversaciones','actividad'];
 const categories=['ACCESO','CUENTA','DATOS_PERSONALES','SOPORTE','OTRA_ADMINISTRATIVA'];
-function createService(repo) {
-    async function createUser(actor,input) { const data=v.account(input,true); data.password=await bcrypt.hash(data.password,12); return repo.createUser(actor,data); }
+function createService(repo, { invite = correo => require('./auth.service').solicitarRecuperacion(correo),
+    validateActivation = () => require('../config/activation-url').validarUrlActivacion() } = {}) {
+    async function createUser(actor, input) {
+        const data = v.altaCuenta(input);
+        validateActivation();
+        const usuario = await repo.createUser(actor, data);
+        let invitacion = 'ACEPTADA';
+        try { await invite(usuario.correo); }
+        catch { invitacion = 'PENDIENTE'; }
+        return { usuario, invitacion };
+    }
     const updateUser=(actor,id,input)=>repo.updateUser(actor,v.id(id),v.account(input));
     function caseInput(input={}) {
         if(!['SOLICITUD','CONVERSACION'].includes(input.tipo)||!categories.includes(input.categoria)) v.fail('Selecciona una atención y categoría administrativas.');

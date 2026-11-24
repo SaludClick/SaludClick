@@ -54,7 +54,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            alert("Contraseña actualizada correctamente. Ahora puedes iniciar sesión.");
+            alert(activacion
+                ? "Correo verificado y contraseña guardada. El personal necesita habilitación antes de operar."
+                : "Contraseña actualizada correctamente.");
             window.location.href = "login.html";
         } catch (error) {
             console.error(error);

@@ -1,4 +1,4 @@
-export const ROLES = Object.freeze({ ADMINISTRADOR: 1, USUARIO: 2, FARMACIA: 3, EPS: 4 });
+export const ROLES = Object.freeze({ ADMINISTRADOR: 1, USUARIO: 2, FARMACIA: 3, EPS: 4, DOMICILIARIO: 5 });
 const permisos = Object.freeze({
     '/pages/admin.html': [1], '/pages/admin-cuentas.html': [1],
     '/pages/farmacia.html': [3],
@@ -8,7 +8,8 @@ const permisos = Object.freeze({
     '/pages/farmacia-chat.html': [], '/pages/farmacia-entregas.html': [],
     '/pages/chat-farmacia.html': [2], '/pages/perfil.html': [1, 2, 3, 4],
     '/pages/admin-pacientes.html': [1], '/pages/admin-afiliados.html': [],
-    '/pages/eps.html': [4], '/pages/eps-v1.html': [4], '/pages/soporte.html': [2]
+    '/pages/eps.html': [4], '/pages/eps-v1.html': [4], '/pages/ips.html': [4], '/pages/soporte.html': [2],
+    '/pages/domiciliario.html': [5], '/pages/constancia-entrega.html': [2]
 });
 export const PAGINAS_PRIVADAS = new Set(Object.keys(permisos));
 export function rolUsuario(usuario) {
@@ -16,7 +17,8 @@ export function rolUsuario(usuario) {
     return Object.values(ROLES).includes(role) ? role : null;
 }
 export function paginaInicio(usuario) {
-    return ({ 1: '/pages/admin.html', 2: '/pages/dashboard.html', 3: '/pages/farmacia.html', 4: '/pages/eps.html' })[rolUsuario(usuario)] || '/login.html';
+    return ({ 1: '/pages/admin.html', 2: '/pages/dashboard.html', 3: '/pages/farmacia.html',
+        4: '/pages/eps.html', 5: '/pages/domiciliario.html' })[rolUsuario(usuario)] || '/login.html';
 }
 export function puedeAcceder(destino, usuario) {
     const url = new URL(destino, 'http://localhost');

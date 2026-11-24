@@ -185,6 +185,27 @@ test('auth repository confirma la actualización de contraseña y revierte fallo
     assert.ok(sqlCalls.some(({ sql }) => sql === 'RELEASE'));
 });
 
+test('la recuperación bloquea la cuenta antes de reemplazar o consumir tokens', async () => {
+    const emitir = () => authRepository.crearTokenRecuperacion(31, 'hash-token', new Date('2026-01-01'));
+    await emitir();
+    assert.equal(sqlCalls[0].sql, 'BEGIN');
+    assert.match(sqlCalls[1].sql, /FROM usuarios.*FOR UPDATE/);
+    assert.match(sqlCalls[2].sql, /^DELETE FROM tokens_recuperacion WHERE usuario_id = \$1$/);
+    assert.match(sqlCalls[3].sql, /^INSERT INTO tokens_recuperacion/);
+    assert.equal(sqlCalls[4].sql, 'COMMIT');
+
+    sqlCalls.length = 0;
+    sqlFailure = 'INSERT INTO tokens_recuperacion';
+    await assert.rejects(emitir(), /test transaction failure/);
+    assert.deepEqual(sqlCalls.slice(-2).map(({ sql }) => sql), ['ROLLBACK', 'RELEASE']);
+
+    sqlCalls.length = 0;
+    sqlFailure = undefined;
+    await authRepository.actualizarPassword(31, 'new-hash', 7);
+    assert.match(sqlCalls[1].sql, /FROM usuarios.*FOR UPDATE/);
+    assert.match(sqlCalls[2].sql, /clock_timestamp\(\) AT TIME ZONE 'UTC'/);
+});
+
 test('token consumido o vencido revierte sin cambiar contraseña ni activar', async () => {
     consumedToken = false;
     try {
