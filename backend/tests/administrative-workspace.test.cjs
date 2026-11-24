@@ -36,11 +36,25 @@ test('account allowlist rejects privileged roles, hidden fields and invalid iden
   for(const input of [{...valid,rol_id:1},{...valid,password:'short'},{...valid,correo:'invalid'},{...valid,cedula:''},{...valid,hash:'secret'}])assert.throws(()=>v.account(input,true));
   assert.throws(()=>v.account({password:'overwrite'}));assert.throws(()=>v.account({}));
 });
-test('new accounts are hashed and existing password is not accepted by updates',async()=>{
+test('el alta invita por correo y separa verificación de habilitación operativa',async()=>{
   let saved;
-  const service=createService({createUser:async(actor,data)=>{saved={actor,data};return {id:10};}});
-  await service.createUser(1,{nombre:'Ana',apellido:'Test',correo:'a@example.test',cedula:'009',password:'a-long-test-password',rol_id:2});
-  assert.match(saved.data.password,/^\$2[aby]\$/);assert.notEqual(saved.data.password,'a-long-test-password');
+  const invited=[];
+  const service=createService({createUser:async(actor,data)=>{saved={actor,data};return {id:10,correo:data.correo};}},
+    {validateActivation(){},invite:async correo=>invited.push(correo)});
+  const identity={nombre:'Ana',apellido:'Test',correo:'a@example.test'};
+  for (const [tipo_alta,rol_id] of [['PACIENTE',2],['FARMACIA',3],['IPS',4],['DOMICILIARIO',5]]) {
+    const documento=rol_id===2?{tipo_documento:'CC',cedula:'009'}:{};
+    assert.equal((await service.createUser(1,{...identity,tipo_alta,...documento})).invitacion,'ACEPTADA');
+    assert.equal(saved.data.rol_id,rol_id);
+    assert.equal(saved.data.estado,'INACTIVO');
+    assert.equal(saved.data.password,'!ACTIVACION_PENDIENTE');
+    assert.equal(saved.data.cedula,rol_id===2?'009':null);
+  }
+  assert.equal(invited.length,4);
+  for (const extra of [{rol_id:1},{estado:'ACTIVO'},{password:'inyectada'},{ips_id:'otra'},{cedula:'009'}]) {
+    await assert.rejects(service.createUser(1,{...identity,tipo_alta:'IPS',...extra}),/no permitidos/);
+  }
+  await assert.rejects(service.createUser(1,{...identity,tipo_alta:'PACIENTE'}),/documento/i);
   assert.throws(()=>service.updateUser(1,10,{password:'not-allowed'}));
 });
 test('filters validate dates, ranges, page and input lengths',()=>{

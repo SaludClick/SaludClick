@@ -77,6 +77,8 @@ model Usuario {
   password                 String              @db.VarChar(255)
   google_subject           String?             @unique @db.VarChar(255)
   session_version          Int                 @default(1)
+  correo_verificado_at     DateTime?           @db.Timestamptz
+  alta_diferenciada        Boolean             @default(false)
   rol_id                   Int
   estado                   EstadoUsuario?      @default(ACTIVO)
   created_at               DateTime?           @default(now()) @db.Timestamp(0)

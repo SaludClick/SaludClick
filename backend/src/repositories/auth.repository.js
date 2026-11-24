@@ -102,7 +102,9 @@ const actualizarPassword = (usuarioId, passwordHash, tokenId) =>
         if (!consumed.rows.length) throw new PublicError("El enlace es inválido o ya expiró.");
         await connection.query(
             `UPDATE usuarios SET password = $1,
-             estado = CASE WHEN password = '!ACTIVACION_PENDIENTE' THEN 'ACTIVO' ELSE estado END
+             correo_verificado_at = CASE WHEN password = '!ACTIVACION_PENDIENTE' THEN clock_timestamp() ELSE correo_verificado_at END,
+             estado = CASE WHEN password = '!ACTIVACION_PENDIENTE' AND (NOT alta_diferenciada OR rol_id = 2)
+                           THEN 'ACTIVO' ELSE estado END
              WHERE id = $2`,
             [passwordHash, usuarioId]
         );

@@ -55,7 +55,9 @@ El alta operativa pasa por una persona autorizada. El correo identifica la cuent
 | Administración | Nombre, apellido y correo institucional. El rol requiere aprovisionamiento y aprobación administrativa. |
 | Domiciliario | Nombre, apellido y correo de la persona asignada. Se registra el vínculo con la entidad que puede asignar visitas. |
 
-Esta matriz define el alta objetivo. Los formularios existentes todavía deben ajustarse a estos campos por rol. Las evidencias clínicas y los datos de la visita corresponden al trámite en el que se usan.
+El formulario de Usuarios envía `tipo_alta` y los campos de identidad que corresponden. El servidor deriva el rol y crea la cuenta inactiva. La invitación expira a los 15 minutos y su consumo registra la verificación del correo. El paciente puede iniciar sesión tras establecer su contraseña. Las cuentas nuevas de IPS, Farmacia y Domiciliario quedan inactivas hasta su habilitación operativa separada. Las evidencias clínicas y los datos de la visita se registrarán en el trámite donde se usen.
+
+La migración `20261123235500_alta_diferenciada` reserva el rol 5. Revisa que ese identificador esté libre antes de aplicarla. Los controles de las cuentas históricas se conservan y el alta nueva no crea membresías. Si falla el proveedor de correo, la cuenta sigue pendiente y la persona puede pedir otro enlace en Recuperar contraseña.
 
 ## API de farmacia
 
