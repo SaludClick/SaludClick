@@ -1,6 +1,6 @@
 import { setSession, consumirDestinoPendiente } from "./auth.js";
 import { apiUrl } from "./api.js";
-import { paginaInicio } from './roles.js';
+import { paginaInicio, rolUsuario, ROLES } from './roles.js';
 
 // ==========================================
 // CONFIGURACIÓN DE RECAPTCHA V2 CHECKBOX
@@ -97,7 +97,7 @@ function cargarRecaptcha() {
 // GUARDAR SESIÓN Y REDIRIGIR
 // ==========================================
 
-function iniciarSesion(
+async function iniciarSesion(
     resultado,
     recordar = true,
     continuarAccion = false
@@ -110,12 +110,19 @@ function iniciarSesion(
 
     alert(`¡Bienvenido, ${resultado.usuario.nombre || "Usuario"}!`);
 
-    const destinoPendiente = continuarAccion
-        ? consumirDestinoPendiente()
-        : null;
-
-    const rutaDestino =
-        destinoPendiente || paginaInicio(resultado.usuario);
+    let inicio = paginaInicio(resultado.usuario);
+    if (rolUsuario(resultado.usuario) === ROLES.EPS) {
+        try {
+            const response = await fetch(apiUrl("/api/ips/verificar-acceso"), {
+                headers: { Authorization: `Bearer ${resultado.token}` },
+                signal: AbortSignal.timeout(3000)
+            });
+            if (response.ok && (await response.json()).ips?.id) inicio = "/pages/ips.html";
+        } catch {
+            // El acceso histórico conserva su propio control de membresía.
+        }
+    }
+    const rutaDestino = continuarAccion ? consumirDestinoPendiente(inicio) : inicio;
 
     window.location.href = rutaDestino;
 }
@@ -189,7 +196,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 ? recordarInput.checked
                 : true;
 
-            iniciarSesion(resultado, recordar, true);
+            await iniciarSesion(resultado, recordar, true);
 
         } catch (error) {
             reiniciarRecaptcha();
@@ -246,7 +253,7 @@ window.handleGoogleCredentialResponse = async function (response) {
             return;
         }
 
-        iniciarSesion(resultado, true, true);
+        await iniciarSesion(resultado, true, true);
 
     } catch (error) {
         reiniciarRecaptcha();

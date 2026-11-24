@@ -29,6 +29,7 @@ model Rol {
 }
 
 model Usuario {
+  acceso_ips IpsAcceso?
   vinculos_eps EpsFarmacia[]
   acceso_eps EpsAcceso?
   eventos_actor_eps EpsEvento[]
@@ -714,6 +715,7 @@ model FarmaciaStockEvento {
 
 // EPS: aislamiento explicito. No se asignan entidades ni cuentas automaticamente.
 model EpsEntidad {
+  prestadores IpsEps[]
   avisos_integrados EpsNotificacionCompartida[]
   id String @id @db.VarChar(80)
   nombre String @db.VarChar(150)
@@ -731,6 +733,42 @@ model EpsEntidad {
   eventos EpsEvento[]
   @@map("eps_entidades")
 }
+
+model IpsEntidad {
+  id           String @id @db.VarChar(80)
+  nombre       String @db.VarChar(150)
+  nit          String @unique @db.VarChar(30)
+  activa       Boolean @default(false)
+  accesos      IpsAcceso[]
+  aseguradoras IpsEps[]
+
+  @@map("ips_entidades")
+}
+
+model IpsEps {
+  ips_id String @db.VarChar(80)
+  eps_id String @db.VarChar(80)
+  activa Boolean @default(false)
+  ips    IpsEntidad @relation(fields: [ips_id], references: [id], onDelete: Restrict)
+  eps    EpsEntidad @relation(fields: [eps_id], references: [id], onDelete: Restrict)
+
+  @@id([ips_id, eps_id])
+  @@index([eps_id])
+  @@map("ips_eps")
+}
+
+model IpsAcceso {
+  usuario_id  Int @id
+  ips_id      String @db.VarChar(80)
+  activo      Boolean @default(false)
+  revocado_at DateTime? @db.Timestamptz
+  usuario     Usuario @relation(fields: [usuario_id], references: [id], onDelete: Restrict)
+  ips         IpsEntidad @relation(fields: [ips_id], references: [id], onDelete: Restrict)
+
+  @@index([ips_id, activo])
+  @@map("ips_accesos")
+}
+
 model EpsAcceso {
   usuario_id Int @id
   eps_id String @db.VarChar(80)

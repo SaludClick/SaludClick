@@ -1,0 +1,19 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+
+<Layout title="Panel IPS | SaludClick" bodyClass="ad-workspace">
+  <link slot="head" rel="stylesheet" href="/css/administrative.css" />
+  <main class="ad-main">
+    <header class="ad-heading">
+      <h1>Panel IPS</h1>
+      <button type="button" id="btnLogout">Cerrar sesión</button>
+    </header>
+    <p id="ipsEstado" role="status">Comprobando el acceso…</p>
+    <section class="ad-card" id="ipsEntidad" hidden aria-labelledby="ipsNombre">
+      <h2 id="ipsNombre"></h2>
+      <p>Tu cuenta tiene una vinculación activa con esta IPS.</p>
+    </section>
+  </main>
+  <script is:inline type="module" src="/js/ips.js"></script>
+</Layout>

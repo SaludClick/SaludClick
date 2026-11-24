@@ -4,7 +4,9 @@
 
 El rol institucional actual usa el ID 4. La sesión EPS comprueba la membresía de la cuenta y el acceso vigente a la entidad. Las tablas `eps_entidades`, `eps_accesos` y `eps_farmacias` también intervienen en la consulta de solicitudes y el aislamiento del directorio de afiliados. El repositorio de solicitudes cruza `afiliado_cuentas_origen.eps_id` con la entidad y la farmacia vinculada. Renombrar todos los identificadores como IPS haría indistinguibles la afiliación a la aseguradora y el ámbito de atención del prestador.
 
-Se propone conservar las referencias y contratos de afiliación EPS y crear el ámbito IPS con una relación explícita al asegurador y una membresía de prestador. La migración debe ser aditiva. Debe validar coincidencias y exigir una correspondencia de entidades y cuentas aprobada antes de asignar acceso. Las rutas históricas deben mantener su autenticación y ámbito durante la transición. Solo se cambiarán el destino del rol 4 y la navegación después de verificar a qué institución pertenece cada cuenta.
+La migración aditiva `20261123233000_ips_entidades` conserva las referencias y contratos de afiliación EPS. Introduce `ips_entidades` para prestadores, `ips_eps` para convenios con aseguradoras y `ips_accesos` para la membresía de prestador. Parte de una base migrada que ya contiene `eps_entidades`. No genera filas ni cambia el acceso existente. Antes de activar cuentas reales se requiere revisar la correspondencia de entidades y usuarios y cargarla de forma explícita.
+
+El rol 4 abre `/pages/ips.html` cuando cuenta con membresía IPS activa y una institución habilitada. Las demás cuentas conservan su destino anterior y sus permisos históricos. El panel IPS inicial muestra la institución de la sesión. `/api/ips/verificar-acceso` valida el rol y estado actuales de la cuenta, la membresía y la fecha de revocación antes de devolver esos datos.
 
 ## Responsabilidades acordadas
 
