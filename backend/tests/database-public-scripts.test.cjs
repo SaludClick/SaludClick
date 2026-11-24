@@ -4,6 +4,29 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { provisionAdmin } = require("../scripts/provision-admin");
 
+test("la migración de Google conserva cuentas existentes y exige identificadores únicos", async () => {
+  const { PGlite } = require("@electric-sql/pglite");
+  const db = new PGlite();
+  try {
+    await db.exec(`CREATE TABLE usuarios (id INTEGER PRIMARY KEY, correo TEXT NOT NULL);
+      INSERT INTO usuarios VALUES (1, 'uno@example.test'), (2, 'dos@example.test');`);
+    const migration = path.join(__dirname, "../prisma/migrations/20261123230000_google_subject/migration.sql");
+    await db.exec(fs.readFileSync(migration, "utf8"));
+    const { rows } = await db.query("SELECT id, correo, google_subject FROM usuarios ORDER BY id");
+    assert.deepEqual(rows, [
+      { id: 1, correo: "uno@example.test", google_subject: null },
+      { id: 2, correo: "dos@example.test", google_subject: null }
+    ]);
+    await db.query("UPDATE usuarios SET google_subject = $1 WHERE id = 1", ["google-sub"]);
+    await assert.rejects(
+      db.query("UPDATE usuarios SET google_subject = $1 WHERE id = 2", ["google-sub"]),
+      { code: "23505" }
+    );
+  } finally {
+    await db.close();
+  }
+});
+
 test("el aprovisionamiento guarda bcrypt, restringe roles y no pasa la contraseÃ±a en claro", async () => {
   const calls = [];
 

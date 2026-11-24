@@ -225,9 +225,9 @@ const login = async (data) => {
 // LOGIN CON GOOGLE
 // ==========================================
 
-const googleLogin = async (idToken) => {
+const googleLogin = async (idToken, password) => {
 
-    if (!idToken) {
+    if (typeof idToken !== "string" || !idToken || !process.env.GOOGLE_CLIENT_ID?.trim()) {
         throw new Error(
             "Token de Google requerido"
         );
@@ -248,30 +248,28 @@ const googleLogin = async (idToken) => {
         );
     }
 
-    if (!payload.email_verified) {
+    if (payload.email_verified !== true) {
         throw new Error(
             "El correo de Google no está verificado"
         );
     }
 
-    const correo = payload.email
-        .trim()
-        .toLowerCase();
-
-    // Buscar usuario existente.
-    let usuario =
-        await authRepository.buscarPorCorreo(correo);
-
-    if (!usuario) {
-        throw new Error(
-            "No existe una cuenta asociada a este correo de Google."
-        );
+    const subject = payload.sub;
+    if (typeof subject !== "string" || !subject.trim() || subject.length > 255) {
+        throw new Error("Identificador de Google inválido.");
     }
 
-    if (usuario.estado === "INACTIVO") {
-        throw new PublicError(
-            "La cuenta se encuentra inactiva"
-        );
+    let usuario = await authRepository.buscarPorGoogle(subject);
+    if (!usuario && typeof password === "string" && password && Buffer.byteLength(password) <= 72) {
+        const cuenta = await authRepository.buscarPorCorreo(normalizarCorreo(payload.email));
+        if (cuenta?.rol_id === 2 && cuenta.estado === "ACTIVO" && !cuenta.google_subject &&
+            await bcrypt.compare(password, cuenta.password)) {
+            usuario = await authRepository.vincularGoogle(cuenta, subject);
+        }
+    }
+
+    if (usuario?.rol_id !== 2 || usuario.estado !== "ACTIVO") {
+        throw new Error("Acceso con Google no autorizado.");
     }
 
     // Crear el JWT propio de SaludClick.

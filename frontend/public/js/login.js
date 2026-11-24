@@ -228,6 +228,7 @@ window.handleGoogleCredentialResponse = async function (response) {
             },
             body: JSON.stringify({
                 credential: response.credential,
+                password: document.getElementById("password")?.value || undefined,
                 recaptchaToken
             })
         });

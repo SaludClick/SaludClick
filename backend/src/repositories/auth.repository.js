@@ -9,6 +9,25 @@ const buscarPorCorreo = async (correo) => {
     return rows[0];
 };
 
+const buscarPorGoogle = async (subject) => {
+    const { rows } = await pool.query(
+        "SELECT id, nombre, apellido, correo, estado, rol_id FROM usuarios WHERE google_subject = $1",
+        [subject]
+    );
+    return rows[0];
+};
+
+const vincularGoogle = async (usuario, subject) => {
+    const { rows } = await pool.query(
+        `UPDATE usuarios SET google_subject = $1
+         WHERE id = $2 AND password = $3 AND correo = $4
+           AND rol_id = 2 AND estado = 'ACTIVO' AND google_subject IS NULL
+         RETURNING id, nombre, apellido, correo, estado, rol_id`,
+        [subject, usuario.id, usuario.password, usuario.correo]
+    );
+    return rows[0];
+};
+
 const register = async (usuario) => {
     const resultado = await pool.query(
         `INSERT INTO usuarios
@@ -121,6 +140,8 @@ const actualizarPerfil = async (usuarioId, data) => {
 
 module.exports = {
     buscarPorCorreo,
+    buscarPorGoogle,
+    vincularGoogle,
     register,
     login,
     crearTokenRecuperacion,

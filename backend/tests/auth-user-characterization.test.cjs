@@ -26,6 +26,8 @@ function findUser(correo) { return users.find(user => user.correo === correo); }
 
 const repository = {
     buscarPorCorreo: async correo => findUser(correo),
+    buscarPorGoogle: async subject => users.find(user => user.google_subject === subject),
+    vincularGoogle: async (usuario, subject) => Object.assign(usuario, { google_subject: subject }),
     register: async usuario => {
         registrationCalls += 1;
         const saved = { ...usuario, id: nextId++, estado: 'ACTIVO' };
@@ -159,23 +161,40 @@ test('login valida contraseña/estado y firma el JWT actual de ocho horas', asyn
 
 test('Google verifica audiencia y correo antes de crear o iniciar sesión', async t => {
     process.env.GOOGLE_CLIENT_ID = 'google-client-test';
-    await t.test('cuenta existente', async () => {
-        googlePayload = { email: ' ANA@EXAMPLE.TEST ', email_verified: true, name: 'Ana Prueba' };
+    await t.test('la coincidencia del correo exige contraseña local', async () => {
+        googlePayload = { sub: 'google-ana', email: ' ANA@EXAMPLE.TEST ', email_verified: true };
+        await assert.rejects(authService.googleLogin('google-valid'), /no autorizado/i);
+        await assert.rejects(authService.googleLogin('google-valid', 'incorrecta'), /no autorizado/i);
+        const result = await authService.googleLogin('google-valid', 'correcta');
+        assert.equal(result.usuario.id, 7);
+        assert.equal(findUser('ana@example.test').google_subject, 'google-ana');
+    });
+    await t.test('el identificador vinculado funciona aunque cambie el correo en Google', async () => {
+        findUser('ana@example.test').google_subject = 'google-ana';
+        googlePayload = { sub: 'google-ana', email: 'ana-nuevo@example.test', email_verified: true };
         const result = await authService.googleLogin('google-valid');
         assert.equal(googleOptions.idToken, 'google-valid');
         assert.equal(googleOptions.audience, 'google-client-test');
         assert.equal(result.usuario.correo, 'ana@example.test');
         assert.equal(result.mensaje, 'Inicio de sesión con Google correcto');
     });
+    await t.test('otro identificador no reemplaza el vínculo ni accede a roles privilegiados', async () => {
+        findUser('ana@example.test').google_subject = 'google-ana';
+        googlePayload = { sub: 'google-otro', email: 'ana@example.test', email_verified: true };
+        await assert.rejects(authService.googleLogin('google-valid', 'correcta'), /no autorizado/i);
+        findUser('ana@example.test').rol_id = 1;
+        googlePayload.sub = 'google-ana';
+        await assert.rejects(authService.googleLogin('google-valid', 'correcta'), /no autorizado/i);
+    });
     await t.test('correo no verificado', async () => {
         googlePayload = { email: 'ana@example.test', email_verified: false };
         await assert.rejects(authService.googleLogin('google-valid'), /correo de Google no está verificado/);
     });
     await t.test('cuenta nueva no se registra automáticamente', async () => {
-        googlePayload = { email: 'nueva@example.test', email_verified: true, name: 'María Gómez' };
+        googlePayload = { sub: 'google-nueva', email: 'nueva@example.test', email_verified: true };
         await assert.rejects(
-            authService.googleLogin('google-valid'),
-            /No existe una cuenta asociada a este correo de Google/
+            authService.googleLogin('google-valid', 'correcta'),
+            /no autorizado/i
         );
         assert.equal(findUser('nueva@example.test'), undefined);
         assert.equal(registrationCalls, 0);

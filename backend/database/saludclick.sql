@@ -64,6 +64,7 @@ CREATE TABLE "usuarios" (
     "tipo_documento" VARCHAR(10),
     "ciudad" VARCHAR(100),
     "password" VARCHAR(255) NOT NULL,
+    "google_subject" VARCHAR(255),
     "rol_id" INTEGER NOT NULL,
     "estado" "EstadoUsuario" DEFAULT 'ACTIVO',
     "created_at" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
@@ -221,6 +222,7 @@ CREATE UNIQUE INDEX "roles_nombre_key" ON "roles"("nombre");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "usuarios_correo_key" ON "usuarios"("correo");
+CREATE UNIQUE INDEX "usuarios_google_subject_key" ON "usuarios"("google_subject");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "usuarios_cedula_key" ON "usuarios"("cedula");
