@@ -1,0 +1,103 @@
+html[data-theme="light"] {
+    color-scheme: light;
+    --theme-surface: #fff;
+    --theme-text: #173832;
+    --theme-border: #748982;
+    --theme-focus: #006653;
+}
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --theme-bg: #101b19;
+    --theme-surface: #192925;
+    --theme-raised: #233833;
+    --theme-text: #eef6f2;
+    --theme-muted: #bed0c9;
+    --theme-border: #658078;
+    --theme-focus: #88e4cc;
+    --ad-bg: var(--theme-bg);
+    --ad-card: var(--theme-surface);
+    --ad-ink: var(--theme-text);
+    --ad-muted: var(--theme-muted);
+    --ad-line: var(--theme-border);
+    --ad-green: #80dac1;
+    background: var(--theme-bg);
+}
+
+.saludclick-theme {
+    width: fit-content;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .5rem .75rem;
+    margin: 1rem auto;
+    border: 1px solid var(--theme-border);
+    border-radius: .5rem;
+    background: var(--theme-surface);
+    color: var(--theme-text);
+    font: 500 .875rem/1.5 system-ui, sans-serif;
+}
+
+.saludclick-theme select {
+    color: inherit;
+    background: var(--theme-surface);
+    border: 1px solid var(--theme-border);
+    border-radius: .25rem;
+    min-height: 2.25rem;
+    padding-inline: .4rem;
+}
+
+html[data-theme] :focus-visible {
+    outline: 3px solid var(--theme-focus);
+    outline-offset: 2px;
+}
+
+html[data-theme="dark"] body,
+html[data-theme="dark"] body.farmacia-dashboard-page,
+html[data-theme="dark"] body.dashboard-body main {
+    background: var(--theme-bg);
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] body :is(
+    .card, .stat-card, .auth-panel, .ad-card, .modal-content, dialog,
+    .checkout-cart-table, .orders-table, .farmacia-table, .ad-message,
+    .navbar, .dropdown-menu, .table, .form-control, .form-select,
+    .farmacia-dashboard-card, .farmacia-order, .farmacia-metric, .farmacia-notification,
+    .vitalix-dialog, .vitalix-menu, .vitalix-option, .vitalix-composer,
+    .vitalix-message-assistant .vitalix-message-content, .chat-list, .chat-window,
+    .chat-window-header, .chat-list-item, .chat-composer, .chat-bubble
+) {
+    background-color: var(--theme-surface);
+    color: var(--theme-text);
+    border-color: var(--theme-border);
+    --bs-table-bg: var(--theme-surface);
+    --bs-table-color: var(--theme-text);
+    --bs-table-border-color: var(--theme-border);
+}
+
+html[data-theme="dark"] body :is(
+    input:not([type="checkbox"], [type="radio"], [type="submit"], [type="button"]),
+    select, textarea, .ad-workspace th, th, .ad-message.staff
+) {
+    background-color: var(--theme-raised);
+    color: var(--theme-text);
+    border-color: var(--theme-border);
+}
+
+html[data-theme="dark"] body :is(.card, .stat-card, .auth-panel, .ad-card, dialog)
+    :is(h1, h2, h3, h4, label, strong, legend) {
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] body :is(.card p, .auth-panel p, .text-muted, .ad-muted),
+html[data-theme="dark"] body input::placeholder,
+html[data-theme="dark"] body textarea::placeholder {
+    color: var(--theme-muted);
+}
+
+html[data-theme="dark"] body.ad-workspace .ad-primary {
+    background: #08795f;
+    color: white;
+    border-color: #80dac1;
+}
