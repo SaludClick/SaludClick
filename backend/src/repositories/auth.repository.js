@@ -11,7 +11,7 @@ const buscarPorCorreo = async (correo) => {
 
 const buscarPorGoogle = async (subject) => {
     const { rows } = await pool.query(
-        "SELECT id, nombre, apellido, correo, estado, rol_id FROM usuarios WHERE google_subject = $1",
+        "SELECT id, nombre, apellido, correo, estado, rol_id, session_version FROM usuarios WHERE google_subject = $1",
         [subject]
     );
     return rows[0];
@@ -22,7 +22,7 @@ const vincularGoogle = async (usuario, subject) => {
         `UPDATE usuarios SET google_subject = $1
          WHERE id = $2 AND password = $3 AND correo = $4
            AND rol_id = 2 AND estado = 'ACTIVO' AND google_subject IS NULL
-         RETURNING id, nombre, apellido, correo, estado, rol_id`,
+         RETURNING id, nombre, apellido, correo, estado, rol_id, session_version`,
         [subject, usuario.id, usuario.password, usuario.correo]
     );
     return rows[0];

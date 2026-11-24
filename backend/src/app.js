@@ -51,6 +51,9 @@ app.use("/api", (req, res, next) => {
         res.set("Cache-Control", "no-store");
     }
     next();
+}, (req, res, next) => {
+    const authority = app.get("sessionAuthority");
+    return authority ? authority.http(req, res, next) : next();
 }, routes);
 app.use('/api', (req, res) => {
     res.status(404).json({ ok: false, mensaje: 'Ruta de API no encontrada.' });

@@ -76,6 +76,7 @@ model Usuario {
   ciudad                   String?             @db.VarChar(100)
   password                 String              @db.VarChar(255)
   google_subject           String?             @unique @db.VarChar(255)
+  session_version          Int                 @default(1)
   rol_id                   Int
   estado                   EstadoUsuario?      @default(ACTIVO)
   created_at               DateTime?           @default(now()) @db.Timestamp(0)

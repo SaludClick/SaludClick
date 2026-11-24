@@ -3,6 +3,7 @@ const { verificarToken } = require("../utils/jwt");
 const chatService = require("../services/chat.service");
 const chatRepository = require("../repositories/chat.repository");
 const { authorizeChatStaff: authorize } = require('../middlewares/chat-staff.middleware');
+const { canReceive } = require('../services/session-authority');
 const esStaffSocket = user => Number(user?.rol_id ?? user?.rol) === 1;
 
 function attachChatSocket(io, { authenticateStaff = authorize, recheckMs = 15000 } = {}) {
@@ -35,6 +36,15 @@ function attachChatSocket(io, { authenticateStaff = authorize, recheckMs = 15000
                 }
             } catch { excluded.push(socket.id); disconnect(socket); }
         }));
+        const sockets = io.sockets?.sockets;
+        if (sockets) {
+            const recipients = await Promise.all([...sockets.values()].filter(socket => socket.rooms.has(room) && !excluded.includes(socket.id)).map(async socket => {
+                return await canReceive(socket) && socket.rooms.has(room) ? socket.id : null;
+            }));
+            const approved = recipients.filter(Boolean);
+            if (approved.length) io.to(approved).emit(event, data);
+            return;
+        }
         const target = io.to(room);
         (excluded.length ? target.except(excluded) : target).emit(event, data);
     }

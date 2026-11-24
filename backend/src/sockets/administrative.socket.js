@@ -1,5 +1,6 @@
 const jwt=require('jsonwebtoken');
 const {createSessionGuard}=require('../middlewares/administrative-session.middleware');
+const {canReceive}=require('../services/session-authority');
 function attachAdministrativeSocket(io,app,{guard=createSessionGuard(),visitorLookup=hash=>require('../repositories/administrative.repository').getRepository().visitorCaseId(hash)}={}) {
     const namespace=io.of('/administrativo');
     const visitors = new Map();
@@ -56,7 +57,17 @@ function attachAdministrativeSocket(io,app,{guard=createSessionGuard(),visitorLo
         const client=event.cliente_id||event.actor_id;
         if(Number.isSafeInteger(client)&&client>0)target=target.to(`administrativo:cliente:${client}`);
         const payload=event.caso_id?{caso_id:event.caso_id}:{};
-        target.emit('administrativo:actualizado',payload);
+        if (namespace.sockets) {
+            const rooms = new Set(['administrativo:staff']);
+            if (Number.isSafeInteger(client) && client > 0) rooms.add(`administrativo:cliente:${client}`);
+            for (const socket of namespace.sockets.values()) {
+                if ([...rooms].some(room => socket.rooms.has(room))) {
+                    void canReceive(socket).then(current => {
+                        if (current) socket.emit('administrativo:actualizado', payload);
+                    });
+                }
+            }
+        } else target.emit('administrativo:actualizado',payload);
         for (const socket of visitors.get(event.caso_id) || []) {
             Promise.resolve().then(()=>visitorLookup(socket.data.visitorHash)).then(id=>{
                 if (id !== event.caso_id) return socket.disconnect(true);

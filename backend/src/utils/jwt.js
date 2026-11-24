@@ -21,7 +21,8 @@ const generarToken = (usuario) => {
         {
             id: usuario.id,
             correo: usuario.correo,
-            rol: usuario.rol_id
+            rol: usuario.rol_id,
+            sv: usuario.session_version
         },
         process.env.JWT_SECRET,
         {

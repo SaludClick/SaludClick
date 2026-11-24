@@ -17,6 +17,12 @@ const io = new Server(httpServer, {
     allowRequest(req, callback) { callback(null, originAllowed(req.headers.origin)); }
 });
 
+const authority = require("./src/services/session-authority").createSessionAuthority(pool.query.bind(pool));
+app.set("sessionAuthority", authority);
+authority.socket(io.of("/"));
+authority.socket(io.of("/administrativo"), { visitors: true });
+authority.socket(io.of("/farmacia-notificaciones"));
+
 attachChatSocket(io);
 require('./src/sockets/administrative.socket').attachAdministrativeSocket(io,app);
 require('./src/sockets/farmacia-notificaciones.socket').attachFarmaciaNotifications(io, app);
