@@ -1,0 +1,15 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+<Layout title="Entregas asignadas | SaludClick" bodyClass="ad-workspace">
+  <link slot="head" rel="stylesheet" href="/css/administrative.css" />
+  <main class="ad-main">
+    <header class="ad-heading">
+      <h1>Entregas asignadas</h1>
+      <button type="button" id="btnLogout">Cerrar sesión</button>
+    </header>
+    <p id="visitasEstado" role="status"></p>
+    <section id="visitas" aria-label="Visitas"></section>
+  </main>
+  <script is:inline type="module" src="/js/domiciliario.js"></script>
+</Layout>

@@ -28,6 +28,7 @@ router.use("/eps/v1", require("./eps-v1.routes"));
 router.use("/eps", epsRoutes);
 router.use("/eps", require("./eps-v1.routes"));
 router.use("/ips", require("./ips.routes").createIpsRouter());
+router.use("/dispensacion", require("./dispensacion.routes").createRouter());
 router.use("/integracion", require("./eps-integration.routes").createRouter());
 router.use("/chat", chatRoutes);
 

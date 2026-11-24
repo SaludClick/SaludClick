@@ -29,6 +29,16 @@ model Rol {
 }
 
 model Usuario {
+  farmacia_perfil_dispensacion FarmaciaPersonalDispensacion? @relation("DispensacionEmpleado")
+  farmacia_equipo_dispensacion FarmaciaPersonalDispensacion[] @relation("DispensacionFarmacia")
+  dispensaciones_asignadas DispensacionEtapa[] @relation("DispensacionAsignada")
+  visitas_dispensacion DispensacionEtapa[] @relation("DispensacionVisita")
+  habilitaciones_dispensacion DispensacionHabilitacion[] @relation("DispensacionHabilitado")
+  habilitaciones_otorgadas DispensacionHabilitacion[] @relation("DispensacionHabilitador")
+  actuaciones_dispensacion DispensacionEvento[]
+  constancias_dispensacion DispensacionConstancia[]
+  delegaciones_dispensacion DispensacionReceptor[] @relation("DispensacionDelegante")
+  recepciones_dispensacion DispensacionReceptor[] @relation("DispensacionDelegado")
   acceso_ips IpsAcceso?
   vinculos_eps EpsFarmacia[]
   acceso_eps EpsAcceso?
@@ -206,6 +216,7 @@ model ObservacionPrecio {
 }
 
 model Solicitud {
+  dispensacion DispensacionEtapa?
   autorizaciones_eps EpsAutorizacion[]
   seguimientos_eps EpsSeguimiento[]
   farmacia_stock_eventos FarmaciaStockEvento[]
@@ -738,6 +749,7 @@ model EpsEntidad {
 }
 
 model IpsEntidad {
+  dispensaciones DispensacionEtapa[]
   id           String @id @db.VarChar(80)
   nombre       String @db.VarChar(150)
   nit          String @unique @db.VarChar(30)
@@ -764,12 +776,104 @@ model IpsAcceso {
   usuario_id  Int @id
   ips_id      String @db.VarChar(80)
   activo      Boolean @default(false)
+  responsable Boolean @default(false)
+  clinico     Boolean @default(false)
   revocado_at DateTime? @db.Timestamptz
   usuario     Usuario @relation(fields: [usuario_id], references: [id], onDelete: Restrict)
   ips         IpsEntidad @relation(fields: [ips_id], references: [id], onDelete: Restrict)
 
   @@index([ips_id, activo])
   @@map("ips_accesos")
+}
+
+model FarmaciaPersonalDispensacion {
+  usuario_id Int @id
+  farmacia_id Int
+  perfil String
+  activo Boolean @default(true)
+  usuario Usuario @relation("DispensacionEmpleado",fields:[usuario_id],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  farmacia Usuario @relation("DispensacionFarmacia",fields:[farmacia_id],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  @@map("farmacia_personal_dispensacion")
+}
+
+model DispensacionHabilitacion {
+  id BigInt @id @default(autoincrement())
+  actor_id Int
+  usuario_id Int
+  ambito String
+  permiso String
+  activo Boolean
+  revision String?
+  fecha DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz
+  actor Usuario @relation("DispensacionHabilitador",fields:[actor_id],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  usuario Usuario @relation("DispensacionHabilitado",fields:[usuario_id],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  @@map("dispensacion_habilitaciones")
+}
+
+model DispensacionEtapa {
+  solicitud_id Int @id
+  ips_id String @db.VarChar(80)
+  farmacia_id Int?
+  vence_at DateTime @db.Timestamptz
+  estado String
+  autorizadas Json
+  saldo Json
+  plan Json
+  etapa_indice Int @default(0)
+  saldo_etapa Json @default("{}")
+  preparadas Json @default("{}")
+  domiciliario_id Int?
+  visita_activa String? @db.Uuid
+  visita_iniciada Boolean @default(false)
+  solicitud Solicitud @relation(fields:[solicitud_id],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  ips IpsEntidad @relation(fields:[ips_id],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  farmacia Usuario? @relation("DispensacionAsignada",fields:[farmacia_id],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  domiciliario Usuario? @relation("DispensacionVisita",fields:[domiciliario_id],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  eventos DispensacionEvento[]
+  constancias DispensacionConstancia[]
+  receptores DispensacionReceptor[]
+  @@map("dispensaciones_etapas")
+}
+
+model DispensacionEvento {
+  solicitud_id Int
+  clave String @db.Uuid
+  actor_id Int
+  accion String
+  entrada Json
+  resultado Json
+  fecha DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz
+  expediente DispensacionEtapa @relation(fields:[solicitud_id],references:[solicitud_id],onDelete:NoAction,onUpdate:NoAction)
+  actor Usuario @relation(fields:[actor_id],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  @@id([solicitud_id,clave])
+  @@map("dispensacion_eventos")
+}
+
+model DispensacionConstancia {
+  visita_id String @db.Uuid
+  tipo String
+  solicitud_id Int
+  firmante_id Int
+  version String
+  documento String
+  sha256 String @db.Char(64)
+  fecha DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz
+  expediente DispensacionEtapa @relation(fields:[solicitud_id],references:[solicitud_id],onDelete:NoAction,onUpdate:NoAction)
+  firmante Usuario @relation(fields:[firmante_id],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  @@id([visita_id,tipo])
+  @@map("dispensacion_constancias")
+}
+
+model DispensacionReceptor {
+  visita_id String @id @db.Uuid
+  solicitud_id Int
+  otorgante_id Int
+  receptor_id Int
+  fecha DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz
+  expediente DispensacionEtapa @relation(fields:[solicitud_id],references:[solicitud_id],onDelete:NoAction,onUpdate:NoAction)
+  otorgante Usuario @relation("DispensacionDelegante",fields:[otorgante_id],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  receptor Usuario @relation("DispensacionDelegado",fields:[receptor_id],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  @@map("dispensacion_receptores")
 }
 
 model EpsAcceso {
