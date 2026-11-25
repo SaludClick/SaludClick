@@ -62,6 +62,14 @@ test('el tema sigue al sistema y conserva la elección al navegar', { timeout: 4
         assert.equal(await resolved(), 'dark');
         await systemTheme('light');
         await until(async () => await resolved() === 'light');
+        await evaluate(`(() => {
+            const select = document.querySelector('.saludclick-theme select');
+            select.value = 'dark';
+            select.dispatchEvent(new Event('change'));
+        })()`);
+        await send('Page.reload');
+        await until(() => evaluate('document.readyState === "complete" && document.querySelector(".saludclick-theme select")?.value === "dark"'));
+        assert.equal(await resolved(), 'dark');
     } finally {
         await browser?.cerrar();
         await new Promise(resolve => server.close(resolve));
