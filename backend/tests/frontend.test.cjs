@@ -359,7 +359,7 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
         let file = path.resolve(staticRoot, '.' + (pathname === '/' ? '/index.html' : pathname));
         if (
             !fs.existsSync(file) &&
-            (pathname === '/' || pathname === '/pages/admin-afiliados.html' || pathname === '/login.html' || pathname === '/index.html' || pathname === '/pages/admin-cuentas.html' || pathname === '/pages/admin-pacientes.html' || pathname === '/pages/chat.html' || pathname === '/pages/chat-farmacia.html' || pathname === '/pages/farmacia.html' || pathname === '/pages/perfil.html' || pathname.startsWith('/pages/farmacia-') || ['/pages/eps.html', '/pages/eps-v1.html', '/pages/ips.html'].includes(pathname) || pathname.startsWith('/_astro/'))
+            (pathname === '/' || pathname === '/pages/admin-afiliados.html' || pathname === '/login.html' || pathname === '/index.html' || pathname === '/pages/admin-cuentas.html' || pathname === '/pages/admin-pacientes.html' || pathname === '/pages/chat.html' || pathname === '/pages/chat-farmacia.html' || pathname === '/pages/farmacia.html' || pathname === '/pages/perfil.html' || pathname.startsWith('/pages/farmacia-') || ['/pages/eps.html', '/pages/eps-v1.html', '/pages/ips.html', '/pages/dispensacion.html', '/pages/domiciliario.html', '/pages/constancia-entrega.html'].includes(pathname) || pathname.startsWith('/_astro/'))
         ) {
             staticRoot = builtRoot;
             file = path.resolve(staticRoot, '.' + (pathname === '/' ? '/index.html' : pathname));
