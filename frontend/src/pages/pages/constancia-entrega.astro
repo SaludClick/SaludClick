@@ -13,9 +13,9 @@ import Layout from "../../layouts/Layout.astro";
     </form>
     <form id="confirmarEntrega" class="ad-card" hidden>
       <p id="constanciaVersion"></p>
-      <label><span id="textoTratamiento"></span><input name="tratamiento" type="checkbox" required /></label>
+      <label class="ad-check"><input name="tratamiento" type="checkbox" required /><span id="textoTratamiento"></span></label>
       <p id="cantidadesRecibidas"></p>
-      <label><span id="textoRecepcion"></span><input name="recepcion" type="checkbox" required /></label>
+      <label class="ad-check"><input name="recepcion" type="checkbox" required /><span id="textoRecepcion"></span></label>
       <button class="ad-primary" type="submit">Confirmar documentos</button>
     </form>
     <section class="ad-card" id="copiasEntrega" hidden>

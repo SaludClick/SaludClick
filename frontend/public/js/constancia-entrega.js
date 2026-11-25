@@ -10,8 +10,11 @@ if (checkAuthGuard()) {
 
     async function cargar(id) {
         const base = `/api/dispensacion/solicitudes/${id}`;
+        let hayCopias = false;
+        estado.textContent = "Consultando constancias…";
         try {
             const { datos: copias } = await apiFetch(`${base}/constancias`);
+            hayCopias = copias.length > 0;
             const lista = document.getElementById("copiasEntregaLista");
             for (const [index, item] of copias.entries()) {
                 const li = document.createElement("li");
@@ -25,6 +28,7 @@ if (checkAuthGuard()) {
             }
             document.getElementById("copiasEntrega").hidden = !copias.length;
             const { datos } = await apiFetch(`${base}/documentos`);
+            estado.textContent = "";
             if (copias.some(copia => JSON.parse(copia.documento).visita_id === datos.visita_id)) {
                 estado.textContent = "Ya confirmaste los documentos de esta visita.";
                 return;
@@ -79,6 +83,10 @@ if (checkAuthGuard()) {
                     estado.textContent = error.message;
                 } finally { button.disabled = false; }
             });
-        } catch (error) { estado.textContent = error.message; }
+        } catch (error) {
+            estado.textContent = hayCopias && error.status === 409
+                ? "Puedes descargar las constancias confirmadas. No hay una visita pendiente de confirmación."
+                : error.message;
+        }
     }
 }

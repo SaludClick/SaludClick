@@ -36,6 +36,7 @@ test('las rutas Astro no colisionan con public y conservan las páginas HTML esp
         'pages/constancia-entrega.html',
         'pages/dashboard.html',
         'pages/domiciliario.html',
+        'pages/dispensacion.html',
         'pages/eps-v1.html',
         'pages/eps.html',
         'pages/farmacia.html',

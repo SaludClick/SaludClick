@@ -6,10 +6,13 @@ import Layout from "../../layouts/Layout.astro";
   <main class="ad-main">
     <header class="ad-heading">
       <h1>Entregas asignadas</h1>
-      <button type="button" id="btnLogout">Cerrar sesión</button>
+      <div class="ad-actions">
+        <button type="button" id="actualizarVisitas">Actualizar</button>
+        <button type="button" id="btnLogout">Cerrar sesión</button>
+      </div>
     </header>
     <p id="visitasEstado" role="status"></p>
-    <section id="visitas" aria-label="Visitas"></section>
+    <section id="visitas" class="visitas-lista" aria-label="Visitas"></section>
   </main>
   <script is:inline type="module" src="/js/domiciliario.js"></script>
 </Layout>

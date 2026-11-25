@@ -1,0 +1,21 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+<Layout title="Dispensación | SaludClick" bodyClass="ad-workspace">
+  <link slot="head" rel="stylesheet" href="/css/administrative.css" />
+  <main class="ad-main">
+    <header class="ad-heading"><h1>Dispensación</h1><a class="ad-button" id="volverPanel">Volver al panel</a></header>
+    <form id="buscarDispensacion" class="ad-card ad-toolbar">
+      <label>Número de solicitud<input name="solicitud" type="number" min="1" max="2147483647" required /></label>
+      <button type="submit" class="ad-primary">Consultar</button>
+    </form>
+    <p id="dispensacionAviso" role="status" aria-live="polite"></p>
+    <section class="ad-card" id="dispensacionResumen" hidden aria-label="Estado de la solicitud"></section>
+    <form id="dispensacionAccion" class="ad-card ad-form" hidden>
+      <label class="ad-wide">Acción<select name="accion" required></select></label>
+      <div class="ad-wide" id="dispensacionCampos"></div>
+      <button type="submit" class="ad-primary">Guardar acción</button>
+    </form>
+  </main>
+  <script is:inline type="module" src="/js/dispensacion.js"></script>
+</Layout>
