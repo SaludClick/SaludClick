@@ -8,19 +8,22 @@ html[data-theme="light"] {
 
 html[data-theme="dark"] {
     color-scheme: dark;
-    --theme-bg: #101b19;
-    --theme-surface: #192925;
-    --theme-raised: #233833;
-    --theme-text: #eef6f2;
-    --theme-muted: #bed0c9;
-    --theme-border: #658078;
-    --theme-focus: #88e4cc;
+    --theme-bg: #1c2427;
+    --theme-surface: #263034;
+    --theme-raised: #303c40;
+    --theme-text: #f0f3f2;
+    --theme-muted: #c0ccca;
+    --theme-border: #465457;
+    --theme-control-border: #7c8a8b;
+    --theme-focus: #b1d9c9;
+    --theme-link: #b3dbc9;
+    --theme-selected: #354c47;
     --ad-bg: var(--theme-bg);
     --ad-card: var(--theme-surface);
     --ad-ink: var(--theme-text);
     --ad-muted: var(--theme-muted);
     --ad-line: var(--theme-border);
-    --ad-green: #80dac1;
+    --ad-green: var(--theme-link);
     background: var(--theme-bg);
 }
 
@@ -60,8 +63,9 @@ html[data-theme="dark"] body.dashboard-body main {
 }
 
 html[data-theme="dark"] body :is(
-    .card, .stat-card, .auth-panel, .ad-card, .modal-content, dialog,
-    .checkout-cart-table, .orders-table, .farmacia-table, .ad-message,
+    .card, .stat-card, .auth-panel, .ad-card, .modal-content, .modal-pedido-contenido, dialog,
+    .medicamento-card, .perfil-card, .form-container, .dashboard-stat,
+    .checkout-cart-table, .orders-table, .historial-table, .farmacia-table, .ad-message,
     .navbar, .dropdown-menu, .table, .form-control, .form-select,
     .farmacia-dashboard-card, .farmacia-order, .farmacia-metric, .farmacia-notification,
     .vitalix-dialog, .vitalix-menu, .vitalix-option, .vitalix-composer,
@@ -82,7 +86,7 @@ html[data-theme="dark"] body :is(
 ) {
     background-color: var(--theme-raised);
     color: var(--theme-text);
-    border-color: var(--theme-border);
+    border-color: var(--theme-control-border);
 }
 
 html[data-theme="dark"] body :is(.card, .stat-card, .auth-panel, .ad-card, dialog)
@@ -97,7 +101,49 @@ html[data-theme="dark"] body textarea::placeholder {
 }
 
 html[data-theme="dark"] body.ad-workspace .ad-primary {
-    background: #08795f;
+    background: #366459;
     color: white;
-    border-color: #80dac1;
+    border-color: #81a69a;
+}
+
+html[data-theme="dark"] body :is(.ad-button, .ad-workspace button:not(.ad-primary), .user-dropdown) {
+    color: var(--theme-text);
+    background-color: var(--theme-raised);
+    border-color: var(--theme-control-border);
+}
+
+html[data-theme="dark"] body :is(.ad-card, .auth-panel, .navbar, .dropdown-menu, .user-dropdown) a:not(.ad-button, .btn) {
+    color: var(--theme-link);
+}
+
+html[data-theme="dark"] body :is(.ad-sidebar, .admin-sidebar, .sidebar) {
+    background: var(--theme-surface);
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] body :is(.ad-sidebar nav a, .admin-side-link, .sidebar nav a) {
+    color: var(--theme-muted);
+}
+
+html[data-theme="dark"] body :is(.ad-sidebar nav a, .admin-side-link, .sidebar nav a):is(:hover, .active, [aria-current="page"]) {
+    background: var(--theme-selected);
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] body :is(.orders-table, .historial-table, .farmacia-table, .ad-workspace table) :is(td, th) {
+    border-color: var(--theme-border);
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] body :is(.orders-table, .historial-table, .farmacia-table, .ad-workspace table) tbody tr:hover {
+    background-color: var(--theme-raised);
+}
+
+html[data-theme="dark"] body :is(.chat-bubble.mine, .vitalix-message-user .vitalix-message-content, .ad-message.staff, .ad-badge) {
+    background-color: var(--theme-selected);
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] body :is(.chat-bubble, .vitalix-message-content, .ad-message) :is(time, footer) {
+    color: var(--theme-muted);
 }

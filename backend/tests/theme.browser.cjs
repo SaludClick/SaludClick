@@ -31,7 +31,19 @@ test('el tema sigue al sistema y conserva la elección al navegar', { timeout: 4
         await systemTheme('dark');
         await navigate('/login.html');
         assert.equal(await resolved(), 'dark');
-        assert.equal(await evaluate('getComputedStyle(document.querySelector(".auth-panel")).backgroundColor'), 'rgb(25, 41, 37)');
+        assert.equal(await evaluate('getComputedStyle(document.querySelector(".auth-panel")).backgroundColor'), 'rgb(38, 48, 52)');
+        assert.ok(await evaluate(`(() => {
+            const colors = getComputedStyle(document.documentElement);
+            const luminance = value => [...value.trim().matchAll(/[0-9a-f]{2}/gi)]
+                .map(([channel]) => parseInt(channel, 16) / 255)
+                .map(c => c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4)
+                .reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0);
+            const contrast = (fg, bg) => (luminance(colors.getPropertyValue(fg)) + .05) /
+                (luminance(colors.getPropertyValue(bg)) + .05);
+            return contrast('--theme-text', '--theme-surface') >= 4.5 &&
+                contrast('--theme-muted', '--theme-raised') >= 4.5 &&
+                contrast('--theme-control-border', '--theme-raised') >= 3;
+        })()`));
         await evaluate(`(() => {
             const select = document.querySelector('.saludclick-theme select');
             select.value = 'light';
