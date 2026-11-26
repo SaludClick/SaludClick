@@ -18,8 +18,11 @@ test("el domiciliario inicia su visita y el paciente confirma la constancia en m
         assert.equal(req.headers.authorization, "Bearer courier-test");
         res.json({ ok: true, datos: done ? [] : [{
             solicitud_id: 10, visita_id, iniciada: start, direccion: "Dirección ficticia",
-            vence_at: "2027-01-01T12:00:00Z"
+            vence_at: "2027-01-01T12:00:00Z", adjuntos: 0
         }] });
+    });
+    app.get("/api/dispensacion/solicitudes/10/adjuntos", (_req, res) => {
+        res.json({ ok: true, datos: [] });
     });
     app.get("/api/dispensacion/solicitudes/10/documentos", (_req, res) => {
         res.json({ ok: true, datos: { version: "BORRADOR-0.1", visita_id, titular: true,
@@ -65,8 +68,9 @@ test("el domiciliario inicia su visita y el paciente confirma la constancia en m
         await until(() => evaluate("document.querySelector('#copiasEntrega')?.hidden === false"));
         await open("/pages/domiciliario.html");
         await until(() => evaluate("!!document.querySelector('#visitas select')"));
-        await evaluate(`document.querySelector('#visitas select').value = 'ENTREGADA';
-            document.querySelector('#visitas form').requestSubmit();`);
+        await evaluate(`const resultado = document.querySelector('#visitas select');
+            resultado.value = 'ENTREGADA';
+            resultado.form.requestSubmit();`);
         await until(() => evaluate("document.querySelector('#visitasEstado').textContent.includes('No tienes')"));
         assert.deepEqual(calls.map(({ action, token }) => [action, token]), [
             ["INICIAR_VISITA", "Bearer courier-test"], ["FIRMAR", "Bearer patient-test"], ["RESULTADO_VISITA", "Bearer courier-test"]

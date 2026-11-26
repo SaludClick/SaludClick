@@ -486,10 +486,62 @@ function createDispensacion(pool) {
             const member = await miembroFarmacia(db, actor.id);
             if (member?.perfil !== "DOMICILIARIO") fail("Membresía no vigente.", 403);
             const { rows } = await db.query(`SELECT d.solicitud_id, d.visita_activa AS visita_id,
-                d.visita_iniciada AS iniciada, d.vence_at, s.direccion
+                d.visita_iniciada AS iniciada, d.vence_at, s.direccion,
+                (SELECT count(*)::int FROM dispensacion_adjuntos a
+                 WHERE a.solicitud_id=d.solicitud_id AND a.visita_id=d.visita_activa) AS adjuntos
                 FROM dispensaciones_etapas d JOIN solicitudes s ON s.id=d.solicitud_id
                 WHERE d.domiciliario_id=$1 AND d.farmacia_id=$2 AND d.estado='EN_REPARTO'
                 ORDER BY d.solicitud_id LIMIT 100`, [actor.id, member.farmacia_id]);
+            return rows;
+        });
+    }
+
+    async function adjuntarVisita(actor, pedidoId, input) {
+        campos(input, ["visita_id", "nombre", "contenido"]);
+        const visitaId = claveVisita(input.visita_id);
+        const nombre = text(input.nombre, "Nombre del archivo", 120);
+        const encoded = input.contenido;
+        if (!/\.pdf$/i.test(nombre) || /[\p{C}/\\]/u.test(nombre) || typeof encoded !== "string" ||
+            encoded.length > 6990508 || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) fail("Adjunta un PDF de hasta 5 MB.");
+        const contenido = Buffer.from(encoded, "base64");
+        if (contenido.length > 5242880 || contenido.subarray(0, 5).toString() !== "%PDF-" ||
+            !contenido.subarray(-1024).includes(Buffer.from("%%EOF"))) fail("El archivo PDF no es válido.");
+        const hash = createHash("sha256").update(contenido).digest("hex");
+        return tx(async db => {
+            if (await actorVigente(db, actor) !== 5) fail("Operación no autorizada.", 403);
+            await one(db, "SELECT id FROM solicitudes WHERE id=$1 FOR UPDATE", [pedidoId]);
+            const order = await one(db, "SELECT *, vence_at <= clock_timestamp() AS vencida FROM dispensaciones_etapas WHERE solicitud_id=$1", [pedidoId]);
+            const member = await miembroFarmacia(db, actor.id);
+            if (!order || member?.perfil !== "DOMICILIARIO" || member.farmacia_id !== order.farmacia_id) fail("Visita no disponible.", 404);
+            const previo = await one(db, `SELECT id,nombre,fecha FROM dispensacion_adjuntos
+                WHERE solicitud_id=$1 AND visita_id=$2 AND sha256=$3 AND domiciliario_id=$4 AND farmacia_id=$5`,
+                [pedidoId, visitaId, hash, actor.id, member.farmacia_id]);
+            if (previo) return previo;
+            if (order.domiciliario_id !== actor.id || order.visita_activa !== visitaId) fail("Visita no disponible.", 404);
+            if (order.estado !== "EN_REPARTO" || !order.visita_iniciada || order.vencida) fail("La visita debe estar iniciada y vigente.", 409);
+            const total = await one(db, `SELECT count(*)::int AS cantidad FROM dispensacion_adjuntos
+                WHERE solicitud_id=$1 AND visita_id=$2`, [pedidoId, visitaId]);
+            if (total.cantidad >= 5) fail("Cada visita admite hasta cinco documentos.", 409);
+            return one(db, `INSERT INTO dispensacion_adjuntos
+                (id,solicitud_id,visita_id,farmacia_id,domiciliario_id,nombre,sha256,contenido)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,nombre,fecha`,
+                [randomUUID(), pedidoId, visitaId, member.farmacia_id, actor.id, nombre, hash, contenido]);
+        });
+    }
+
+    async function adjuntosPaciente(actor, pedidoId, archivoId) {
+        return tx(async db => {
+            if (await actorVigente(db, actor) !== 2) fail("Operación no autorizada.", 403);
+            const pedido = await one(db, "SELECT id FROM solicitudes WHERE id=$1 AND usuario_id=$2", [pedidoId, actor.id]);
+            if (!pedido) fail("Solicitud no disponible.", 404);
+            if (archivoId) {
+                const archivo = await one(db, `SELECT contenido FROM dispensacion_adjuntos
+                    WHERE solicitud_id=$1 AND id=$2`, [pedidoId, claveVisita(archivoId)]);
+                if (!archivo) fail("Documento no disponible.", 404);
+                return Buffer.from(archivo.contenido);
+            }
+            const { rows } = await db.query(`SELECT id,nombre,fecha FROM dispensacion_adjuntos
+                WHERE solicitud_id=$1 ORDER BY fecha DESC,id`, [pedidoId]);
             return rows;
         });
     }
@@ -539,7 +591,7 @@ function createDispensacion(pool) {
         });
     }
 
-    return { configurarIps, habilitarFarmacia, habilitarIps, procesar, consultar, misVisitas, documentos };
+    return { configurarIps, habilitarFarmacia, habilitarIps, procesar, consultar, misVisitas, documentos, adjuntarVisita, adjuntosPaciente };
 }
 
 module.exports = { createDispensacion };

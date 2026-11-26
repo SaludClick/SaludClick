@@ -50,7 +50,7 @@ test("la matriz aprobada controla convenios, etapas, visita y constancias", asyn
             INSERT INTO medicamentos VALUES (23,40);
         `);
         for (const migration of ["20261117180000_farmacia_inventario_propio", "20261123235000_revocacion_sesiones",
-            "20261124000000_dispensacion_etapas", "20261124010000_stock_dispensacion"]) {
+            "20261124000000_dispensacion_etapas", "20261124010000_stock_dispensacion", "20261125000000_adjuntos_visita"]) {
             await db.exec(readFileSync(resolve(__dirname, "../prisma/migrations", migration, "migration.sql"), "utf8"));
         }
         await db.exec("INSERT INTO farmacia_existencias (farmacia_id,medicamento_id,cantidad) VALUES (3,23,3)");
@@ -94,8 +94,20 @@ test("la matriz aprobada controla convenios, etapas, visita y constancias", asyn
         assert.deepEqual(await stock(), { cantidad: 9, reservado: 4 });
         let { visita_id } = await asignar();
         const visits = await operations.misVisitas(await actor(5));
-        assert.deepEqual(Object.keys(visits[0]).sort(), ["direccion", "iniciada", "solicitud_id", "vence_at", "visita_id"]);
+        assert.deepEqual(Object.keys(visits[0]).sort(), ["adjuntos", "direccion", "iniciada", "solicitud_id", "vence_at", "visita_id"]);
         await step(5, 10, "INICIAR_VISITA", { visita_id });
+        const pdf = Buffer.from("%PDF-1.4\nDocumento ficticio\n%%EOF\n");
+        const adjunto = { visita_id, nombre: "visita.pdf", contenido: pdf.toString("base64") };
+        const courier = await actor(5);
+        const patient = await actor(2);
+        const otherPatient = await actor(8);
+        await assert.rejects(operations.adjuntarVisita(courier, 10, { ...adjunto, contenido: "AAAA" }), { status: 400 });
+        const archivo = await operations.adjuntarVisita(courier, 10, adjunto);
+        assert.deepEqual(await operations.adjuntarVisita(courier, 10, adjunto), archivo);
+        assert.equal((await operations.misVisitas(courier))[0].adjuntos, 1);
+        assert.equal((await operations.adjuntosPaciente(patient, 10))[0].id, archivo.id);
+        assert.deepEqual(await operations.adjuntosPaciente(patient, 10, archivo.id), pdf);
+        await assert.rejects(operations.adjuntosPaciente(otherPatient, 10, archivo.id), { status: 404 });
         await step(5, 10, "RESULTADO_VISITA", { visita_id, resultado: "AUSENCIA" });
         assert.deepEqual(await stock(), { cantidad: 9, reservado: 0 });
         await preparar();

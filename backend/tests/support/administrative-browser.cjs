@@ -161,6 +161,7 @@ async function testWorkspace({t,evaluate,go,click,value,until,send,fixture}){
         await until(()=>evaluate(`document.querySelector('#chatReply').disabled`));
         await click('#chatClose');await until(()=>evaluate(`document.querySelector('#chatReply').disabled===false`));
         await click('#chatClose');await until(()=>Promise.resolve(fixture.cases[0].estado==='CERRADA'));
+        await until(()=>evaluate(`document.querySelector('#chatClose')?.textContent.includes('Reabrir') && !document.querySelector('#chatClose').disabled`));
         await click('#chatClose');await until(()=>Promise.resolve(fixture.cases[0].estado==='ABIERTA'));
         for(const width of [390,320]){
             await send('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:true});

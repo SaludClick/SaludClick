@@ -8,43 +8,59 @@ html[data-theme="light"] {
 
 html[data-theme="dark"] {
     color-scheme: dark;
-    --theme-bg: #101b19;
-    --theme-surface: #192925;
-    --theme-raised: #233833;
-    --theme-text: #eef6f2;
-    --theme-muted: #bed0c9;
-    --theme-border: #658078;
-    --theme-focus: #88e4cc;
+    --theme-bg: #1c2427;
+    --theme-surface: #263034;
+    --theme-raised: #303c40;
+    --theme-text: #f0f3f2;
+    --theme-muted: #c0ccca;
+    --theme-border: #465457;
+    --theme-control-border: #7c8a8b;
+    --theme-focus: #b1d9c9;
+    --theme-link: #b3dbc9;
+    --theme-selected: #354c47;
+    --theme-action: #366459;
+    --theme-action-hover: #407367;
     --ad-bg: var(--theme-bg);
     --ad-card: var(--theme-surface);
     --ad-ink: var(--theme-text);
     --ad-muted: var(--theme-muted);
     --ad-line: var(--theme-border);
-    --ad-green: #80dac1;
+    --ad-green: var(--theme-link);
     background: var(--theme-bg);
 }
 
-.saludclick-theme {
-    width: fit-content;
-    display: flex;
-    align-items: center;
-    gap: .6rem;
-    padding: .5rem .75rem;
-    margin: 1rem auto;
+.saludclick-theme.saludclick-theme {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 2.375rem;
+    height: 2.375rem;
+    min-height: 0;
+    padding: 0;
     border: 1px solid var(--theme-border);
-    border-radius: .5rem;
+    border-radius: 50%;
     background: var(--theme-surface);
     color: var(--theme-text);
-    font: 500 .875rem/1.5 system-ui, sans-serif;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
 }
 
-.saludclick-theme select {
-    color: inherit;
-    background: var(--theme-surface);
-    border: 1px solid var(--theme-border);
-    border-radius: .25rem;
-    min-height: 2.25rem;
-    padding-inline: .4rem;
+.saludclick-theme:hover {
+    border-color: var(--theme-focus);
+    background: var(--theme-selected, #edf6ee);
+}
+
+.auth-back-link + .saludclick-theme {
+    margin-inline-start: .5rem;
+    vertical-align: middle;
+}
+
+.saludclick-theme-floating {
+    position: absolute;
+    top: .75rem;
+    right: .75rem;
+    z-index: 2;
 }
 
 html[data-theme] :focus-visible {
@@ -59,10 +75,123 @@ html[data-theme="dark"] body.dashboard-body main {
     color: var(--theme-text);
 }
 
+html[data-theme="dark"] body:is(.home-page, .auth-page) {
+    --public-ink: var(--theme-text);
+    --public-muted: var(--theme-muted);
+    --public-green: var(--theme-link);
+    --public-green-dark: var(--theme-link);
+    --public-green-soft: var(--theme-selected);
+    --public-border: var(--theme-border);
+}
+
+html[data-theme="dark"] body.admin-console {
+    --admin-ink: var(--theme-text);
+    --admin-muted: var(--theme-muted);
+    --admin-border: var(--theme-border);
+}
+
+html[data-theme="dark"] body.home-page :is(.home-hero, .servicios, .beneficios, .portada-faq) {
+    background: var(--theme-bg);
+}
+
+html[data-theme="dark"] .home-page .home-navbar,
+html[data-theme="dark"] .home-page .home-navbar nav#menu {
+    background: var(--theme-surface);
+    border-color: var(--theme-border);
+}
+
+html[data-theme="dark"] .home-page .home-navbar nav#menu .home-nav-links a {
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] .home-page .home-navbar nav#menu .home-nav-links a:is(:hover, :focus-visible),
+html[data-theme="dark"] .home-page .home-menu-toggle:is(:hover, :focus-visible, [aria-expanded="true"]) {
+    background: var(--theme-selected);
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] .home-page .home-menu-toggle,
+html[data-theme="dark"] .home-page .home-search {
+    background: var(--theme-surface);
+    border-color: var(--theme-control-border);
+}
+
+html[data-theme="dark"] .home-page .home-menu-toggle:is(:hover, :focus-visible, [aria-expanded="true"]) {
+    outline-color: var(--theme-focus);
+}
+
+html[data-theme="dark"] .home-page .home-search input {
+    background: var(--theme-raised);
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] .home-page .home-search input:focus {
+    outline-color: var(--theme-focus);
+}
+
+html[data-theme="dark"] .home-page .home-header-row .home-login-link,
+html[data-theme="dark"] .home-page .home-search button,
+html[data-theme="dark"] .home-page .home-hero .hero-botones .btn-primary {
+    --public-green: var(--theme-action);
+    --public-green-dark: var(--theme-action-hover);
+    color: #fff;
+    border-color: #81a69a;
+}
+
+html[data-theme="dark"] .home-page .home-hero .hero-botones .btn-primary:is(:hover, :focus-visible) {
+    --public-green: var(--theme-action-hover);
+}
+
+html[data-theme="dark"] .home-page .catalogo-publico .btn-outline,
+html[data-theme="dark"] .home-page .home-hero .hero-botones .btn-outline {
+    background: var(--theme-surface);
+    color: var(--theme-text);
+    border-color: var(--theme-control-border);
+}
+
+html[data-theme="dark"] .home-page .catalogo-publico .btn-outline:is(:hover, :focus-visible),
+html[data-theme="dark"] .home-page .home-hero .hero-botones .btn-outline:is(:hover, :focus-visible) {
+    background: var(--theme-raised);
+    color: var(--theme-text);
+    border-color: var(--theme-focus);
+}
+
+html[data-theme="dark"] body.home-page :is(.catalogo-publico-lista > *, .beneficio, .portada-faq details),
+html[data-theme="dark"] #servicios .servicio-tarjeta {
+    background: var(--theme-surface);
+    color: var(--theme-text);
+    border-color: var(--theme-border);
+}
+
+html[data-theme="dark"] body.auth-page :is(.auth-back-link, .auth-privacy-note, .auth-footer) {
+    color: var(--theme-muted);
+}
+
+html[data-theme="dark"] body.auth-page .auth-highlight-icon {
+    background: var(--theme-surface);
+    border-color: var(--theme-border);
+}
+
+html[data-theme="dark"] body.dashboard-body .servicios,
+html[data-theme="dark"] #farmaciaApp[data-farmacia-module="dashboard"] {
+    background: var(--theme-bg);
+}
+
+html[data-theme="dark"] body.dashboard-body .servicios h2,
+html[data-theme="dark"] #farmaciaApp[data-farmacia-module="dashboard"] .admin-page-heading h1 {
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] #farmaciaApp[data-farmacia-module="dashboard"] :is(.farmacia-dashboard-profile, #farmaciaLinkedEps),
+html[data-theme="dark"] body.admin-console .admin-topbar-copy span {
+    color: var(--theme-muted);
+}
+
 html[data-theme="dark"] body :is(
-    .card, .stat-card, .auth-panel, .ad-card, .modal-content, dialog,
-    .checkout-cart-table, .orders-table, .farmacia-table, .ad-message,
-    .navbar, .dropdown-menu, .table, .form-control, .form-select,
+    .card, .stat-card, .auth-panel, .ad-card, .modal-content, .modal-pedido-contenido, dialog,
+    .medicamento-card, .perfil-card, .form-container, .dashboard-stat,
+    .checkout-cart-table, .orders-table, .historial-table, .farmacia-table, .ad-message,
+    .navbar, .admin-topbar, .dropdown-menu, .table, .form-control, .form-select,
     .farmacia-dashboard-card, .farmacia-order, .farmacia-metric, .farmacia-notification,
     .vitalix-dialog, .vitalix-menu, .vitalix-option, .vitalix-composer,
     .vitalix-message-assistant .vitalix-message-content, .chat-list, .chat-window,
@@ -82,7 +211,7 @@ html[data-theme="dark"] body :is(
 ) {
     background-color: var(--theme-raised);
     color: var(--theme-text);
-    border-color: var(--theme-border);
+    border-color: var(--theme-control-border);
 }
 
 html[data-theme="dark"] body :is(.card, .stat-card, .auth-panel, .ad-card, dialog)
@@ -97,7 +226,49 @@ html[data-theme="dark"] body textarea::placeholder {
 }
 
 html[data-theme="dark"] body.ad-workspace .ad-primary {
-    background: #08795f;
+    background: var(--theme-action);
     color: white;
-    border-color: #80dac1;
+    border-color: #81a69a;
+}
+
+html[data-theme="dark"] body :is(.ad-button, .ad-workspace button:not(.ad-primary, .saludclick-theme), .user-dropdown) {
+    color: var(--theme-text);
+    background-color: var(--theme-raised);
+    border-color: var(--theme-control-border);
+}
+
+html[data-theme="dark"] body :is(.ad-card, .auth-panel, .navbar, .dropdown-menu, .user-dropdown) a:not(.ad-button, .btn) {
+    color: var(--theme-link);
+}
+
+html[data-theme="dark"] body :is(.ad-sidebar, .admin-sidebar, .sidebar) {
+    background: var(--theme-surface);
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] body :is(.ad-sidebar nav a, .admin-side-link, .sidebar nav a) {
+    color: var(--theme-muted);
+}
+
+html[data-theme="dark"] body :is(.ad-sidebar nav a, .admin-side-link, .sidebar nav a):is(:hover, .active, [aria-current="page"]) {
+    background: var(--theme-selected);
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] body :is(.orders-table, .historial-table, .farmacia-table, .ad-workspace table) :is(td, th) {
+    border-color: var(--theme-border);
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] body :is(.orders-table, .historial-table, .farmacia-table, .ad-workspace table) tbody tr:hover {
+    background-color: var(--theme-raised);
+}
+
+html[data-theme="dark"] body :is(.chat-bubble.mine, .vitalix-message-user .vitalix-message-content, .ad-message.staff, .ad-badge) {
+    background-color: var(--theme-selected);
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] body :is(.chat-bubble, .vitalix-message-content, .ad-message) :is(time, footer) {
+    color: var(--theme-muted);
 }

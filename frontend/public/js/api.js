@@ -7,7 +7,7 @@ export function apiUrl(path) {
     return `${API_BASE}${route.startsWith('/api/') ? route : `/api/${route.replace(/^\/+/, '')}`}`;
 }
 
-export async function apiFetch(url, options = {}) {
+export async function apiFetch(url, options = {}, responseType = 'json') {
     const expected = new URL(apiUrl('/api/health'), window.location.href);
     const target = new URL(/^https?:\/\//i.test(url) ? url : apiUrl(url), window.location.href);
     if (target.origin !== expected.origin || target.username || target.password) {
@@ -23,6 +23,7 @@ export async function apiFetch(url, options = {}) {
     } catch {
         throw new Error('No fue posible conectar con el servidor. Verifica que la API esté disponible.');
     }
+    if (response.ok && responseType === 'blob') return response.blob();
     let data = null;
     try { data = await response.json(); } catch { data = {}; }
     if (response.status === 401) { logout(); throw new Error('Tu sesión expiró. Inicia sesión nuevamente.'); }

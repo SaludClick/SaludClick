@@ -1,0 +1,83 @@
+.ad-workspace {
+    --workspace-gap: clamp(.75rem, 2vw, 1.5rem);
+    --workspace-radius: .875rem;
+}
+
+.ad-workspace .ad-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: var(--workspace-gap);
+}
+
+.ad-workspace .ad-heading h1 {
+    font-size: clamp(1.65rem, 1.3rem + 1.5vw, 2.15rem);
+    line-height: 1.15;
+    text-wrap: balance;
+}
+
+.ad-workspace .ad-card {
+    border-radius: var(--workspace-radius);
+    padding: var(--workspace-gap);
+    margin-bottom: var(--workspace-gap);
+}
+
+.ad-workspace :is(.ad-form, .ad-toolbar, .ad-actions) {
+    gap: .85rem;
+}
+
+.ad-workspace :is(button, .ad-button, input:not([type="checkbox"], [type="radio"]), select) {
+    min-height: 2.625rem;
+}
+
+.ad-workspace :is(input, select, textarea) { width: 100%; }
+.ad-workspace :is(input[type="checkbox"], input[type="radio"]) { width: auto; }
+.ad-workspace [role="status"]:empty { display: none; }
+.ad-workspace [role="status"]:not(:empty) { overflow-wrap: anywhere; }
+
+.visitas-lista {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+    gap: var(--workspace-gap);
+}
+
+.visitas-lista .ad-card { margin: 0; }
+.visitas-lista .ad-card h2 { margin-block-end: .4rem; }
+.visitas-lista .ad-card form,
+#confirmarEntrega, #autorizarReceptor {
+    display: grid;
+    gap: .8rem;
+}
+
+.visitas-lista .ad-card form > button,
+#confirmarEntrega > button, #autorizarReceptor > button {
+    justify-self: start;
+}
+
+.dispensacion-resumen {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: .5rem 1rem;
+    margin: 0;
+}
+.dispensacion-resumen dt { font-weight: 650; }
+.dispensacion-resumen dd { margin: 0; overflow-wrap: anywhere; }
+.dispensacion-renglones { display: grid; gap: .65rem; }
+.dispensacion-renglon {
+    min-inline-size: 0;
+    margin: 0;
+    padding: .75rem;
+    border: 1px solid var(--ad-line);
+    border-radius: .65rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+    gap: .65rem;
+    align-items: end;
+}
+#dispensacionCampos { display: grid; gap: .8rem; }
+#dispensacionCampos > button { justify-self: start; }
+
+@media (max-width: 480px) {
+    .ad-workspace .ad-topbar { flex-wrap: wrap; }
+    .dispensacion-resumen { grid-template-columns: 1fr; gap: .2rem; }
+    .dispensacion-resumen dd + dt { margin-top: .5rem; }
+}

@@ -23,6 +23,7 @@ test('la matriz de pantallas impide cruces entre administrador, farmacia y pacie
         ['/pages/formulas.html', [2]], ['/pages/chat-farmacia.html', [2]], ['/pages/farmacia-chat.html', []], ['/pages/farmacia-entregas.html', []],
         ['/pages/eps.html', [4]], ['/pages/eps-v1.html', [4]], ['/pages/ips.html', [4]], ['/pages/soporte.html', [2]],
         ['/pages/domiciliario.html', [5]], ['/pages/constancia-entrega.html', [2]],
+        ['/pages/dispensacion.html', [1, 3, 4]],
         ['/pages/perfil.html', [1, 2, 3, 4]], ['/index.html?accion=domicilio', [2]]
         ,['/pages/admin-afiliados.html', []], ['/pages/admin-pacientes.html', [1]]
     ]) for (const role of [1, 2, 3, 4, 5, 99]) {

@@ -7,15 +7,20 @@ import Layout from "../../layouts/Layout.astro";
     <p><a href="/pages/pedidos.html">Volver a mis pedidos</a></p>
     <h1>Constancia de entrega</h1>
     <p id="constanciaEstado" role="status"></p>
+    <section class="ad-card" id="adjuntosEntrega" hidden>
+      <h2>Documentos de la visita</h2>
+      <ul id="adjuntosEntregaLista"></ul>
+      <p id="adjuntosEntregaEstado" role="status"></p>
+    </section>
     <form id="autorizarReceptor" class="ad-card" hidden>
       <label>Identificador de la cuenta del receptor<input name="receptor" type="number" min="1" max="2147483647" required /></label>
       <button type="submit">Autorizar receptor para esta visita</button>
     </form>
     <form id="confirmarEntrega" class="ad-card" hidden>
       <p id="constanciaVersion"></p>
-      <label><span id="textoTratamiento"></span><input name="tratamiento" type="checkbox" required /></label>
+      <label class="ad-check"><input name="tratamiento" type="checkbox" required /><span id="textoTratamiento"></span></label>
       <p id="cantidadesRecibidas"></p>
-      <label><span id="textoRecepcion"></span><input name="recepcion" type="checkbox" required /></label>
+      <label class="ad-check"><input name="recepcion" type="checkbox" required /><span id="textoRecepcion"></span></label>
       <button class="ad-primary" type="submit">Confirmar documentos</button>
     </form>
     <section class="ad-card" id="copiasEntrega" hidden>

@@ -30,4 +30,12 @@ El responsable puede registrar `CONCILIAR_VISITA` con el identificador de visita
 
 La migración `20261124010000_stock_dispensacion` extiende el libro de inventario existente y mantiene los índices de unicidad históricos. Se detiene si encuentra preparaciones o entregas por etapas anteriores a la integración que deban conciliarse. El flujo por etapas rechaza también los pedidos con movimientos históricos de inventario. El checkout histórico actualiza el stock global del catálogo en `medicamentos.stock`. La nueva entrega solo modifica `farmacia_existencias`, que representa el inventario acreditado de la farmacia.
 
-Las confirmaciones usan textos de demostración. Para producción quedan por revisar los [documentos y el método de firma](borradores-entrega-domiciliaria.md). Las operaciones de IPS, administración y farmacia se prueban por API, mientras que Domiciliario y la constancia tienen pantallas propias.
+Las confirmaciones usan textos de demostración. Para producción quedan por revisar los [documentos y el método de firma](borradores-entrega-domiciliaria.md). IPS, Administración y Farmacia tienen el acceso **Gestionar dispensación** en sus paneles. Domiciliario registra las visitas desde Entregas asignadas y el paciente confirma desde la constancia de su pedido.
+
+## Demo local en Windows
+
+Compila el frontend con `npm run build` desde `frontend`. Desde la raíz, define `SALUDCLICK_DEMO_PASSWORD` con la contraseña de prueba y ejecuta `backend/scripts/start-dispensacion-demo.ps1 -PostgresBin <carpeta-bin-de-PostgreSQL>`. Si la ejecución de scripts está deshabilitada, ejecuta ese archivo con `powershell.exe -NoProfile -ExecutionPolicy Bypass -File` para limitar la excepción al proceso de la demo.
+
+El script crea un clúster nuevo en loopback y lo detiene al salir. Abre `http://127.0.0.1:4324/demo-login.html` y usa la credencial ficticia de Domiciliario o uno de estos perfiles con la misma contraseña local: `paciente@example.test`, `ips@example.test`, `admin@example.test` y `farmacia@example.test`. La ruta de ingreso local utiliza bcrypt y la autorización real de la aplicación. Solo existe en el proceso de demostración, con correo y Google desactivados. Las migraciones se aplican a esa base vacía.
+
+La demo nueva trae las solicitudes 1 y 2 asignadas. La solicitud 3 está pendiente de autorización. Farmacia es el usuario 3, Domiciliario es el usuario 6 y el producto ficticio tiene código 1. Para la prueba automatizada con datos recién creados, usa `SALUDCLICK_DEMO_E2E=1` y ejecuta `node --test backend/tests/dispensacion-demo.browser.cjs` desde la raíz. Esa prueba realiza transiciones reales en la base de demostración.
