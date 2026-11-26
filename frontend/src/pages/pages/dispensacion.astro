@@ -5,6 +5,14 @@ import Layout from "../../layouts/Layout.astro";
   <link slot="head" rel="stylesheet" href="/css/administrative.css" />
   <main class="ad-main">
     <header class="ad-heading"><h1>Dispensación</h1><a class="ad-button" id="volverPanel">Volver al panel</a></header>
+    <form id="habilitarDispensacion" class="ad-card" hidden>
+      <h2 id="habilitarDispensacionTitulo"></h2>
+      <div class="ad-toolbar">
+        <label><span id="habilitarDispensacionEtiqueta"></span><input name="usuario" type="number" min="1" max="2147483647" required /></label>
+        <button type="submit" class="ad-primary">Habilitar</button>
+      </div>
+      <p id="habilitarDispensacionAviso" role="status"></p>
+    </form>
     <form id="buscarDispensacion" class="ad-card ad-toolbar">
       <label>Número de solicitud<input name="solicitud" type="number" min="1" max="2147483647" required /></label>
       <button type="submit" class="ad-primary">Consultar</button>

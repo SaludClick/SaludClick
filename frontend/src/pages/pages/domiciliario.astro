@@ -1,18 +1,19 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 ---
-<Layout title="Entregas asignadas | SaludClick" bodyClass="ad-workspace">
+<Layout title="Mis entregas | SaludClick" bodyClass="ad-workspace courier-page">
   <link slot="head" rel="stylesheet" href="/css/administrative.css" />
+  <link slot="head" rel="stylesheet" href="/css/domiciliario.css" />
   <main class="ad-main">
     <header class="ad-heading">
-      <h1>Entregas asignadas</h1>
+      <div><h1>Mis entregas</h1><p>Consulta tus rutas y comparte los documentos de cada visita con el paciente.</p></div>
       <div class="ad-actions">
         <button type="button" id="actualizarVisitas">Actualizar</button>
         <button type="button" id="btnLogout">Cerrar sesión</button>
       </div>
     </header>
     <p id="visitasEstado" role="status"></p>
-    <section id="visitas" class="visitas-lista" aria-label="Visitas"></section>
+    <section id="visitas" class="visitas-lista" aria-label="Entregas asignadas"></section>
   </main>
   <script is:inline type="module" src="/js/domiciliario.js"></script>
 </Layout>

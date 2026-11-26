@@ -7,6 +7,11 @@ import Layout from "../../layouts/Layout.astro";
     <p><a href="/pages/pedidos.html">Volver a mis pedidos</a></p>
     <h1>Constancia de entrega</h1>
     <p id="constanciaEstado" role="status"></p>
+    <section class="ad-card" id="adjuntosEntrega" hidden>
+      <h2>Documentos de la visita</h2>
+      <ul id="adjuntosEntregaLista"></ul>
+      <p id="adjuntosEntregaEstado" role="status"></p>
+    </section>
     <form id="autorizarReceptor" class="ad-card" hidden>
       <label>Identificador de la cuenta del receptor<input name="receptor" type="number" min="1" max="2147483647" required /></label>
       <button type="submit">Autorizar receptor para esta visita</button>

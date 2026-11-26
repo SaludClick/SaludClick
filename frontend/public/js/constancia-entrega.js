@@ -5,8 +5,50 @@ if (checkAuthGuard()) {
     const estado = document.getElementById("constanciaEstado");
     const form = document.getElementById("confirmarEntrega");
     const id = new URLSearchParams(location.search).get("solicitud");
-    if (/^[1-9]\d{0,9}$/.test(id || "")) void cargar(id);
+    if (/^[1-9]\d{0,9}$/.test(id || "")) {
+        void cargar(id);
+        void cargarAdjuntos(id);
+    }
     else estado.textContent = "Selecciona un pedido válido.";
+
+    async function cargarAdjuntos(id) {
+        const base = `/api/dispensacion/solicitudes/${id}/adjuntos`;
+        const status = document.getElementById("adjuntosEntregaEstado");
+        try {
+            const { datos } = await apiFetch(base);
+            const lista = document.getElementById("adjuntosEntregaLista");
+            document.getElementById("adjuntosEntrega").hidden = false;
+            status.textContent = datos.length ? "" : "Todavía no hay documentos adjuntos.";
+            for (const archivo of datos) {
+                const item = document.createElement("li");
+                const button = document.createElement("button");
+                button.type = "button";
+                button.textContent = `Descargar ${archivo.nombre}`;
+                button.addEventListener("click", async () => {
+                    button.disabled = true;
+                    status.textContent = "Preparando la descarga…";
+                    try {
+                        const blob = await apiFetch(`${base}/${archivo.id}`, {}, "blob");
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement("a");
+                        link.href = url;
+                        link.download = archivo.nombre;
+                        link.click();
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                        status.textContent = "";
+                    } catch (error) {
+                        status.textContent = error.message;
+                    } finally { button.disabled = false; }
+                });
+                item.append(button);
+                lista.append(item);
+            }
+        } catch (error) {
+            if (error.status === 404 || error.status === 403) return;
+            document.getElementById("adjuntosEntrega").hidden = false;
+            status.textContent = error.message;
+        }
+    }
 
     async function cargar(id) {
         const base = `/api/dispensacion/solicitudes/${id}`;

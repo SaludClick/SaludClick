@@ -14,10 +14,10 @@ function createRouter({
         if (!enabled()) return res.status(404).json({ ok: false, mensaje: "Dispensación por etapas no habilitada." });
         return next();
     }, validarJWT);
-    const handle = action => async (req, res) => {
+    const handle = (action, respond = (res, datos) => res.json({ ok: true, datos })) => async (req, res) => {
         try {
             const datos = await action(req, operations());
-            return res.json({ ok: true, datos });
+            return respond(res, datos);
         } catch (error) {
             if (error.public) return res.status(error.status).json({ ok: false, mensaje: error.message });
             if (["23505", "23514", "40001", "40P01"].includes(error.code)) {
@@ -34,6 +34,14 @@ function createRouter({
     router.put("/farmacia/personal/:usuario", handle((req, svc) =>
         svc.habilitarFarmacia(req.usuario, id(req.params.usuario), req.body)));
     router.get("/mis-visitas", handle((req, svc) => svc.misVisitas(req.usuario)));
+    router.post("/solicitudes/:id/adjuntos", handle((req, svc) =>
+        svc.adjuntarVisita(req.usuario, id(req.params.id), req.body)));
+    router.get("/solicitudes/:id/adjuntos", handle((req, svc) =>
+        svc.adjuntosPaciente(req.usuario, id(req.params.id))));
+    router.get("/solicitudes/:id/adjuntos/:archivo", handle((req, svc) =>
+        svc.adjuntosPaciente(req.usuario, id(req.params.id), req.params.archivo),
+    (res, contenido) => res.type("application/octet-stream").attachment("documento-visita.pdf")
+        .set("Content-Type", "application/octet-stream").send(contenido)));
     router.get("/solicitudes/:id", handle((req, svc) => svc.consultar(req.usuario, id(req.params.id))));
     router.get("/solicitudes/:id/documentos", handle((req, svc) => svc.documentos(req.usuario, id(req.params.id), false)));
     router.get("/solicitudes/:id/constancias", handle((req, svc) => svc.documentos(req.usuario, id(req.params.id), true)));

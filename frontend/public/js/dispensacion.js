@@ -16,6 +16,37 @@ const states = {
 
 if (checkAuthGuard()) initialize();
 
+function initializeHabilitacion(role) {
+    const form = document.getElementById("habilitarDispensacion");
+    const admin = role === 1;
+    const perfil = admin ? "RESPONSABLE" : "DOMICILIARIO";
+    const notice = document.getElementById("habilitarDispensacionAviso");
+    document.getElementById("habilitarDispensacionTitulo").textContent =
+        admin ? "Habilitar responsable de farmacia" : "Habilitar domiciliario";
+    document.getElementById("habilitarDispensacionEtiqueta").textContent =
+        admin ? "ID de la cuenta de farmacia" : "ID de la cuenta del domiciliario";
+    form.hidden = false;
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+        const usuario = form.elements.usuario.valueAsNumber;
+        const button = form.querySelector("button");
+        button.disabled = true;
+        notice.textContent = "Guardando habilitación…";
+        try {
+            await apiFetch(`/api/dispensacion/farmacia/personal/${usuario}`, {
+                method: "PUT",
+                body: JSON.stringify({ perfil, activo: true })
+            });
+            notice.textContent = `Cuenta #${usuario} habilitada.`;
+            form.reset();
+        } catch (error) {
+            notice.textContent = error.message;
+        } finally {
+            button.disabled = false;
+        }
+    });
+}
+
 function initialize() {
     const user = getCurrentUser();
     const role = rolUsuario(user);
@@ -26,6 +57,7 @@ function initialize() {
     const fields = document.getElementById("dispensacionCampos");
     const selector = form.elements.accion;
     document.getElementById("volverPanel").href = role === 4 ? "/pages/ips.html" : paginaInicio(user);
+    if (role === 1 || role === 3) initializeHabilitacion(role);
     let orderId, order, pending;
 
     function selectActions() {
