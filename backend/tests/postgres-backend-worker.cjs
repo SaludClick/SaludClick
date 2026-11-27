@@ -40,7 +40,7 @@ async function main() {
 
         const port = httpServer.address().port;
         const token = jwt.sign(
-            { id: Number(userId), correo: "integration@example.test", rol: 2 },
+            { id: Number(userId), correo: "integration@example.test", rol: 2, sv: 1 },
             TEST_JWT_SECRET,
             { expiresIn: "2m" }
         );
@@ -82,6 +82,7 @@ async function main() {
             status: response.status,
             ok: body.ok,
             solicitudId: body.solicitudId,
+            pagoId: body.pagoId,
             replayed: body.replayed === true,
             backendErrors
         })}\n`);

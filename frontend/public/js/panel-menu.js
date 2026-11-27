@@ -74,8 +74,9 @@ if (panel) {
             link?.origin === location.origin;
         const samePageSection = link?.hash && link.pathname === location.pathname;
 
+        const sidebarAction = event.target.closest('[data-panel-close-on-activate]');
         if (primaryUnmodifiedClick &&
-            ((pharmacyRoute || samePageSection) && mobile.matches)) close();
+            ((pharmacyRoute || samePageSection || sidebarAction) && mobile.matches)) close();
     });
 
     document.addEventListener('keydown', event => {

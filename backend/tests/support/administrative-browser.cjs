@@ -234,8 +234,8 @@ async function testWorkspace({t,evaluate,go,click,value,until,send,fixture}){
             await until(()=>evaluate(`location.pathname==='${role===3?'/pages/farmacia.html':'/pages/eps.html'}'`));
             assert.equal(fixture.messages.length,count);
             await go('/index.html');
-            await until(()=>evaluate(`!!document.querySelector('astro-island[component-url]')`));
-            assert.equal(await evaluate(`document.querySelectorAll('.vitalix-composer').length`),0);
+            await until(()=>evaluate(`!!document.querySelector('astro-island[component-url]:not([ssr])')
+                && !document.querySelector('.vitalix-widget, .vitalix-composer')`));
         }
     });
 }

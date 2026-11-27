@@ -25,6 +25,7 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
     };
     const say = text => { $('mensajePedido').textContent = text; };
     const limit = med => Math.min(99, MAX_CANTIDAD, med.stock);
+    const money = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' });
     function state(value, text) {
         notice.dataset.state = value;
         notice.textContent = text;
@@ -50,9 +51,16 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
         if (med.descripcion && med.descripcion !== med.presentacion) {
             body.append(element('p', med.descripcion, 'mc-description'));
         }
-        body.append(element('p', med.stockBajo ? 'Stock bajo' : med.disponible ? 'Disponible · ' + med.stock + ' unidades' : (med.estado === 'INACTIVO' ? 'No disponible' : 'Sin existencias'), 'mc-availability' + (med.disponible ? '' : ' mc-unavailable')));
+        const stockLabel = med.stockBajo ? 'Stock bajo' : med.disponible ? 'Disponible' : 'Existencias';
+        const inventoryLabel = med.estado === 'AGOTADO' ? 'Sin existencias'
+            : med.estado !== 'DISPONIBLE' ? 'No disponible'
+            : med.stock === 0 ? 'Sin existencias'
+            : `${stockLabel} · ${med.stock} unidades`;
+        body.append(element('p', inventoryLabel, 'mc-availability' + (med.disponible ? '' : ' mc-unavailable')));
+        body.append(element('p', '', 'mc-selection-availability'));
         const prescription = med.requiereFormula === true ? 'Requiere fórmula médica' : med.requiereFormula === false ? 'No requiere fórmula según el catálogo' : 'Prescripción: información no registrada';
         body.append(element('p', prescription, 'mc-prescription'));
+        body.append(element('p', med.precio > 0 ? money.format(med.precio) : 'Precio no disponible', 'mc-presentation'));
         const button = element('button', med.disponible ? 'Agregar a solicitud' : 'No disponible', 'mc-primary');
         button.type = 'button';
         button.dataset.medicamentoId = med.id;
@@ -91,7 +99,13 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
             for (const button of grid.querySelectorAll('[data-medicamento-id]')) {
                 const med = items.find(item => item.id === Number(button.dataset.medicamentoId));
                 const selected = saved.borrador.find(line => Number(line.id) === med.id);
-                button.disabled = !med.disponible || (selected?.cantidad || 0) >= limit(med);
+                const quantity = selected?.cantidad || 0;
+                const availability = button.closest('article').querySelector('.mc-selection-availability');
+                availability.textContent = med.disponible && quantity
+                    ? `${Math.max(0, med.stock - quantity)} restantes · ${quantity} en tu selección`
+                    : '';
+                availability.hidden = !availability.textContent;
+                button.disabled = !med.disponible || quantity >= limit(med);
             }
             if (!saved.borrador.length) {
                 selection.append(element('p', 'Tu selección está vacía. Agrega medicamentos del catálogo.', 'mc-empty-selection'));
@@ -163,8 +177,8 @@ if (checkAuthGuard()) document.addEventListener('DOMContentLoaded', () => {
                 descripcion: med.descripcion,
                 stockBajo: med.estado === 'DISPONIBLE' && Number(med.stock) > 0 && Number(med.stock) <= (med.stock_minimo ?? 0),
                 estado: String(med.estado || '').toUpperCase(), stock: Math.max(0, Number(med.stock) || 0),
-                disponible: med.estado === 'DISPONIBLE' && Number(med.stock) > 0,
-                precio: Number(med.precio) || 0
+                disponible: med.estado === 'DISPONIBLE' && Number(med.stock) > 0 && Number.isFinite(Number(med.precio)) && Number(med.precio) > 0,
+                precio: Number.isFinite(Number(med.precio)) && Number(med.precio) > 0 ? Number(med.precio) : null
             }));
             if (items.some(med => !Number.isSafeInteger(med.id) || med.id < 1 || typeof med.nombre !== 'string')) throw new Error('El catálogo contiene datos incompletos.');
             setCatalogo(items);

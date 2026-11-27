@@ -25,13 +25,13 @@ function getTestDatabaseUrl() {
     if (
         !["postgres:", "postgresql:"].includes(url.protocol) ||
         url.hostname !== "127.0.0.1" ||
-        url.port !== "55434" ||
+        !["5433", "55434"].includes(url.port) ||
         database !== "saludclick_test" ||
         !url.username ||
         !url.password
     ) {
         throw new Error(
-            "Destino rechazado: se requiere PostgreSQL autenticado en 127.0.0.1:55434/saludclick_test."
+            "Destino rechazado: se requiere PostgreSQL autenticado en 127.0.0.1 (5433 o 55434), base saludclick_test."
         );
     }
 
@@ -49,6 +49,8 @@ function getTestDatabaseUrl() {
 function configureApplicationDatabase() {
     const connectionString = getTestDatabaseUrl();
     process.env.DATABASE_URL = connectionString;
+    process.env.EPS_DATABASE_URL = connectionString;
+    process.env.EPS_DATABASE_SCHEMA = "public";
     return connectionString;
 }
 

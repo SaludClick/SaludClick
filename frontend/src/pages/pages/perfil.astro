@@ -1,4 +1,5 @@
 ---
+import UserHeader from '../../components/UserHeader.astro';
 import PerfilFormulario from '../../components/PerfilFormulario.astro';
 ---
 <!DOCTYPE html>
@@ -14,12 +15,16 @@ import PerfilFormulario from '../../components/PerfilFormulario.astro';
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/panel-menu.css">
+    <link rel="stylesheet" href="/css/user-header.css">
+    <link rel="stylesheet" href="/css/user-documents.css">
 </head>
 
-<body class="dashboard-page">
+<body class="dashboard-page user-profile">
 
     <!-- BARRA DE NAVEGACIÓN -->
-    <header class="navbar">
+    <UserHeader />
+    <header class="navbar" data-user-header-fallback>
         <div class="container nav-container">
             <a href="dashboard.html" class="logo">
                 <i class="fa-solid fa-heart-pulse"></i>
@@ -41,43 +46,25 @@ import PerfilFormulario from '../../components/PerfilFormulario.astro';
                     <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
                 </button>
             </nav>
+            <saludclick-theme-control></saludclick-theme-control>
         </div>
     </header>
 
-    <!-- ENCABEZADO -->
-    <section class="hero">
-        <div class="container">
-            <div class="hero-texto text-center">
-                <span class="badge mb-2">
-                    <i class="fa-solid fa-id-card"></i> Información Personal
-                </span>
-                <h1>Mi Perfil</h1>
-                <p>Consulta y actualiza tu información personal para mantener tus datos siempre actualizados.</p>
-            </div>
+    <main class="profile-main">
+        <div class="profile-intro">
+            <h1>Mi perfil</h1>
+            <p>Consulta y actualiza los datos de tu cuenta.</p>
         </div>
-    </section>
-
-    <!-- TARJETA DEL PERFIL DE USUARIO -->
-    <section class="servicios">
-        <div class="container">
-            <div class="perfil-card">
-                
-                <!-- Cabecera con Avatar -->
-                <div class="profile-header">
-                    <div class="profile-avatar">
-                        <i class="fa-solid fa-user-gear"></i>
-                    </div>
-                    <div class="profile-title">
-                        <h2>Datos del Usuario</h2>
-                        <p class="text-muted small mb-0">Gestiona tus datos de cuenta y contacto</p>
-                    </div>
+        <section class="perfil-card" aria-labelledby="nombrePerfil">
+            <div class="profile-header">
+                <div class="profile-avatar" aria-hidden="true">
+                    <svg class="user-document-icon" focusable="false"><use href="/images/user-icons.svg#user"></use></svg>
                 </div>
-
-                <PerfilFormulario />
-
+                <h2 id="nombrePerfil">Datos de la cuenta</h2>
             </div>
-        </div>
-    </section>
+            <PerfilFormulario personal />
+        </section>
+    </main>
 
     <!-- FOOTER -->
     <footer class="footer">

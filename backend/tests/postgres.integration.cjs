@@ -30,18 +30,12 @@ function suffix() {
 }
 
 async function createFixture(t, { stock = 8, medicineCount = 1 } = {}) {
-    const fixture = { roles: [], categories: [], users: [], medications: [] };
+    const fixture = { categories: [], users: [], medications: [] };
     t.after(() => deleteFixture(fixture));
     const connection = await pool.connect();
     const run = suffix();
     try {
         await connection.query("BEGIN");
-        const role = await connection.query(
-            "INSERT INTO roles (nombre, descripcion) VALUES ($1, $2) RETURNING id",
-            [`it_${run}`, "PostgreSQL integration fixture"]
-        );
-        fixture.roles.push(role.rows[0].id);
-
         const category = await connection.query(
             "INSERT INTO categorias (nombre, descripcion) VALUES ($1, $2) RETURNING id",
             [`it_${run}`, "PostgreSQL integration fixture"]
@@ -59,7 +53,7 @@ async function createFixture(t, { stock = 8, medicineCount = 1 } = {}) {
                 `it.${run}@example.test`,
                 `IT${run}`,
                 "integration-only-not-a-real-password",
-                fixture.roles[0]
+                2
             ]
         );
         fixture.users.push(user.rows[0].id);
@@ -87,8 +81,8 @@ async function createFixture(t, { stock = 8, medicineCount = 1 } = {}) {
 }
 
 async function deleteFixture(fixture) {
-    const { roles, categories, users, medications } = fixture;
-    if (!roles.length && !categories.length && !users.length && !medications.length) return;
+    const { categories, users, medications } = fixture;
+    if (!categories.length && !users.length && !medications.length) return;
 
     const connection = await pool.connect();
     try {
@@ -119,10 +113,6 @@ async function deleteFixture(fixture) {
         await connection.query(
             "DELETE FROM categorias WHERE id = ANY($1::int[])",
             [categories]
-        );
-        await connection.query(
-            "DELETE FROM roles WHERE id = ANY($1::int[])",
-            [roles]
         );
         await connection.query("COMMIT");
     } catch (error) {
@@ -261,9 +251,27 @@ test("órdenes concurrentes conservan inventario sin sobreventa", async t => {
     ]);
 
     assert.equal(attempts.filter(result => result.status === "fulfilled").length, 1);
-    assert.equal(attempts.filter(result => result.status === "rejected").length, 1);
+    const rejected = attempts.filter(result => result.status === "rejected");
+    assert.equal(rejected.length, 1);
+    assert.equal(rejected[0].reason.status, 409);
     assert.deepEqual(await orderCounts(fixture.users[0]), {
         pedidos: 1, detalles: 1, pagos: 1
+    });
+    assert.equal(await inventory(fixture.medications[0]), 1);
+});
+
+test("claves distintas confirman dos compras simultáneas si hay stock suficiente", async t => {
+    const fixture = await createFixture(t, { stock: 5 });
+    const payload = orderData([{ id: fixture.medications[0], cantidad: 2 }]);
+    const results = await Promise.all([
+        orderService.crearPedido(fixture.users[0], payload, crypto.randomUUID()),
+        orderService.crearPedido(fixture.users[0], payload, crypto.randomUUID())
+    ]);
+
+    assert.equal(new Set(results.map(result => result.solicitudId)).size, 2);
+    assert.equal(new Set(results.map(result => result.pagoId)).size, 2);
+    assert.deepEqual(await orderCounts(fixture.users[0]), {
+        pedidos: 2, detalles: 2, pagos: 2
     });
     assert.equal(await inventory(fixture.medications[0]), 1);
 });
@@ -378,6 +386,8 @@ test("pedido e idempotencia sobreviven al reinicio del backend", async t => {
     assert.equal(replayed.ok, true);
     assert.equal(replayed.replayed, true);
     assert.equal(replayed.solicitudId, created.solicitudId);
+    assert.ok(created.pagoId);
+    assert.equal(replayed.pagoId, created.pagoId);
     assert.equal(await inventory(fixture.medications[0]), 7);
     assert.deepEqual(await orderCounts(fixture.users[0]), {
         pedidos: 1, detalles: 1, pagos: 1

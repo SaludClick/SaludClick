@@ -7,8 +7,8 @@ if (checkAuthGuard()) document.addEventListener("DOMContentLoaded", () => {
     const identity = document.querySelector(".dashboard-user");
     const identityStatus = document.getElementById("dashboardIdentidadEstado");
     const fields = ["totalPedidos", "totalFormulas", "pedidosActivos", "totalGastado"];
-    const names = ["nombreUsuarioTop", "nombreUsuario", "nombreUsuarioPanel"];
-    const money = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+    const names = ["nombreUsuarioTop", "nombreUsuario"];
+    const money = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0, maximumFractionDigits: 2 });
     let generation = 0;
     let controller;
 
@@ -17,6 +17,10 @@ if (checkAuthGuard()) document.addEventListener("DOMContentLoaded", () => {
         if (element) element.textContent = value;
     }
     function state(value, message) {
+        text("dashboardConexion", {
+            loading: "Consultando", loaded: "Datos comprobados", empty: "Datos comprobados",
+            error: "Consulta incompleta", expired: "Sesión expirada"
+        }[value]);
         if (status) {
             status.dataset.state = value;
             status.textContent = message;

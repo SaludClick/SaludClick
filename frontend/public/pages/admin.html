@@ -8,43 +8,37 @@
 <link rel="stylesheet" href="/css/administrative.css">
 <link rel="stylesheet" href="/css/administrative-chat.css">
 <link rel="stylesheet" href="/css/panel-menu.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="/css/theme.css">
     <link rel="stylesheet" href="/css/workspace.css">
 </head>
 <body class="ad-workspace">
 <div class="ad-shell" data-panel-menu="administrador">
-<aside class="ad-sidebar" id="adminSidebar" aria-label="Navegación de administración">
+<aside class="ad-sidebar panel-sidebar" id="adminSidebar" aria-label="Navegación de administración">
 <button class="admin-menu-toggle panel-menu-close" type="button" data-panel-close aria-label="Cerrar men&#250;"><span class="panel-menu-icon" aria-hidden="true"></span></button>
-<a class="ad-brand" href="/pages/admin.html">SaludClick<small>ADMINISTRACIÓN</small>
-</a>
-<nav id="adminNavigation" aria-label="Administración">
-<a id="dashboard" href="#dashboard" data-section="dashboard">Dashboard</a>
-<a id="usuarios" href="#usuarios" data-section="usuarios">Usuarios</a>
-<a id="solicitudes" href="#solicitudes" data-section="solicitudes">Solicitudes</a>
-<a id="notificaciones" href="#notificaciones" data-section="notificaciones">Notificaciones</a>
-<a id="informes" href="#informes" data-section="informes">Informes</a>
-<a id="configuracion" href="#configuracion" data-section="configuracion">Configuración</a>
+<a class="admin-brand" href="/pages/admin.html"><span class="admin-brand-mark"><i class="fa-solid fa-heart-pulse" aria-hidden="true"></i></span><span>SaludClick<small>ADMINISTRACIÓN</small></span></a>
+<span class="admin-nav-caption">MENÚ PRINCIPAL</span>
+<nav class="admin-side-nav" id="adminNavigation" aria-label="Administración">
+<a class="admin-side-link" id="dashboard" href="#dashboard" data-section="dashboard"><i class="fa-solid fa-chart-pie" aria-hidden="true"></i><span>Dashboard</span></a>
+<a class="admin-side-link" id="usuarios" href="#usuarios" data-section="usuarios"><i class="fa-solid fa-users" aria-hidden="true"></i><span>Usuarios</span></a>
+<a class="admin-side-link" id="solicitudes" href="#solicitudes" data-section="solicitudes"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i><span>Solicitudes</span></a>
+<a class="admin-side-link" id="notificaciones" href="#notificaciones" data-section="notificaciones"><i class="fa-solid fa-bell" aria-hidden="true"></i><span>Notificaciones</span><span id="adminNotificationBell" class="panel-sidebar-badge" hidden><small id="adminNotificationCount" hidden>0</small></span></a>
+<a class="admin-side-link" id="informes" href="#informes" data-section="informes"><i class="fa-solid fa-chart-column" aria-hidden="true"></i><span>Informes</span></a>
+<a class="admin-side-link" id="configuracion" href="#configuracion" data-section="configuracion"><i class="fa-solid fa-sliders" aria-hidden="true"></i><span>Configuración</span></a>
 </nav>
-<footer>
-<span class="ad-status-dot">
-</span>Atención administrativa<p>Acceso limitado a tus responsabilidades.</p>
-</footer>
+<span id="adminIdentity" hidden></span>
+<div class="admin-sidebar-bottom">
+        <button class="admin-logout" id="adminLogout" type="button">
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
 </aside>
 <div class="panel-menu-backdrop" data-panel-backdrop aria-hidden="true"></div>
 <main class="ad-main">
-<header class="ad-topbar">
-<div class="panel-menu-heading">
+<header class="ad-topbar panel-topbar">
 <button type="button" class="admin-menu-toggle" id="adminMenu" aria-label="Abrir menú" aria-expanded="false" aria-controls="adminSidebar"><span class="panel-menu-icon" aria-hidden="true"></span></button>
-<span>Centro de administración</span>
-</div>
-<div class="ad-actions">
-<a id="adminNotificationBell" class="ad-bell" href="#notificaciones" aria-label="Notificaciones sin leer">
-<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span id="adminNotificationCount" hidden>0</span>
-</a>
-<span id="adminIdentity">
-</span>
-<button type="button" id="adminLogout">Cerrar sesión</button>
-</div>
+<saludclick-theme-control></saludclick-theme-control>
 </header>
 <div class="ad-heading">
 <div>

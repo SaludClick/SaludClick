@@ -212,7 +212,8 @@ if (checkAuthGuard()) {
                     {
                         style: 'currency',
                         currency: 'COP',
-                        maximumFractionDigits: 0
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2
                     }
                 ).format(
                     Number(numero) || 0
@@ -352,7 +353,12 @@ if (checkAuthGuard()) {
                          * desde la información guardada.
                          */
 
-                        if (!med) {
+                        if (!med || !Number.isFinite(med.precio) || med.precio <= 0) {
+                            const unavailable = rows.insertRow().insertCell();
+                            unavailable.colSpan = 4;
+                            unavailable.textContent = med
+                                ? `${med.nombre}: precio no disponible.`
+                                : `Medicamento #${item.id}: ya no está en el catálogo.`;
                             return;
                         }
 
@@ -401,7 +407,7 @@ if (checkAuthGuard()) {
                 );
 
 
-                if (productosMostrados === 0) {
+                if (productosMostrados !== state.borrador.length) {
 
                     const tr =
                         rows.insertRow();
@@ -412,11 +418,11 @@ if (checkAuthGuard()) {
                     td.colSpan = 4;
 
                     td.textContent =
-                        'No se encontraron los medicamentos del carrito. ' +
-                        'Regresa a Medicamentos y vuelve a agregarlos.';
+                        'No se puede calcular el total del carrito completo. ' +
+                        'Regresa a Medicamentos y revisa los productos.';
 
                     totalEl.textContent =
-                        money(0);
+                        'No disponible';
 
                     btn.disabled = true;
 
@@ -469,7 +475,7 @@ if (checkAuthGuard()) {
                                     precio:
                                         Number(
                                             medicamento.precio
-                                        ) || 0,
+                                        ),
 
                                     stock:
                                         Number(
@@ -536,6 +542,8 @@ if (checkAuthGuard()) {
                     'DOMICILIO';
 
 
+                document.getElementById('camposDomicilio').hidden = !domicilio;
+
                 direccion.disabled =
                     !domicilio;
 
@@ -564,6 +572,10 @@ if (checkAuthGuard()) {
             function validarFormulario() {
                 const state = leerCarrito();
                 if (!state?.borrador?.length) throw new Error('Agrega al menos un medicamento antes de pagar.');
+                if (state.borrador.some(item => {
+                    const med = buscarMedicamento(item.id);
+                    return !med || !Number.isFinite(med.precio) || med.precio <= 0;
+                })) throw new Error('Revisa los productos y precios del carrito antes de pagar.');
                 if (tipoEntrega.value === 'DOMICILIO' && direccion.value.trim().length < 8) {
                     direccion.setAttribute('aria-invalid','true');
                     direccion.focus();

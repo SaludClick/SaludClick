@@ -35,7 +35,6 @@ html {
 body {
     background: #f5f8fc;
     color: #333;
-    padding-top: 90px;
     min-height: 100vh;
 }
 
@@ -1413,7 +1412,7 @@ body:has(.sidebar) .footer {
         display: block;
     }
 
-    nav {
+    .navbar nav {
         position: absolute;
         top: 80px;
         left: 0;
@@ -1427,7 +1426,7 @@ body:has(.sidebar) .footer {
         display: none;
     }
 
-    nav.active {
+    .navbar nav.active {
         display: flex !important;
     }
 
@@ -1610,10 +1609,6 @@ body:has(.sidebar) .footer {
 /* Extra Mobile */
 
 @media(max-width: 480px) {
-    body {
-        padding-top: 80px;
-    }
-
     .container {
         width: 92%;
     }
@@ -3240,14 +3235,14 @@ body {
 }
 
 .logout-link,
-#logout {
+#logout:where(:not(.admin-logout)) {
     color: #dc3545 !important;
     border-top: 1px solid #eef2f5 !important;
     margin-top: 4px;
 }
 
 .logout-link i,
-#logout i {
+#logout:where(:not(.admin-logout)) i {
     color: #dc3545 !important;
 }
 
@@ -3545,7 +3540,6 @@ body {
     min-height: 100vh;
     background: var(--sc-bg);
     color: var(--sc-text);
-    padding-top: 70px;
 }
 
 img {
@@ -3633,12 +3627,18 @@ a {
    NAVBAR
 ========================================================= */
 
+/* Solo las barras fijas necesitan reservar espacio fuera del flujo. */
+body:where(:has(> .navbar:not(.dashboard-navbar, .home-navbar))) {
+    --fixed-navbar-height: 70px;
+    padding-block-start: var(--fixed-navbar-height);
+}
+
 .navbar {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
-    height: 70px;
+    height: var(--fixed-navbar-height, 70px);
     z-index: 2000;
     background: rgba(255,255,255,.97);
     border-bottom: 1px solid var(--sc-border);
@@ -4151,12 +4151,8 @@ textarea:focus {
 }
 
 @media (max-width: 768px) {
-    body {
-        padding-top: 65px;
-    }
-
-    .navbar {
-        height: 65px;
+    body:where(:has(> .navbar:not(.dashboard-navbar, .home-navbar))) {
+        --fixed-navbar-height: 68px;
     }
 
     .container {

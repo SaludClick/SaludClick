@@ -95,6 +95,15 @@ test('rechaza medicamentos inexistentes, no disponibles o sin stock antes de per
     await t.test('stock insuficiente', async () => {
         await assert.rejects(orderService.crearPedido(12, order({ items: [{ id: 5, cantidad: 9 }] }), IDEMPOTENCY_KEY), /Stock insuficiente/);
     });
+    await t.test('precio aún no disponible', async () => {
+        const originalPrice = inventory[0].precio;
+        inventory[0].precio = '0';
+        try {
+            await assert.rejects(orderService.crearPedido(12, order(), IDEMPOTENCY_KEY), /precio.*no está disponible/);
+        } finally {
+            inventory[0].precio = originalPrice;
+        }
+    });
     assert.equal(writes.length, writesBefore);
 });
 

@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
         menu.classList.toggle("active", isOpen);
         menuToggle.setAttribute("aria-expanded", String(isOpen));
 
-        if (isHomePage) {
+        if (isHomePage || menuToggle.closest('.user-panel-header')) {
             menuToggle.setAttribute(
                 "aria-label",
                 `${isOpen ? "Cerrar" : "Abrir"} menú de navegación`
@@ -23,10 +23,14 @@ document.addEventListener("DOMContentLoaded", () => {
         setMenuOpen(!menu.classList.contains("active"));
     });
 
-    if (!isHomePage) return;
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && menu.classList.contains("active")) {
+            setMenuOpen(false, true);
+        }
+    });
 
     menu.addEventListener("click", (event) => {
-        if (event.target instanceof Element && event.target.closest("a")) {
+        if (event.target instanceof Element && event.target.closest("a[href]")) {
             setMenuOpen(false);
         }
     });
@@ -41,13 +45,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && menu.classList.contains("active")) {
-            setMenuOpen(false, true);
-        }
-    });
-
-    window.matchMedia("(min-width: 761px)").addEventListener("change", () => {
-        setMenuOpen(false);
-    });
+    if (isHomePage) {
+        window.matchMedia("(min-width: 761px)").addEventListener("change", () => {
+            setMenuOpen(false);
+        });
+    }
 });

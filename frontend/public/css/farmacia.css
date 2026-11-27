@@ -129,19 +129,6 @@
 }
 body.farmacia-dashboard-page { padding: 0; background: #f3f6f7; }
 #farmaciaApp[data-farmacia-module="dashboard"] { background: #f3f6f7; }
-#farmaciaApp[data-farmacia-module="dashboard"] .admin-sidebar { background: #10362e; }
-#farmaciaApp[data-farmacia-module="dashboard"] #logout {
-    color: #d3e9e1 !important;
-    background: transparent;
-    border: 1px solid #ffffff32 !important;
-}
-#farmaciaApp[data-farmacia-module="dashboard"] #logout:hover { background: #ffffff18; }
-#farmaciaApp[data-farmacia-module="dashboard"] .admin-side-link.active {
-    color: #10362e;
-    background: #54d4c4;
-    box-shadow: none;
-}
-#farmaciaApp[data-farmacia-module="dashboard"] .admin-side-link.active i { color: inherit; }
 #farmaciaApp[data-farmacia-module="dashboard"] .admin-topbar .farmacia-notifications-bell { margin-left: auto; }
 #farmaciaApp[data-farmacia-module="dashboard"] .admin-topbar { min-height: 64px; }
 #farmaciaApp[data-farmacia-module="dashboard"] .farmacia-main {

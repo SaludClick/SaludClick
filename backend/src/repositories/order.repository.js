@@ -168,10 +168,12 @@ async function listarPedidosUsuario(usuarioId) {
     const { rows } = await pool.query(
         `SELECT s.id, s.fecha, s.estado, s.tipo_entrega, s.direccion,
                 COALESCE(SUM(ds.subtotal), 0) AS total,
+                STRING_AGG(m.nombre || ' ×' || ds.cantidad::text, ', ' ORDER BY ds.id) AS medicamentos_resumen,
                 p.estado AS pago_estado, p.metodo AS pago_metodo,
                 p.marca AS pago_marca, p.ultimos_digitos
          FROM solicitudes s
          LEFT JOIN detalle_solicitud ds ON ds.solicitud_id = s.id
+         LEFT JOIN medicamentos m ON m.id = ds.medicamento_id
          LEFT JOIN pagos p ON p.solicitud_id = s.id
          WHERE s.usuario_id = $1
          ${require('../config/farmacia-operacion').habilitada()?'AND NOT EXISTS (SELECT 1 FROM solicitudes_ocultas_paciente o WHERE o.usuario_id=s.usuario_id AND o.solicitud_id=s.id)':''}

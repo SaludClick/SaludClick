@@ -35,8 +35,22 @@ async function crear(req,res) {
         await fs.mkdir(UPLOAD_DIR,{recursive:true});
         const ext = mime==="application/pdf"?".pdf":mime==="image/png"?".png":mime==="image/webp"?".webp":".jpg";
         const stored = `${crypto.randomUUID()}${ext}`;
-        await fs.writeFile(path.join(UPLOAD_DIR,stored),buffer,{flag:"wx"});
-        const id=await repo.crear({usuarioId:req.usuario.id,nombreArchivo:stored,nombreOriginal:String(nombre).slice(0,180),tipoMime:mime,tamano:buffer.length,descripcion});
+        const file = path.join(UPLOAD_DIR, stored);
+        await fs.writeFile(file,buffer,{flag:"wx"});
+        let id;
+        try {
+            id = await repo.crear({usuarioId:req.usuario.id,nombreArchivo:stored,nombreOriginal:String(nombre).slice(0,180),tipoMime:mime,tamano:buffer.length,descripcion});
+        } catch (error) {
+            // Los errores de datos y restricciones confirman que el INSERT no se guardó.
+            if (/^2[23][0-9A-Z]{3}$/.test(error.code || "")) {
+                try {
+                    await fs.unlink(file);
+                } catch {
+                    console.error("No se pudo retirar un archivo de fórmula sin registro.");
+                }
+            }
+            throw error;
+        }
         res.status(201).json({ok:true,mensaje:"Fórmula cargada correctamente.",formula:{id,nombre:String(nombre).slice(0,180),estado:"PENDIENTE"}});
     } catch(e) { res.status(400).json({ok:false,mensaje:publicMessage(e,"No se pudo cargar la fórmula.")}); }
 }
@@ -51,7 +65,12 @@ async function ver(req,res){
         const directory = await fs.realpath(UPLOAD_DIR);
         const file = path.join(directory, f.nombre_archivo);
         if (await fs.realpath(file) !== file || !(await fs.stat(file)).isFile()) return res.sendStatus(404);
-        res.setHeader("Content-Type",f.tipo_mime); res.setHeader("Content-Disposition",`inline; filename="${String(f.nombre_original).replace(/["\r\n]/g,"_")}"`);
+        const filename = encodeURIComponent(String(f.nombre_original)).replace(/[!'()*]/g, char =>
+            "%" + char.charCodeAt(0).toString(16).toUpperCase());
+        res.setHeader("Content-Type", f.tipo_mime);
+        res.setHeader("Content-Disposition", `inline; filename="formula"; filename*=UTF-8''${filename}`);
+        res.setHeader("Cache-Control", "private, no-store");
+        res.setHeader("X-Content-Type-Options", "nosniff");
         res.sendFile(file);
     }catch(e){res.status(404).json({ok:false,mensaje:"No se pudo abrir la fórmula."});}
 }

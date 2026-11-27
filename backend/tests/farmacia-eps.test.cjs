@@ -167,7 +167,7 @@ test('navegador: vínculo autorizado por endpoint permite ver 50 IDs únicos en 
         assert.deepEqual(await ids(),['vp-0']);
         state.pacientes[0].correo='cambiado@example.test';
         await evaluate('document.querySelector("#farmaciaUsuariosRefresh").click()');
-        await until(()=>evaluate('document.querySelectorAll("#farmaciaUsuariosRows tr").length===0'));
+        await until(()=>evaluate('document.querySelector("#farmaciaUsuariosRows").getAttribute("aria-busy")==="false" && document.querySelectorAll("#farmaciaUsuariosRows tr").length===0'));
         assert.equal(writes,writesBeforeReads);assert.deepEqual(browser.errores,[]);
     }finally{await browser.cerrar();}
 });
@@ -242,7 +242,7 @@ test('navegador: directorio EPS de solo lectura, búsqueda, paginación, cambio 
         await until(()=>evaluate('document.querySelectorAll("#farmaciaUsuariosRows tr").length===1'));
         await send('Page.reload');await until(()=>evaluate('document.querySelectorAll("#farmaciaUsuariosRows tr").length===1&&document.querySelector("#farmaciaUsuariosEstado").value==="activos"'));
         await evaluate('document.querySelector("#farmaciaUsuariosEstado").value="inactivos";document.querySelector("#farmaciaUsuariosFilter").requestSubmit()');
-        await until(()=>evaluate('document.querySelectorAll("#farmaciaUsuariosRows tr").length===0'));
+        await until(()=>evaluate('document.querySelector("#farmaciaUsuariosRows").getAttribute("aria-busy")==="false" && document.querySelectorAll("#farmaciaUsuariosRows tr").length===0'));
         await evaluate('document.querySelector("#farmaciaUsuariosClear").click()');await until(()=>evaluate('document.querySelectorAll("#farmaciaUsuariosRows tr").length===25'));
         await evaluate('document.querySelector("#farmaciaUsuariosBuscar").value="900000";document.querySelector("#farmaciaUsuariosFilter").requestSubmit()');
         await until(()=>evaluate('document.querySelectorAll("#farmaciaUsuariosRows tr").length===1'));

@@ -103,11 +103,16 @@ test('Perfil Farmacia: valida tipos, caracteres, longitudes y formatos antes de 
     assert.equal(writes, 0);
     assert.doesNotThrow(() => validarPerfilFarmacia({ nombre: 'X'.repeat(100), apellido: 'Y'.repeat(100), telefono: '', ciudad: '', numeroDocumento: '' }));
 });
-test('Contratos compartidos: Paciente y EPS conservan perfil y validación anteriores sin consulta Farmacia', async () => {
+test('Contratos compartidos: Paciente valida teléfono y EPS conserva su perfil sin consulta Farmacia', async () => {
     for (const rol of [2, 4]) {
         const auth = token(rol, rol);
         assert.equal((await request('/auth/profile', { auth })).status, 200);
-        assert.equal((await request('/auth/profile', { method: 'PUT', auth, data: { nombre: 'Ana', apellido: 'Prueba', telefono: '300' } })).status, 200);
+        const data = { nombre: 'Ana', apellido: 'Prueba', telefono: '300' };
+        if (rol === 2) {
+            assert.equal((await request('/auth/profile', { method: 'PUT', auth, data })).status, 400);
+            data.telefono = '3001234567';
+        }
+        assert.equal((await request('/auth/profile', { method: 'PUT', auth, data })).status, 200);
     }
     assert.equal(lookups, 0); assert.equal(writes, 2);
 });

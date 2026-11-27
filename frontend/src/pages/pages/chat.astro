@@ -1,16 +1,19 @@
 ---
+import UserHeader from '../../components/UserHeader.astro';
 import Layout from "../../layouts/Layout.astro";
 import Chat from "../../components/Chat.jsx";
 const title = "VITALIX | Asistente de acceso | SaludClick";
 ---
 <Layout title={title} bodyClass="">
+  <Fragment slot="head"><link rel="stylesheet" href="/css/panel-menu.css" /><link rel="stylesheet" href="/css/user-header.css" /></Fragment>
   <Fragment slot="head">
     <meta
       name="description"
       content="VITALIX ofrece orientación sobre solicitudes de acceso y soporte de cuentas de SaludClick."
     />
   </Fragment>
-  <header class="navbar">
+  <UserHeader />
+    <header class="navbar" data-user-header-fallback>
     <div class="container nav-container">
       <a href="/" class="logo" aria-label="SaludClick, inicio">
         <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
@@ -41,6 +44,7 @@ const title = "VITALIX | Asistente de acceso | SaludClick";
           Cerrar sesión
         </button>
       </nav>
+        <saludclick-theme-control></saludclick-theme-control>
     </div>
   </header>
   <Chat client:load />

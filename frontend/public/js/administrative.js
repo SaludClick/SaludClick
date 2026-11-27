@@ -12,9 +12,10 @@ const client=document.body.dataset.client==='true';
 const labels={dashboard:'Dashboard',usuarios:'Usuarios',solicitudes:'Solicitudes',notificaciones:'Notificaciones',informes:'Informes',configuracion:'Configuración'};
 let section=client?'solicitudes':'dashboard',page=1,filters={},users=[],currentCase=null,loading=false,loadVersion=0;
 function updateNotificationCount(value){
-    const n=Number(value)||0,link=document.querySelector('[data-section=notificaciones]');if(link)link.textContent=`Notificaciones (${n})`;
-    const bell=$('adminNotificationBell'),count=$('adminNotificationCount');if(!bell||!count)return;
-    const previous=Number(count.textContent)||0;count.textContent=String(n);count.hidden=n===0;bell.classList.toggle('has-unread',n>0);bell.setAttribute('aria-label',`Notificaciones: ${n} sin leer`);
+    const n=Number(value)||0,link=document.querySelector('[data-section=notificaciones]');
+    const bell=$('adminNotificationBell'),count=$('adminNotificationCount');
+    if(!bell||!count){if(link)link.textContent=`Notificaciones (${n})`;return;}
+    const previous=Number(count.textContent)||0;count.textContent=String(n);count.hidden=n===0;bell.hidden=n===0;bell.classList.toggle('has-unread',n>0);link?.setAttribute('aria-label',`Notificaciones: ${n} sin leer`);
     if(n>previous){bell.classList.remove('is-new');requestAnimationFrame(()=>bell.classList.add('is-new'));}
 }
 async function refreshNotificationCount(){if(!document.hidden){try{updateNotificationCount((await api('/notificaciones?limit=1')).sinLeer);}catch{}}}
@@ -133,7 +134,10 @@ async function start(){
     if(!checkAuthGuard())return;const user=getCurrentUser();const expected=client?2:1;
     const actual=Number(user?.rol_id??user?.rol);
     if(actual!==expected){location.replace({1:'/pages/admin.html',2:'/pages/dashboard.html',3:'/pages/farmacia.html',4:'/pages/eps.html'}[actual]||'/login.html');return;}
-    $('adminIdentity').textContent=user.nombre||role(expected);$('adminLogout').addEventListener('click',logout);
+    if (!client) {
+        $('adminIdentity').textContent = user.nombre || role(expected);
+        $('adminLogout').addEventListener('click', logout);
+    }
     $('adminRefresh').addEventListener('click',()=>run(async()=>{notice();if(section==='solicitudes')await chat.refresh();else await load();}));
     if (client) $('adminMenu').addEventListener('click',()=>{const open=$('adminSidebar').classList.toggle('open');$('adminMenu').setAttribute('aria-expanded',String(open));});
     $('cancelUser')?.addEventListener('click',()=>$('userDialog').close());

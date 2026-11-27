@@ -1,0 +1,131 @@
+body:not(:has([data-user-header-fallback])) > [data-user-header] {
+    min-block-size: 64px;
+}
+
+.user-panel-header {
+    font: 600 14px/1.4 Inter, "Segoe UI", Arial, sans-serif;
+}
+
+.user-panel-header.panel-topbar .nav-container {
+    display: flex;
+    width: min(1500px, calc(100% - clamp(24px, 5vw, 64px)));
+    max-width: none;
+    margin: 0 auto;
+    padding: 0;
+}
+
+.user-panel-header.panel-topbar .logo {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: clamp(6px, 1vw, 11px);
+    font-size: clamp(18px, 2.2vw, 25px);
+    font-weight: 800;
+    letter-spacing: -.04em;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.user-panel-header svg,
+.user-document-icon {
+    display: block;
+    flex: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.user-panel-header.panel-topbar .logo svg {
+    width: clamp(16px, 2.2vw, 27px);
+    height: auto;
+    aspect-ratio: 1;
+}
+
+.user-panel-header .logo:hover {
+    opacity: .82;
+}
+
+.user-panel-header .dashboard-top-identity {
+    overflow: hidden;
+}
+
+.user-panel-header .dashboard-top-identity #nombreUsuarioTop {
+    font-size: clamp(.75rem, 2vw, .875rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-panel-menu-anchor {
+    position: relative;
+    flex: none;
+}
+
+.user-panel-header.panel-topbar nav#menu {
+    inset: calc(100% + 12px) 0 auto auto;
+    box-sizing: border-box;
+    width: min(360px, calc(100vw - 88px));
+}
+
+.user-panel-header nav#menu .nav-link {
+    flex: 0 0 auto;
+}
+
+.user-panel-header nav#menu .nav-link[aria-current="page"] {
+    background: var(--sc-green-soft, #edf8f1);
+    color: var(--sc-green, #08795f);
+}
+
+.user-panel-header :is(.logo, button, .nav-link):focus-visible {
+    outline: 2px solid var(--sc-green, #08795f);
+    outline-offset: 2px;
+}
+
+html[data-theme="dark"] .user-panel-header nav#menu .nav-link[aria-current="page"] {
+    color: #a0e4bf;
+    background: #203c31;
+}
+
+html[data-theme="dark"] .user-panel-header .dashboard-top-identity {
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] .user-panel-header .dashboard-account-icon {
+    color: var(--theme-link);
+}
+
+html[data-theme="dark"] .user-panel-header #logout,
+html[data-theme="dark"] .user-panel-header #logout svg {
+    color: #ff9ca8 !important;
+}
+
+body[data-client="true"]:has(> .user-panel-header) .ad-shell {
+    min-height: calc(100dvh - 64px);
+}
+
+@media (min-width: 721px) {
+    body[data-client="true"] .ad-sidebar {
+        height: calc(100dvh - 64px);
+    }
+}
+
+body[data-client="true"] .ad-sidebar .ad-client-navigation-title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+@media (max-width: 720px) {
+    body[data-client="true"] .ad-sidebar {
+        gap: .625rem;
+        padding-block: .75rem;
+    }
+
+    body[data-client="true"] .ad-heading {
+        margin-top: 1rem;
+    }
+}

@@ -302,7 +302,8 @@ export function mountIntegration(root) {
     const link = node('a', 'Crear solicitud con el proceso existente', 'btn-outline');
     link.href = '/pages/medicamentos.html';
     g.append(link);
-    const auth = group('Mis autorizaciones');
+    const auth = node('div');
+    group('Mis autorizaciones').append(auth);
     await rows(
       auth,
       '/paciente/autorizaciones',
@@ -314,7 +315,8 @@ export function mountIntegration(root) {
         r.farmacia_vinculo?.farmacia.nombre || 'Sin asignar',
       ],
     );
-    const orders = group('Mis solicitudes y resultados');
+    const orders = node('div');
+    group('Mis solicitudes y resultados').append(orders);
     await rows(orders, '/paciente/solicitudes', ['Solicitud', 'Estado', 'Autorizaciones'], (r) => [
       '#' + r.id,
       r.estado,

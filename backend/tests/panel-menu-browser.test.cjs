@@ -156,7 +156,7 @@ test('Edge: menus by role, viewport, keyboard, navigation and persistence', { ti
                         await key('Tab', 9, 8);
                         assert.equal(await evaluate('document.activeElement.closest("aside") !== null'), true);
                         await key('Tab', 9);
-                        assert.equal((await state()).closeFocus, true);
+                        await until(async () => (await state()).closeFocus);
                         await send('Input.dispatchMouseEvent', { x: width - 10, y: 200, type: 'mousePressed', button: 'left', clickCount: 1 });
                         await send('Input.dispatchMouseEvent', { x: width - 10, y: 200, type: 'mouseReleased', button: 'left', clickCount: 1 });
                         assert.equal((await state()).open, false);

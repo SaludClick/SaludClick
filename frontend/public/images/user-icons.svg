@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="heart-pulse" viewBox="0 0 24 24">
+    <path d="M3 12C-1 4 8 1 12 7c4-6 13-3 9 5M4 15c2 3 5 5 8 7 3-2 6-4 8-7M2 12h5l2-4 3 8 2-4h8"/>
+  </symbol>
+  <symbol id="house" viewBox="0 0 24 24">
+    <path d="m3 10 9-7 9 7v10h-6v-6H9v6H3z"/>
+  </symbol>
+  <symbol id="pills" viewBox="0 0 24 24">
+    <path d="M3 7a4 4 0 0 1 8 0v8a4 4 0 0 1-8 0zm0 4h8m8 1a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm-3 7 6-6"/>
+  </symbol>
+  <symbol id="cart-shopping" viewBox="0 0 24 24">
+    <path d="M2 3h3l3 12h11l3-9H6"/>
+    <circle cx="9" cy="20" r="1"/>
+    <circle cx="18" cy="20" r="1"/>
+  </symbol>
+  <symbol id="file-medical" viewBox="0 0 24 24">
+    <path d="M5 3h9l5 5v13H5zm9 0v5h5m-10 7h6m-3-3v6"/>
+  </symbol>
+  <symbol id="clock-rotate-left" viewBox="0 0 24 24">
+    <path d="M3 12a9 9 0 1 1 2 6m-2-6V6m0 6h6m3-5v5l3 2"/>
+  </symbol>
+  <symbol id="user" viewBox="0 0 24 24">
+    <circle cx="12" cy="7" r="4"/>
+    <path d="M4 21v-1a8 8 0 0 1 16 0v1z"/>
+  </symbol>
+  <symbol id="comments" viewBox="0 0 24 24">
+    <path d="M4 4h16v12h-9l-5 4v-4H4zm4 5h8m-8 3h5"/>
+  </symbol>
+  <symbol id="headset" viewBox="0 0 24 24">
+    <path d="M3 13v-1a9 9 0 0 1 18 0v5a4 4 0 0 1-4 4h-5M3 12h4v6H5a2 2 0 0 1-2-2zm18 0h-4v6h2a2 2 0 0 0 2-2z"/>
+  </symbol>
+  <symbol id="circle-question" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="9"/>
+    <path d="M9 9a3 3 0 1 1 4 3c-1 .5-1 1-1 2m0 3h.01"/>
+  </symbol>
+  <symbol id="right-from-bracket" viewBox="0 0 24 24">
+    <path d="M11 3H4v18h7m0-9h10m-4-4 4 4-4 4"/>
+  </symbol>
+  <symbol id="file-arrow-up" viewBox="0 0 24 24">
+    <path d="M5 3h9l5 5v13H5zm9 0v5h5m-7 10v-6m-3 3 3-3 3 3"/>
+  </symbol>
+</svg>

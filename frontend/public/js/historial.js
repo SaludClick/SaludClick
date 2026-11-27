@@ -6,6 +6,14 @@ if (checkAuthGuard()) {
     initAuth();
 
     const tabla = document.getElementById("tablaHistorial");
+    const search = document.getElementById("buscarHistorial");
+    const filter = document.getElementById("estadoHistorial");
+    const refresh = document.getElementById("recargarHistorial");
+    let orders = [];
+    let loading = false;
+    let detailVersion = 0;
+    let detailTrigger;
+
 
     if (!tabla) {
       return;
@@ -19,7 +27,8 @@ if (checkAuthGuard()) {
       return new Intl.NumberFormat("es-CO", {
         style: "currency",
         currency: "COP",
-        maximumFractionDigits: 0,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
       }).format(Number(valor) || 0);
     }
 
@@ -109,6 +118,9 @@ if (checkAuthGuard()) {
 
       modal.id = "modalDetallePedido";
       modal.className = "modal-pedido";
+      modal.setAttribute("role", "dialog");
+      modal.setAttribute("aria-modal", "true");
+      modal.setAttribute("aria-labelledby", "modalPedidoTitulo");
 
       modal.innerHTML = `
         <div class="modal-pedido-contenido">
@@ -157,7 +169,9 @@ if (checkAuthGuard()) {
       const modal = document.getElementById("modalDetallePedido");
 
       if (modal) {
+        detailTrigger = document.activeElement;
         modal.classList.add("activo");
+        document.getElementById("cerrarModalPedido").focus();
         document.body.classList.add("modal-abierto");
       }
     }
@@ -166,7 +180,10 @@ if (checkAuthGuard()) {
       const modal = document.getElementById("modalDetallePedido");
 
       if (modal) {
+        if (!modal.classList.contains("activo")) return;
+        detailVersion++;
         modal.classList.remove("activo");
+        detailTrigger?.focus();
         document.body.classList.remove("modal-abierto");
       }
     }
@@ -193,9 +210,11 @@ if (checkAuthGuard()) {
       `;
 
       abrirModal();
+      const version = ++detailVersion;
 
       try {
         const respuesta = await apiFetch(`/api/pedidos/${pedido.id}`);
+        if (version !== detailVersion) return;
 
         const detalle = Array.isArray(respuesta.pedido)
           ? respuesta.pedido
@@ -263,6 +282,10 @@ if (checkAuthGuard()) {
 
           </div>
 
+          <p>
+            Pago: ${escapeHTML(textoEstado(detalle[0].pago_estado))}
+            ${detalle[0].referencia ? ' · Referencia: ' + escapeHTML(detalle[0].referencia) : ''}
+          </p>
           <h3 class="detalle-titulo">
             Medicamentos
           </h3>
@@ -276,11 +299,8 @@ if (checkAuthGuard()) {
             <strong>${formatoDinero(pedido.total ?? total)}</strong>
           </div>
         `;
-      } catch (error) {
-        console.error(
-          `Error al consultar el pedido #${pedido.id}:`,
-          error
-        );
+      } catch {
+        if (version !== detailVersion) return;
 
         contenido.innerHTML = `
           <div class="detalle-error">
@@ -341,71 +361,26 @@ if (checkAuthGuard()) {
     // CARGAR MEDICAMENTOS RESUMIDOS
     // =================================================
 
-    async function cargarMedicamentosPedido(pedidoId, celda) {
-      try {
-        const respuesta = await apiFetch(`/api/pedidos/${pedidoId}`);
-
-        const detalle = Array.isArray(respuesta.pedido)
-          ? respuesta.pedido
-          : [];
-
-        if (!detalle.length) {
-          celda.textContent = `Pedido #${pedidoId}`;
-          return;
-        }
-
-        const medicamentos = detalle.map((item) => {
-          return `${item.nombre || "Medicamento"} x${item.cantidad || 0}`;
-        });
-
-        celda.textContent = medicamentos.join(", ");
-      } catch (error) {
-        console.error(
-          `No se pudo consultar el detalle del pedido #${pedidoId}:`,
-          error
-        );
-
-        celda.textContent = `Pedido #${pedidoId}`;
-      }
+    function showMessage(text, className) {
+      tabla.replaceChildren();
+      const cell = tabla.insertRow().insertCell();
+      cell.colSpan = 5;
+      cell.className = className;
+      cell.textContent = text;
     }
 
-    // =================================================
-    // CARGAR HISTORIAL
-    // =================================================
-
-    async function cargarHistorial() {
+    function renderOrders() {
+      if (loading) return;
       tabla.replaceChildren();
-
-      try {
-        const respuesta = await apiFetch("/api/pedidos");
-
-        const pedidos = Array.isArray(respuesta.pedidos)
-          ? respuesta.pedidos
-          : [];
-
-        // =========================================
-        // SIN PEDIDOS
-        // =========================================
-
-        if (!pedidos.length) {
-          const fila = tabla.insertRow();
-          const celda = fila.insertCell();
-
-          celda.colSpan = 5;
-          celda.className = "historial-vacio";
-
-          celda.innerHTML = `
-            <i class="fa-solid fa-receipt"></i>
-            <span>No tienes pedidos registrados todavía.</span>
-          `;
-
-          return;
-        }
-
-        // =========================================
-        // MOSTRAR PEDIDOS
-        // =========================================
-
+      const query = search.value.trim().toLocaleLowerCase("es");
+      const pedidos = orders.filter(pedido =>
+        (!filter.value || pedido.estado === filter.value) &&
+        (!query || `#${pedido.id} ${pedido.medicamentos_resumen || ""}`.toLocaleLowerCase("es").includes(query))
+      );
+      if (!pedidos.length) {
+        showMessage(orders.length ? "No hay pedidos que coincidan con los filtros." : "No tienes pedidos registrados todavía.", "historial-vacio");
+        return;
+      }
         pedidos.forEach((pedido) => {
           const fila = tabla.insertRow();
 
@@ -415,12 +390,7 @@ if (checkAuthGuard()) {
 
           // MEDICAMENTOS
           const medicamento = fila.insertCell();
-          medicamento.textContent = "Cargando...";
-
-          cargarMedicamentosPedido(
-            pedido.id,
-            medicamento
-          );
+          medicamento.textContent = pedido.medicamentos_resumen || "Ver detalles";
 
           // FECHA
           const fecha = fila.insertCell();
@@ -483,27 +453,38 @@ if (checkAuthGuard()) {
             () => eliminarPedido(pedido)
           );
         });
+    }
+
+    async function cargarHistorial() {
+      if (loading) return;
+      loading = refresh.disabled = true;
+      tabla.setAttribute("aria-busy", "true");
+      search.disabled = filter.disabled = true;
+      showMessage("Cargando historial…", "historial-vacio");
+      try {
+        const { pedidos } = await apiFetch("/api/pedidos");
+        if (!Array.isArray(pedidos)) throw new Error("El servidor no devolvió un historial válido.");
+        orders = pedidos;
+        const selected = filter.value;
+        filter.replaceChildren(new Option("Todos", ""));
+        for (const estado of new Set(orders.map(pedido => pedido.estado).filter(Boolean))) {
+          filter.add(new Option(textoEstado(estado), estado));
+        }
+        filter.value = [...filter.options].some(option => option.value === selected) ? selected : "";
+        loading = false;
+        search.disabled = filter.disabled = false;
+        renderOrders();
       } catch (error) {
-        console.error(
-          "Error al cargar historial:",
-          error
-        );
-
-        const fila = tabla.insertRow();
-        const celda = fila.insertCell();
-
-        celda.colSpan = 5;
-        celda.className = "historial-error";
-
-        celda.textContent =
-          `No se pudo consultar el historial: ${error.message}`;
+        showMessage(error.message, "historial-error");
+      } finally {
+        loading = refresh.disabled = false;
+        tabla.setAttribute("aria-busy", "false");
       }
     }
 
-    // =================================================
-    // INICIAR
-    // =================================================
-
+    search.addEventListener("input", renderOrders);
+    filter.addEventListener("change", renderOrders);
+    refresh.addEventListener("click", cargarHistorial);
     crearModal();
 
     await cargarHistorial();
@@ -512,12 +493,16 @@ if (checkAuthGuard()) {
     // ACTUALIZAR AL VOLVER A LA PÁGINA
     // =================================================
 
-    window.addEventListener("pageshow", async () => {
-      await cargarHistorial();
+    window.addEventListener("pageshow", async event => {
+      if (event.persisted) await cargarHistorial();
     });
 
     // ESC PARA CERRAR MODAL
     document.addEventListener("keydown", (event) => {
+      if (event.key === "Tab" && document.querySelector("#modalDetallePedido.activo")) {
+        event.preventDefault();
+        document.getElementById("cerrarModalPedido").focus();
+      }
       if (event.key === "Escape") {
         cerrarModal();
       }

@@ -5,16 +5,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Atención administrativa · SaludClick</title>
+<link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/administrative.css">
 <link rel="stylesheet" href="/css/administrative-chat.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="/css/panel-menu.css">
+    <link rel="stylesheet" href="/css/user-header.css">
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body class="ad-workspace" data-client="true">
+<div data-user-header></div>
 <div class="ad-shell">
 <aside class="ad-sidebar" id="adminSidebar">
-<a class="ad-brand" href="/">SaludClick<small>ATENCIÓN AL CLIENTE</small>
-</a>
-<button type="button" class="ad-mobile" id="adminMenu" aria-expanded="false" aria-controls="adminNavigation">Abrir menú</button>
+<p class="ad-client-navigation-title">Atención al cliente</p>
+<button type="button" class="ad-mobile" id="adminMenu" aria-expanded="false" aria-controls="adminNavigation">Secciones de atención</button>
 <nav id="adminNavigation" aria-label="Atención administrativa">
 <a id="solicitudes" href="#solicitudes" data-section="solicitudes">Solicitudes</a>
 <a id="notificaciones" href="#notificaciones" data-section="notificaciones">Notificaciones</a>
@@ -23,14 +27,7 @@
 </nav>
 </aside>
 <main class="ad-main">
-<header class="ad-topbar">
-<span>Soporte administrativo</span>
-<div class="ad-actions">
-<span id="adminIdentity">
-</span>
-<button type="button" id="adminLogout">Cerrar sesión</button>
-</div>
-</header>
+
 <div class="ad-heading">
 <div>
 <span class="ad-eyebrow">CUENTAS Y ACCESO</span>
@@ -51,5 +48,6 @@
 </script>
 <script type="module" src="/js/administrative.js">
 </script>
+<script type="module" src="/js/user-header.js"></script>
 </body>
 </html>

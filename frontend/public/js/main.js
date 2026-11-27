@@ -12,11 +12,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const userDropdown = document.getElementById("userDropdown");
 
     // Botones de cerrar sesión
-    const logoutBtn = document.getElementById("logout");
+    const logoutBtn = document.querySelector("#logout:not(.user-panel-logout)");
     const logoutSidebar = document.getElementById("logoutSidebar");
     const logoutDropdown = document.getElementById("logoutDropdown");
 
-    const nombreUsuarioTop = document.getElementById("nombreUsuarioTop");
+    const nombreUsuarioTop = document.querySelector("header:not(.user-panel-header) #nombreUsuarioTop");
     const dropdownNombre = document.getElementById("dropdownNombre");
     const nombreUsuario = document.getElementById("nombreUsuario");
     const bienvenida = document.getElementById("bienvenida");
@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
         overlay?.classList.remove("active");
     }
 
-    menuToggle?.addEventListener("click", abrirSidebar);
+    if (sidebar) menuToggle?.addEventListener("click", abrirSidebar);
     closeSidebar?.addEventListener("click", cerrarSidebar);
     overlay?.addEventListener("click", cerrarSidebar);
 

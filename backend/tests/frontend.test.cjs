@@ -88,9 +88,11 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
     const paymentChecks = [];
     let medicationFixture = null;
     let dashboardFixture = null;
+    let formulaFixture = null;
     let profileEnabled = false;
     let profileUpdate;
     const demoProfile = { id: 30, nombre: 'Farmacia', apellido: 'Prueba', correo: 'farmacia@example.test', numeroDocumento: 'DOC-123', rol_id: 3 };
+    const patientProfile = { id: 71, nombre: 'Ana', apellido: 'Prueba', correo: 'patient@example.test', numeroDocumento: 'DOC-71', telefono: '3005550182', rol_id: 2 };
     const adminAccounts = [];
     const administrativeFixture=require('./support/administrative-browser.cjs').createFixture();
     const orderIdempotencyKeys = [];
@@ -115,6 +117,23 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
         if(await administrativeFixture.handle(req,res))return;
         if(req.url==='/socket.io/socket.io.js'){res.writeHead(200,{'Content-Type':'text/javascript'});res.end('/* realtime unavailable in isolated fixture */');return;}
         const pathname = new URL(req.url, 'http://localhost').pathname;
+        if (formulaFixture && pathname === '/api/formulas') {
+            res.setHeader('Content-Type', 'application/json');
+            if (req.method === 'POST') {
+                let body = '';
+                for await (const chunk of req) body += chunk;
+                formulaFixture.requests.push(JSON.parse(body));
+                res.statusCode = 201;
+                res.end(JSON.stringify({ ok: true, mensaje: 'Fórmula cargada correctamente.' }));
+                return;
+            }
+            const formulas = formulaFixture.requests.map((item, index) => ({
+                id: index + 1, nombre: item.nombre, descripcion: item.descripcion, estado: formulaFixture.estado,
+                tipo_mime: 'application/pdf', tamano: 12, created_at: '2026-11-27T12:00:00Z'
+            }));
+            res.end(JSON.stringify({ ok: true, formulas, adjuntarASolicitud: false }));
+            return;
+        }
         if (dashboardFixture && ['/api/auth/profile', '/api/dashboard/me'].includes(pathname)) {
             const config = { ...dashboardFixture };
             const second = req.headers.authorization === 'Bearer patient-b';
@@ -145,16 +164,17 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
         }
         if (pathname.startsWith('/api/chat/')) vitalixApiRequests += 1;
         if (pathname === '/api/auth/profile' && profileEnabled) {
+            const profile = req.headers.authorization === 'Bearer patient-profile-test' ? patientProfile : demoProfile;
             res.setHeader('Content-Type', 'application/json');
             if (req.method === 'PUT') {
                 let raw = '';
                 req.on('data', chunk => { raw += chunk; });
                 req.on('end', () => {
                     profileUpdate = JSON.parse(raw);
-                    Object.assign(demoProfile, profileUpdate);
-                    res.end(JSON.stringify({ ok: true, mensaje: 'Perfil actualizado correctamente.', usuario: demoProfile }));
+                    Object.assign(profile, profileUpdate);
+                    res.end(JSON.stringify({ ok: true, mensaje: 'Perfil actualizado correctamente.', usuario: profile }));
                 });
-            } else res.end(JSON.stringify({ ok: true, usuario: demoProfile }));
+            } else res.end(JSON.stringify({ ok: true, usuario: profile }));
             return;
         }
         if (pathname.startsWith('/api/chat/') || pathname.startsWith('/socket.io/')) chatRequests++;
@@ -696,14 +716,15 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
         await until(() => Promise.resolve(orderRequests === before + 2));
         assert.equal(orderIdempotencyKeys.at(-1), orderIdempotencyKeys.at(-2));
     });
-    await t.test('perfil: validaciÃ³n, guardar sin falso Ã©xito y cancelar', async () => {
+    await t.test('perfil conserva la sesión y bloquea la edición si falla la carga', async () => {
         await evaluate(`sessionStorage.removeItem('saludclick_user')`);
         await evaluate(`localStorage.setItem('saludclick_user',JSON.stringify({nombre:'Prueba',correo:'prueba@example.com',rol:2}))`);
-        await go('/pages/perfil.html'); await until(() => evaluate('document.querySelector("#email").value === "prueba@example.com"')); assert.equal(await evaluate('document.querySelector("#email").value'),'prueba@example.com');
-        await value('#nombre','Editado'); await click('#guardarPerfil');
-        assert.match(await evaluate('document.querySelector("#mensajePerfil").textContent'),/Servicio de datos no disponible/);
-        assert.equal(await evaluate('JSON.parse(localStorage.getItem("saludclick_user")).nombre'),'Prueba');
-        await click('#cancelarPerfil'); await until(() => evaluate('document.querySelector("#nombre").value === "Prueba"')); assert.equal(await evaluate('document.querySelector("#nombre").value'),'Prueba');
+        await go('/pages/perfil.html');
+        await until(() => evaluate('!document.querySelector("#reintentarPerfil").hidden'));
+        assert.match(await evaluate('document.querySelector("#mensajePerfil").textContent'), /Servicio de datos no disponible/);
+        assert.equal(await evaluate('document.querySelector("#email").value'), '');
+        assert.equal(await evaluate('document.querySelector("#guardarPerfil").disabled'), true);
+        assert.equal(await evaluate('JSON.parse(localStorage.getItem("saludclick_user")).nombre'), 'Prueba');
     });
     await t.test('menÃºs mÃ³viles, navegaciÃ³n local y dashboard sin listeners duplicados', async () => {
         await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
@@ -1407,11 +1428,13 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
             const before=orderRequests;
             await click('[data-medicamento-id="1"]');await click('[data-medicamento-id="1"]');
             assert.equal((await state()).borrador[0].cantidad,2);
+            assert.equal(await evaluate(`document.querySelector('[data-catalog-id="1"] .mc-selection-availability').textContent`), '0 restantes · 2 en tu selección');
             assert.equal(await evaluate(`document.querySelector('[data-medicamento-id="1"]').disabled`),true);
             await setCartQuantity('Acetaminofén',3);
             assert.equal((await state()).borrador[0].cantidad,2);
             assert.equal(orderRequests,before);
             await click('#vaciarPedido');
+            assert.equal(await evaluate(`document.querySelector('[data-catalog-id="1"] .mc-selection-availability').hidden`), true);
             assert.equal(await evaluate(`document.querySelector('[data-medicamento-id="1"]').disabled`),false);
             assert.equal(await evaluate(`document.querySelector('#catalogoMedicamentos table')===null&&document.querySelector('#detallePedido table')===null`),true);
             assert.equal(await evaluate(`document.querySelector('#tituloPedido').textContent.includes('Mi pedido temporal')`),false);
@@ -1455,11 +1478,11 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
             assert.equal(await dashboardState('loading'), true);
             assert.equal(await evaluate(`document.querySelector('.dashboard-stats').getAttribute('aria-busy')`), 'true');
             assert.deepEqual(await evaluate(`['totalPedidos','totalFormulas','pedidosActivos','totalGastado'].map(id=>document.getElementById(id).textContent)`), ['—','—','—','—']);
-            assert.equal(await evaluate(`document.querySelector('#nombreUsuarioPanel').textContent.trim()`), 'Usuario');
+            assert.equal(await evaluate(`document.querySelector('#nombreUsuario').textContent.trim()`), 'Usuario');
             await until(() => dashboardState('loaded'));
             assert.deepEqual(await evaluate(`['totalPedidos','totalFormulas','pedidosActivos'].map(id=>document.getElementById(id).textContent)`), ['5','3','2']);
             assert.equal(await evaluate(`document.querySelector('#totalGastado').textContent === new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(12500)`), true);
-            assert.deepEqual(await evaluate(`['nombreUsuarioTop','nombreUsuario','nombreUsuarioPanel'].map(id=>document.getElementById(id).textContent)`), ['Ana','Ana','Ana']);
+            assert.deepEqual(await evaluate(`['nombreUsuarioTop','nombreUsuario'].map(id=>document.getElementById(id).textContent)`), ['Ana','Ana']);
             assert.equal(await evaluate(`JSON.parse(sessionStorage.getItem('saludclick_user')).nombre`), 'Ana');
             assert.equal(await evaluate(`localStorage.getItem('saludclick_token')`), null);
             for (const width of [1440,768,390,320]) {
@@ -1498,13 +1521,13 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
                 await patientDashboard({ identity });
                 await until(() => dashboardState('error'));
                 assert.equal(await evaluate(`document.querySelector('#totalPedidos').textContent`), '—');
-                assert.equal(await evaluate(`document.querySelector('#nombreUsuarioPanel').textContent`), 'Usuario');
+                assert.equal(await evaluate(`document.querySelector('#nombreUsuario').textContent`), 'Usuario');
             }
         });
         await t.test('dashboard paciente: fallo de perfil no usa el nombre local como identidad verificada', async () => {
             await patientDashboard({profileStatus:503});
             await until(() => dashboardState('error'));
-            assert.equal(await evaluate(`document.querySelector('#nombreUsuarioPanel').textContent`), 'Usuario');
+            assert.equal(await evaluate(`document.querySelector('#nombreUsuario').textContent`), 'Usuario');
             assert.equal(await evaluate(`document.querySelector('#totalPedidos').textContent`), '5');
         });
         await t.test('dashboard paciente: descarta respuestas pendientes al cambiar de paciente', async () => {
@@ -1514,7 +1537,7 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
             await until(() => dashboardState('loaded'));
             await delay(900);
             assert.equal(await evaluate(`document.querySelector('#totalPedidos').textContent`), '8');
-            assert.equal(await evaluate(`document.querySelector('#nombreUsuarioPanel').textContent`), 'Beatriz');
+            assert.equal(await evaluate(`document.querySelector('#nombreUsuario').textContent`), 'Beatriz');
         });
         await t.test('dashboard paciente: sesion expirada borra datos y vuelve al login', async () => {
             await patientDashboard({statsStatus:401,delay:100});
@@ -1523,6 +1546,139 @@ test('controles del frontend en Edge headless', { timeout: 300000 }, async t => 
         });
     } finally { dashboardFixture = null; }
 
+    await t.test('Mi perfil de Usuario valida, cancela y conserva cambios después de recargar', async () => {
+        profileEnabled = true;
+        try {
+            await go('/login.html');
+            await evaluate(`sessionStorage.setItem('saludclick_token','patient-profile-test');
+                sessionStorage.setItem('saludclick_user',JSON.stringify({id:71,nombre:'Ana',rol:2}));`);
+            await go('/pages/perfil.html');
+            await until(() => evaluate('!document.querySelector("#guardarPerfil").disabled'));
+            assert.equal(await evaluate('document.querySelector("#nombrePerfil").textContent'), 'Ana Prueba');
+            assert.equal(await evaluate('document.querySelector("#email").readOnly'), true);
+            const previous = profileUpdate;
+            await value('#telefono', 'inválido');
+            await click('#guardarPerfil');
+            assert.equal(await evaluate('document.querySelector("#mensajePerfil").dataset.state'), 'error');
+            assert.equal(profileUpdate, previous);
+            await click('#cancelarPerfil');
+            assert.equal(await evaluate('document.querySelector("#telefono").value'), '3005550182');
+            await value('#nombre', 'Ana María');
+            await click('#guardarPerfil');
+            await until(() => evaluate('document.querySelector("#mensajePerfil").dataset.state === "success"'));
+            assert.equal(await evaluate('document.querySelector("#nombreUsuarioTop").textContent'), 'Ana María');
+            assert.equal(profileUpdate.correo, undefined);
+            assert.equal(profileUpdate.rol_id, undefined);
+            await send('Page.reload');
+            await until(() => evaluate('document.readyState === "complete" && !document.querySelector("#guardarPerfil").disabled'));
+            assert.equal(await evaluate('document.querySelector("#nombre").value'), 'Ana María');
+        } finally {
+            profileEnabled = false;
+        }
+    });
+    await t.test('fórmulas: arrastrar, validar, retirar y cargar una sola vez', async () => {
+        formulaFixture = { requests: [], estado: 'PENDIENTE' };
+        try {
+            await go('/login.html');
+            await evaluate(`sessionStorage.setItem('saludclick_token','patient-a');
+                sessionStorage.setItem('saludclick_user',JSON.stringify({id:71,nombre:'Ana',rol:2}));`);
+            await go('/pages/formulas.html');
+            await until(() => evaluate('!!document.querySelector(".empty-state")'));
+            const drop = (content, type) => evaluate(`(() => {
+                const transfer = new DataTransfer();
+                transfer.items.add(new File([${content}], 'prueba.pdf', {type:${JSON.stringify(type)}}));
+                document.getElementById('formulaZona').dispatchEvent(new DragEvent('drop', {bubbles:true, dataTransfer:transfer}));
+            })()`);
+            for (const [contents, type] of [["'texto'", 'text/plain'], ['new Uint8Array(5 * 1024 * 1024 + 1)', 'application/pdf']]) {
+                await drop(contents, type);
+                assert.equal(await evaluate('document.querySelector("#formulaMensaje").dataset.state'), 'error');
+                assert.equal(await evaluate('document.querySelector("#formulaArchivo").files.length'), 0);
+            }
+            await drop("'%PDF-prueba'", 'application/pdf');
+            assert.match(await evaluate('document.querySelector("#formulaDatosArchivo").textContent'), /prueba\.pdf/);
+            await click('#formulaRetirar');
+            assert.equal(await evaluate('document.querySelector("#formulaSeleccion").hidden'), true);
+            await drop("'%PDF-prueba'", 'application/pdf');
+            await value('#formulaNombre', 'Fórmula de prueba');
+            await value('#formulaDescripcion', 'Documento sintético');
+            await evaluate('document.querySelector("#formulaForm").requestSubmit(); document.querySelector("#formulaForm").requestSubmit()');
+            await until(() => evaluate('!!document.querySelector(".formula-card .status-badge[data-state=PENDIENTE]")'));
+            assert.equal(formulaFixture.requests.length, 1);
+            assert.equal(formulaFixture.requests[0].nombre, 'Fórmula de prueba');
+            assert.match(formulaFixture.requests[0].archivo, /^data:application\/pdf;base64,/);
+            formulaFixture.estado = 'VALIDADA';
+            await click('#recargarFormulas');
+            await until(() => evaluate('!!document.querySelector(".formula-card .status-badge[data-state=VALIDADA]")'));
+        } finally {
+            formulaFixture = null;
+        }
+    });
+    await t.test('panel de Usuario comparte encabezado, navegación y tema en diez rutas', async t => {
+        const widths = [320, 390, 768, 1024, 1280, 1440, 1920];
+        const routes = ['dashboard', 'medicamentos', 'pedidos', 'formulas', 'historial', 'perfil',
+            'chat-farmacia', 'soporte', 'chat', 'constancia-entrega'];
+        const screenshots = process.env.SALUDCLICK_USER_EVIDENCE_DIR;
+        dashboardFixture = {};
+        formulaFixture = { requests: [{ nombre: 'Fórmula de prueba', descripcion: 'Documento sintético' }], estado: 'PENDIENTE' };
+        await go('/login.html');
+        await evaluate(`sessionStorage.setItem('saludclick_token','patient-a');
+            sessionStorage.setItem('saludclick_user',JSON.stringify({id:71,nombre:'Ana',apellido:'Prueba',rol:2}));`);
+        const cartBefore = await state();
+        try {
+            for (const [index, route] of routes.entries()) {
+                const query = route === 'constancia-entrega' ? '?solicitud=1' : '';
+                await go('/pages/' + route + '.html' + query);
+                await until(() => evaluate(`document.querySelector('.user-panel-header button.saludclick-theme') !== null`));
+                const header = await evaluate(`({
+                    theme: document.querySelectorAll('button.saludclick-theme').length,
+                    logo: document.querySelector('.user-panel-header .logo').pathname,
+                    name: document.querySelector('.user-panel-header #nombreUsuarioTop').textContent,
+                    menu: [...document.querySelectorAll('.user-panel-header nav a')].slice(0, 6)
+                        .map(link => link.pathname)
+                })`);
+                assert.equal(header.theme, 1, route);
+                assert.equal(header.logo, '/pages/dashboard.html', route);
+                assert.equal(header.name, 'Ana', route);
+                assert.deepEqual(header.menu, routes.slice(0, 6).map(page => '/pages/' + page + '.html'));
+                for (const theme of ['light', 'dark']) {
+                    if (await evaluate('document.documentElement.dataset.theme') !== theme) {
+                        await click('.user-panel-header button.saludclick-theme');
+                    }
+                    assert.equal(await evaluate('document.documentElement.dataset.theme'), theme);
+                    for (const width of widths) {
+                        await send('Emulation.setDeviceMetricsOverride', {width, height: 900, deviceScaleFactor: 1, mobile: false});
+                        await click('.user-panel-header #menuToggle');
+                        const layout = await evaluate(`(() => {
+                            const rect = selector => document.querySelector(selector).getBoundingClientRect();
+                            const menu = rect('.user-panel-header #menu');
+                            const toggle = rect('.user-panel-header #menuToggle');
+                            const theme = rect('.user-panel-header button.saludclick-theme');
+                            return { page: document.documentElement.scrollWidth <= innerWidth,
+                                aligned: menu.width > 0 && menu.left >= 0 && menu.top >= toggle.bottom &&
+                                    Math.abs(menu.right - toggle.right) <= 1 && toggle.right <= theme.left && theme.right <= innerWidth,
+                                height: rect('.user-panel-header').height };
+                        })()`);
+                        assert.deepEqual(layout, {page:true, aligned:true, height:64}, `${route} ${theme} ${width}`);
+                        await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
+                        assert.equal(await evaluate('document.activeElement.id'), 'menuToggle');
+                        if (screenshots && [320, 1440].includes(width) && ['medicamentos','perfil','formulas','soporte'].includes(route)) {
+                            const shot = await send('Page.captureScreenshot', {format:'png'});
+                            fs.writeFileSync(path.join(screenshots, `${route}-${width}-${theme}.png`), Buffer.from(shot.data,'base64'));
+                        }
+                    }
+                }
+                await click('.user-panel-header .logo');
+                await until(() => evaluate("location.pathname === '/pages/dashboard.html' && document.readyState === 'complete'"));
+                assert.equal(await evaluate('document.documentElement.dataset.theme'), 'dark');
+                if (index === routes.length - 1) assert.deepEqual(await state(), cartBefore);
+            }
+            t.diagnostic(`${routes.length * widths.length * 2} combinaciones de ruta, ancho y tema`);
+        } finally {
+            dashboardFixture = null;
+            formulaFixture = null;
+            await send('Emulation.clearDeviceMetricsOverride');
+        }
+    });
     await t.test('sin excepciones JavaScript propias', () => assert.deepEqual(errors,[]));
 });
 

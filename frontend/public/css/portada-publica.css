@@ -342,3 +342,9 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
+
+@media (max-width: 360px) {
+    .home-page .home-header-row { gap: .25rem; }
+    .home-page .home-logo i { width: 1.75rem; height: 1.75rem; }
+    .home-page .home-header-row .home-login-link { padding-inline: .375rem; }
+}

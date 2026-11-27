@@ -229,6 +229,9 @@ async function crearPedido(usuarioId, data, idempotencyKey) {
         }
 
         const precio = Number(med.precio);
+        if (!Number.isFinite(precio) || precio <= 0) {
+            throw serviceError(`El precio de ${med.nombre} no está disponible para esta solicitud.`);
+        }
 
         const subtotal = Number(
             (precio * item.cantidad).toFixed(2)

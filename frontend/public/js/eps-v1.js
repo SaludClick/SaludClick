@@ -63,7 +63,6 @@ function init() {
   document.getElementById('epsUserName').textContent = user.nombre || 'EPS';
   document.getElementById('epsCloseDialog').addEventListener('click', () => dialog.close());
   document.getElementById('refreshEps').addEventListener('click', () => load());
-  document.getElementById('epsBell').addEventListener('click', () => navigate('notificaciones'));
   document.getElementById('logout').addEventListener('click', async () => {
     if (closing) return;
     closing = true;

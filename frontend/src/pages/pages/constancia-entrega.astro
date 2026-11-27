@@ -1,10 +1,13 @@
 ---
+import UserHeader from '../../components/UserHeader.astro';
 import Layout from "../../layouts/Layout.astro";
 ---
 <Layout title="Constancia de entrega | SaludClick" bodyClass="ad-workspace">
+  <Fragment slot="head"><link rel="stylesheet" href="/css/panel-menu.css" /><link rel="stylesheet" href="/css/user-header.css" /></Fragment>
+  <UserHeader />
   <link slot="head" rel="stylesheet" href="/css/administrative.css" />
   <main class="ad-main">
-    <p><a href="/pages/pedidos.html">Volver a mis pedidos</a></p>
+    <a class="constancia-volver" href="/pages/pedidos.html">Volver a mis pedidos</a>
     <h1>Constancia de entrega</h1>
     <p id="constanciaEstado" role="status"></p>
     <section class="ad-card" id="adjuntosEntrega" hidden>

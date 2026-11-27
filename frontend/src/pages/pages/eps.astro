@@ -7,7 +7,7 @@ const title = "Dashboard EPS | SaludClick";
 <Layout title={title} bodyClass="admin-console">
   <link slot="head" rel="stylesheet" href="/css/panel-menu.css" />
   <div class="admin-app" data-panel-menu="eps">
-    <aside class="admin-sidebar" id="menu" aria-label="Navegación EPS">
+    <aside class="admin-sidebar panel-sidebar" id="menu" aria-label="Navegación EPS">
       <button class="admin-menu-toggle panel-menu-close" type="button" data-panel-close aria-label="Cerrar men&#250;"><span class="panel-menu-icon" aria-hidden="true"></span></button>
       <a href="#dashboard" class="admin-brand" aria-label="SaludClick, dashboard EPS">
         <span class="admin-brand-mark">
@@ -47,14 +47,11 @@ const title = "Dashboard EPS | SaludClick";
           <i class="fa-solid fa-user" aria-hidden="true"></i>
           <span>Perfil</span>
         </a>
-        <a class="admin-side-link" href="/pages/eps-v1.html"><span>Gestión EPS</span></a>
+        <a class="admin-side-link" href="/pages/eps-v1.html"><i class="fa-solid fa-sliders" aria-hidden="true"></i><span>Gestión EPS</span></a>
       </nav>
 
+      <span id="epsUserName" hidden></span>
       <div class="admin-sidebar-bottom">
-        <div class="admin-sidebar-user">
-          <span class="admin-avatar"><i class="fa-solid fa-hospital" aria-hidden="true"></i></span>
-          <span><strong id="epsUserName">EPS</strong><small>Personal EPS</small></span>
-        </div>
         <button class="admin-logout" id="logout" type="button">
           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
           <span>Cerrar sesión</span>
@@ -64,7 +61,7 @@ const title = "Dashboard EPS | SaludClick";
     <div class="panel-menu-backdrop" data-panel-backdrop aria-hidden="true"></div>
 
     <div class="admin-main">
-      <header class="admin-topbar">
+      <header class="admin-topbar panel-topbar">
         <button
           class="admin-menu-toggle"
           id="menuToggle"
@@ -75,14 +72,7 @@ const title = "Dashboard EPS | SaludClick";
         >
           <span class="panel-menu-icon" aria-hidden="true"></span>
         </button>
-        <div class="admin-topbar-copy">
-          <span>SaludClick</span>
-          <strong>Panel EPS</strong>
-        </div>
-        <div class="admin-topbar-status">
-          <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-          Acceso EPS
-        </div>
+        <saludclick-theme-control></saludclick-theme-control>
       </header>
 
       <main class="admin-content" id="epsMain">

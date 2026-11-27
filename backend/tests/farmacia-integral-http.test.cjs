@@ -46,6 +46,32 @@ async function request(route,{id=3,role=3,method='GET',body,auth,headers={}}={})
     const res=await fetch(origin+'/api'+route,{method,headers:{Authorization:'Bearer '+(auth||token(id,role)),'Content-Type':'application/json',...headers},body:body===undefined?undefined:JSON.stringify(body)});const type=res.headers.get('content-type');return{status:res.status,data:type?.includes('json')?await res.json():Buffer.from(await res.arrayBuffer()),headers:res.headers};
 }
 const med={nombre:'Prueba integral',descripcion:'Medicamento autorizado de prueba',presentacion:'Caja de 10',imagen:'https://images.example.com/prueba.png',categoria_id:1,precio:15,estado:'INACTIVO'};
+test('HTTP con PostgreSQL aislado: el perfil guarda campos propios y respeta datos protegidos', async () => {
+    const patient = { id: 2, role: 2 };
+    const read = await request('/auth/profile', patient);
+    assert.equal(read.status, 200);
+    const original = read.data.usuario;
+    assert.equal(original.id, 2);
+    const changes = {
+        nombre: original.nombre, apellido: original.apellido, tipoDocumento: original.tipo_documento,
+        telefono: '3005550182', ciudad: 'Medellín'
+    };
+    try {
+        assert.equal((await request('/auth/profile', { ...patient, auth: 'invalid' })).status, 401);
+        assert.equal((await request('/auth/profile', { ...patient, method: 'PUT', body: { ...changes, telefono: 'inválido' } })).status, 400);
+        const result = await request('/auth/profile', { ...patient, method: 'PUT', body: {
+            ...changes, correo: 'protegido@example.test', rol_id: 1
+        } });
+        assert.equal(result.status, 200);
+        const loaded = (await request('/auth/profile', patient)).data.usuario;
+        assert.deepEqual([loaded.telefono, loaded.ciudad, loaded.correo, loaded.rol_id],
+            [changes.telefono, changes.ciudad, original.correo, original.rol_id]);
+        assert.deepEqual((await db.query('SELECT telefono, ciudad FROM usuarios WHERE id = $1', [2])).rows,
+            [{ telefono: changes.telefono, ciudad: changes.ciudad }]);
+    } finally {
+        await db.query('UPDATE usuarios SET telefono = $2, ciudad = $3 WHERE id = $1', [2, original.telefono, original.ciudad]);
+    }
+});
 test('HTTP: sin activación, dashboard explica ausencia de cifras y Solicitudes sigue cerrado',async()=>{
     const stats=await request('/farmacia/dashboard/estadisticas');assert.equal(stats.status,200);assert.equal(stats.data.disponible,false);assert.equal(stats.data.indicadores,null);
     assert.equal((await request('/farmacia/pedidos')).status,503);assert.equal((await request('/farmacia/medicamentos',{method:'POST',body:med})).status,503);
@@ -280,7 +306,17 @@ test('Edge: Medicamentos crea, edita, publica y retira en ambos catálogos con o
         await visit('/');
         await until(()=>evaluate(`(()=>{const card=[...document.querySelectorAll('#catalogo-publico-lista article')].find(el=>el.textContent.includes(${JSON.stringify(edited)}));if(!card)return false;card.scrollIntoView();return card.textContent.includes('Stock bajo')&&card.querySelector('img').naturalWidth===14;})()`));
         await visit('/pages/medicamentos.html');
-        await until(()=>evaluate(`[...document.querySelectorAll('#catalogoMedicamentos .mc-card')].some(el=>el.textContent.includes(${JSON.stringify(edited)})&&el.textContent.includes('Stock bajo')&&el.querySelector('img').naturalWidth===14)`));
+        const patientCard = `[...document.querySelectorAll('#catalogoMedicamentos .mc-card')]
+            .find(el => el.textContent.includes(${JSON.stringify(edited)}))`;
+        await until(() => evaluate(`!!(${patientCard})`)).catch(async error => {
+            const status = await evaluate(`({ path: location.pathname, notice: document.querySelector('#catalogoEstado')?.textContent })`);
+            throw new Error(`No se encontró la tarjeta del medicamento: ${JSON.stringify(status)}`, { cause: error });
+        });
+        assert.match(await evaluate(`(${patientCard}).textContent`), /Stock bajo/);
+        assert.match(await evaluate(`(${patientCard}).textContent`), /Precio no disponible/);
+        assert.equal(await evaluate(`(${patientCard}).querySelector('button').disabled`), true);
+        await evaluate(`(${patientCard}).scrollIntoView()`);
+        await until(() => evaluate(`(${patientCard}).querySelector('img').naturalWidth === 14`));
         await visit(farm);
         await until(()=>evaluate(`document.getElementById('farmaciaMedicamentos')?.textContent.includes(${JSON.stringify(edited)})`));
         assert.equal(await evaluate('document.querySelector("#medicamentos [data-existencias-part=form], #medicamentos [data-existencias-part=vista], #medicamentos [data-existencias-count]")===null'),true);
@@ -570,7 +606,7 @@ test('navegador con PostgreSQL: dashboard, solicitudes y editor autorizado funci
         await send('Page.navigate',{url:origin+'/pages/farmacia-solicitudes.html'});
         await until(()=>evaluate('document.querySelector("#farmaciaOrders").getAttribute("aria-busy")==="false" && document.querySelector("[data-detail]")!==null'));
         await evaluate('document.querySelector("#documentoSolicitudFarmacia").value="100";document.querySelector("#filtroPedidos").requestSubmit()');
-        await until(()=>evaluate('document.querySelectorAll(".farmacia-order").length===1'));
+        await until(()=>evaluate('document.querySelector("#farmaciaOrders").getAttribute("aria-busy")==="false" && document.querySelectorAll(".farmacia-order").length===1 && !document.querySelector("[data-detail]").disabled'));
         assert.match(await evaluate('document.querySelector(".farmacia-order").textContent'),/Ana Uno/);
         await evaluate('document.querySelector("[data-detail]").click()');await until(()=>evaluate('document.querySelector("#farmaciaSolicitudDetalleContent").textContent.includes("Historial")'));
         await send('Page.navigate',{url:origin+'/pages/farmacia-medicamentos.html'});
@@ -602,6 +638,7 @@ test('HTTP con PostgreSQL: solicitud nueva se asigna y notifica por política; r
     process.env.FARMACIA_OPERACION_ENABLED='false';
     process.env.FARMACIA_SOLICITUDES_ENABLED='true';
     let uploadedFile;
+    let originalStock;
     try {
         await db.query('DELETE FROM afiliado_cuentas_origen WHERE usuario_id=5');
         const admin={id:1,role:1,method:'PUT'};
@@ -612,20 +649,40 @@ test('HTTP con PostgreSQL: solicitud nueva se asigna y notifica por política; r
         await db.query("SELECT setval('formulas_medicas_id_seq',(SELECT max(id) FROM formulas_medicas))");
         const original=fs.readFileSync(privateTestFile);
         const patient={id:5,role:2,method:'POST'};
+        for (const archivo of ['data:text/plain;base64,dGVzdA==',
+            'data:application/pdf;base64,' + Buffer.alloc(5 * 1024 * 1024 + 1).toString('base64')]) {
+            const invalid = await request('/formulas', { ...patient, body: { nombre: 'Archivo inválido', archivo } });
+            assert.equal(invalid.status, 400);
+        }
         const upload=await request('/formulas',{...patient,body:{nombre:'Formula-paciente-prueba.pdf',archivo:'data:application/pdf;base64,'+original.toString('base64')}});
         assert.equal(upload.status,201);
         const formulaId=upload.data.formula.id;
         const {rows:[file]}=await db.query('SELECT nombre_archivo FROM formulas_medicas WHERE id=$1',[formulaId]);
         uploadedFile=path.join(path.dirname(privateTestFile),file.nombre_archivo);
+        const privateCopy = await request('/formulas/' + formulaId, { id: 5, role: 2 });
+        assert.equal(privateCopy.status, 200);
+        assert.equal(privateCopy.headers.get('cache-control'), 'private, no-store');
+        assert.deepEqual(privateCopy.data, original);
+        assert.equal((await request('/formulas/' + formulaId, { id: 2, role: 2 })).status, 404);
         await db.query("SELECT setval('solicitudes_id_seq',(SELECT max(id) FROM solicitudes))");
-        const before=(await db.query('SELECT stock FROM medicamentos WHERE id=1')).rows[0].stock;
-        const key=require('node:crypto').randomUUID(),body={items:[{id:1,cantidad:1}],tipoEntrega:'RECOGER',formula:{id:formulaId,permiteDescarga:true},pago:{numero:'4242424242424242',vencimiento:'12/30',cvv:'123',titular:'Paciente de prueba',simulacion:false}};
+        const stock = async () => (await db.query('SELECT stock FROM medicamentos WHERE id=1')).rows[0].stock;
+        originalStock = await stock();
+        await db.query('UPDATE medicamentos SET stock=50 WHERE id=1');
+        const key=require('node:crypto').randomUUID(),body={items:[{id:1,cantidad:3}],tipoEntrega:'RECOGER',formula:{id:formulaId,permiteDescarga:true},pago:{numero:'4242424242424242',vencimiento:'12/30',cvv:'123',titular:'Paciente de prueba',simulacion:false}};
+        const rejected = await request('/pedidos', { ...patient, headers: { 'Idempotency-Key': require('node:crypto').randomUUID() },
+            body: { ...body, pago: { ...body.pago, numero: '1111222233334444' } } });
+        assert.equal(rejected.status, 400);
+        assert.match(rejected.data.mensaje, /Pago rechazado/);
+        assert.equal(await stock(), 50);
         const send=()=>request('/pedidos',{...patient,headers:{'Idempotency-Key':key},body});
-        const first=await send();assert.equal(first.status,201);assert.equal(first.data.asignacionPendiente,false);
+        const results = await Promise.all([send(), send()]);
+        const first = results.find(result => result.data.replayed !== true);
+        const second = results.find(result => result.data.replayed === true);
+        assert.equal(first?.status,201);assert.equal(first.data.asignacionPendiente,false);
         assert.equal((await db.query('SELECT simulacion FROM pagos WHERE solicitud_id=$1',[first.data.solicitudId])).rows[0].simulacion,true);
         assert.match(first.data.mensaje,/simulado/);
-        const second=await send();assert.equal(second.status,201);assert.equal(second.data.solicitudId,first.data.solicitudId);assert.equal(second.data.replayed,true);
-        assert.equal((await db.query('SELECT stock FROM medicamentos WHERE id=1')).rows[0].stock,before-1);
+        assert.equal(second?.status,201);assert.equal(second.data.solicitudId,first.data.solicitudId);
+        assert.equal(await stock(),47);
         const event=(await db.query('SELECT destinatario_id FROM notificaciones_farmacia WHERE referencia_evento=$1',[`solicitud:${first.data.solicitudId}:asignada`])).rows;assert.deepEqual(event,[{destinatario_id:4}]);
         const orderPath='/farmacia/pedidos/'+first.data.solicitudId;
         assert.equal((await request(orderPath,{id:3})).status,404);
@@ -636,7 +693,7 @@ test('HTTP con PostgreSQL: solicitud nueva se asigna y notifica por política; r
         assert.equal(assigned.status,200);
         assert.deepEqual(assigned.data.pedido.usuario,{nombre:'Beto',apellido:'Dos',tipo_documento:'CC',cedula:'200'});
         assert.equal(assigned.data.pedido.eps,'EPS B');
-        assert.deepEqual(assigned.data.pedido.detalles.map(d=>[d.medicamento.nombre,d.cantidad]),[['Medicamento A',1]]);
+        assert.deepEqual(assigned.data.pedido.detalles.map(d=>[d.medicamento.nombre,d.cantidad]),[['Medicamento A',3]]);
         assert.ok(assigned.data.pedido.operacion.bloqueos.includes('PAGO_REAL_NO_APROBADO'));
         for(const suffix of ['', '?descarga=1']){
             const pdf=await request(orderPath+'/formulas/'+formulaId+suffix,{id:4});
@@ -649,12 +706,13 @@ test('HTTP con PostgreSQL: solicitud nueva se asigna y notifica por política; r
         assert.equal(changed.status,409);
         const foreign=await request('/pedidos',{id:2,role:2,method:'POST',headers:{'Idempotency-Key':require('node:crypto').randomUUID()},body});
         assert.equal(foreign.status,400);
-        assert.equal((await db.query('SELECT stock FROM medicamentos WHERE id=1')).rows[0].stock,before-1);
+        assert.equal(await stock(),47);
         assert.equal((await request('/pedidos/'+first.data.solicitudId,{id:5,role:2,method:'DELETE'})).status,409);
         assert.equal((await db.query('SELECT count(*)::int AS n FROM solicitudes WHERE id=$1',[first.data.solicitudId])).rows[0].n,1);
         const history=await request('/pedidos',{id:5,role:2});assert.equal(history.status,200);assert.ok(history.data.pedidos.some(p=>p.id===first.data.solicitudId));
     } finally {
         if(uploadedFile)fs.unlinkSync(uploadedFile);
+        if (originalStock !== undefined) await db.query('UPDATE medicamentos SET stock=$1 WHERE id=1', [originalStock]);
         env.forEach((key,index)=>{if(previous[index]===undefined)delete process.env[key];else process.env[key]=previous[index];});
     }
 });

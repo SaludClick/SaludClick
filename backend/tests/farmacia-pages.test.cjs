@@ -90,7 +90,7 @@ test('navegador: siete pantallas independientes, permisos, módulos aislados, ll
             if (module === 'dashboard') await until(() => evaluate('document.querySelector("#farmaciaDashboardOrdersStatus").textContent.includes("actualizados")'));
             if (module === 'solicitudes') await until(() => evaluate('document.querySelector("#farmaciaOrders").getAttribute("aria-busy") === "false"'));
             if (['inventario','medicamentos'].includes(module)) await until(() => evaluate('document.querySelector("tbody").getAttribute("aria-busy") === "false"'));
-            if (module === 'perfil') await until(() => evaluate('document.querySelector("#nombre").value === "Farmacia Prueba"'));
+            if (module === 'perfil') await until(() => evaluate('document.querySelector("#nombre").value === "Farmacia" && document.querySelector("#apellido").value === "Prueba"'));
             if (module === 'notificaciones') await until(() => evaluate('document.querySelector("#farmaciaNotificationsStatus").getAttribute("role") === "alert"'));
             if (module === 'medicamentos') {
                 assert.equal(await evaluate('document.querySelector("#farmaciaLinkedEps").hidden'), true);

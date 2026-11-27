@@ -186,17 +186,17 @@ export default function FarmaciaChat({ embedded = false }) {
     const person = isStaff ? conversation.cliente : conversation.agente;
     return person ? `${person.nombre} ${person.apellido}` : 'Equipo de farmacia';
   };
-  if (!allowed) return <p role="status">Verificando acceso al chat…</p>;
+  if (!allowed) return <>{!embedded && role !== 2 && <header className="theme-header"><saludclick-theme-control /></header>}<p role="status">Verificando acceso al chat…</p></>;
   const Container = embedded ? 'section' : 'main';
   const Heading = embedded ? 'h2' : 'h1';
   return <div className={`farmacia-chat-module${embedded ? ' farmacia-embedded-chat' : ''}`}>
-    {!embedded && <nav className="farmacia-chat-nav" aria-label={isStaff ? 'Secciones de farmacia' : 'Navegación del chat'}>
+    {!embedded && isStaff && <header className="farmacia-chat-header"><nav className="farmacia-chat-nav" aria-label={isStaff ? 'Secciones de farmacia' : 'Navegación del chat'}>
       <a className="farmacia-chat-brand" href={isStaff ? returnTo : '/pages/dashboard.html'}>SaludClick · {isStaff ? 'Farmacia' : 'Mi cuenta'}</a>
       {isStaff ? <><a href={farmaciaReturnUrl(returnTo, '#panelFarmacia')}>Panel</a><a href={farmaciaReturnUrl(returnTo, '#pedidosFarmacia')}>Pedidos</a><a href={farmaciaReturnUrl(returnTo, '#inventarioFarmacia')}>Inventario</a></> : <a href="/pages/dashboard.html">Mi panel</a>}
       <a href={window.location.pathname + window.location.search} aria-current="page">Chat</a>
       <a href="/pages/perfil.html">Perfil</a>
       <button type="button" onClick={logout}>Cerrar sesión</button>
-    </nav>}
+    </nav><saludclick-theme-control /></header>}
     <Container className="chat-page">
       <header className="chat-heading"><div><p className="chat-eyebrow">ATENCIÓN SALUDCLICK</p><Heading>{isStaff ? 'Chat con pacientes' : 'Chat con farmacia'}</Heading><p>{isStaff ? 'Atiende conversaciones autorizadas y conserva el contexto de tu operación.' : 'Consulta al equipo de farmacia.'}</p></div>
         <span role="status" className={`chat-connection ${connection}`}>{connection === 'online' ? 'En línea' : connection === 'offline' ? 'Sin conexión' : 'Conectando…'}</span>

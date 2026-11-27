@@ -15,25 +15,26 @@ const enlaces = [
 <Layout title={`${titulo} | Farmacia | SaludClick`} bodyClass={dashboard ? 'admin-console farmacia-dashboard-page' : 'admin-console'}>
   <Fragment slot="head"><link rel="stylesheet" href="/css/farmacia.css" /><link rel="stylesheet" href="/css/panel-menu.css" /><slot name="head" /></Fragment>
   <div class="admin-app" data-panel-menu="farmacia" id="farmaciaApp" data-farmacia-module={modulo}>
-    <aside class="admin-sidebar" id="menu" aria-label="Navegación de farmacia">
+    <aside class="admin-sidebar panel-sidebar" id="menu" aria-label="Navegación de farmacia">
       <button class="admin-menu-toggle panel-menu-close" type="button" data-panel-close aria-label="Cerrar menú"><span class="panel-menu-icon" aria-hidden="true"></span></button>
       <a href="/pages/farmacia.html" class="admin-brand"><span class="admin-brand-mark"><i class="fa-solid fa-heart-pulse" aria-hidden="true"></i></span><span>SaludClick<small>FARMACIA</small></span></a>
       <span class="admin-nav-caption">MENÚ PRINCIPAL</span>
       <nav class="admin-side-nav" aria-label="Secciones de farmacia">
-        {enlaces.map(([clave, texto, ruta, icono]) => <a class:list={['admin-side-link', { active: clave === modulo }]} href={ruta} aria-current={clave === modulo ? 'page' : undefined} data-farmacia-link={clave}>{dashboard && <i class={`fa-solid ${icono}`} aria-hidden="true"></i>}<span>{texto}</span></a>)}
+        {enlaces.map(([clave, texto, ruta, icono]) => <a class:list={['admin-side-link', { active: clave === modulo }]} href={ruta} aria-current={clave === modulo ? 'page' : undefined} data-farmacia-link={clave} id={clave === 'notificaciones' ? 'farmaciaNotificationsBell' : undefined}><i class={`fa-solid ${icono}`} aria-hidden="true"></i><span>{texto}</span>{clave === 'notificaciones' && <small id="farmaciaNotificationsBadge" class="panel-sidebar-badge" aria-hidden="true">—</small>}</a>)}
       </nav>
+      <div hidden><span id="farmaciaUserName">Farmacia</span>{dashboard && <><span id="farmaciaDashboardAvatar"></span><span id="farmaciaDashboardAccountName">Farmacia</span></>}</div>
       <div class="admin-sidebar-bottom">
-        <div class="admin-sidebar-user"><span class="admin-avatar"><i class="fa-solid fa-prescription-bottle-medical" aria-hidden="true"></i></span><span><strong id="farmaciaUserName">Farmacia</strong><small>Personal de farmacia</small></span></div>
-        <button class="admin-logout" id="logout" type="button">Cerrar sesión</button>
+        <button class="admin-logout" id="logout" type="button">
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+          <span>Cerrar sesión</span>
+        </button>
       </div>
     </aside>
     <div class="panel-menu-backdrop" data-panel-backdrop aria-hidden="true"></div>
     <div class="admin-main">
-      <header class="admin-topbar">
-        <button class="admin-menu-toggle" id="menuToggle" type="button" aria-label="Abrir menú de farmacia" aria-expanded="false" aria-controls="menu"><span aria-hidden="true">☰</span></button>
-        <div class="admin-topbar-copy"><span>SaludClick · Farmacia</span>{!dashboard && <strong>{titulo}</strong>}</div>
-        <a class="farmacia-notifications-bell" id="farmaciaNotificationsBell" href="/pages/farmacia-notificaciones.html" aria-label="Notificaciones de farmacia. Contador no disponible."><i class="fa-solid fa-bell" aria-hidden="true"></i><span id="farmaciaNotificationsBadge" aria-hidden="true">—</span></a>
-        {dashboard && <a class="farmacia-dashboard-profile" href="/pages/farmacia-perfil.html" aria-label="Perfil de Farmacia"><span class="farmacia-dashboard-avatar" aria-hidden="true" id="farmaciaDashboardAvatar">F</span><span id="farmaciaDashboardAccountName">Farmacia</span></a>}
+      <header class="admin-topbar panel-topbar">
+        <button class="admin-menu-toggle" id="menuToggle" type="button" aria-label="Abrir menú de farmacia" aria-expanded="false" aria-controls="menu"><span class="panel-menu-icon" aria-hidden="true"></span></button>
+        <saludclick-theme-control></saludclick-theme-control>
       </header>
       <p id="farmaciaAccessStatus" class="admin-message" role="status" aria-live="polite">Verificando acceso de Farmacia…</p>
       <main class="admin-content farmacia-main" id="farmaciaMain" hidden>

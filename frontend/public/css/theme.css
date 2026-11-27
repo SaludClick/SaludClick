@@ -29,12 +29,21 @@ html[data-theme="dark"] {
     background: var(--theme-bg);
 }
 
-.saludclick-theme.saludclick-theme {
+saludclick-theme-control {
+    display: grid;
+    flex: 0 0 2.375rem;
+    inline-size: 2.375rem;
+    block-size: 2.375rem;
+    align-self: center;
+    margin-inline-start: auto;
+}
+
+html saludclick-theme-control > .saludclick-theme.saludclick-theme {
     display: inline-grid;
     place-items: center;
     flex: 0 0 auto;
-    width: 2.375rem;
-    height: 2.375rem;
+    width: 100%;
+    height: 100%;
     min-height: 0;
     padding: 0;
     border: 1px solid var(--theme-border);
@@ -46,21 +55,106 @@ html[data-theme="dark"] {
     cursor: pointer;
 }
 
-.saludclick-theme:hover {
+html saludclick-theme-control > .saludclick-theme:hover {
     border-color: var(--theme-focus);
     background: var(--theme-selected, #edf6ee);
 }
 
-.auth-back-link + .saludclick-theme {
-    margin-inline-start: .5rem;
-    vertical-align: middle;
+html saludclick-theme-control > .saludclick-theme:focus-visible {
+    outline: 3px solid var(--theme-focus);
+    outline-offset: 2px;
 }
 
-.saludclick-theme-floating {
-    position: absolute;
-    top: .75rem;
-    right: .75rem;
-    z-index: 2;
+.saludclick-theme span {
+    font-size: 0;
+}
+
+.saludclick-theme span::before {
+    content: "☾";
+    font: 1.25rem/1 "Segoe UI Symbol", sans-serif;
+}
+
+[data-theme="dark"] .saludclick-theme span::before {
+    content: "☀︎";
+}
+
+.theme-header,
+.farmacia-chat-header {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .75rem clamp(1rem, 4vw, 3rem);
+    color: var(--theme-text);
+    background: var(--theme-surface);
+    border-bottom: 1px solid var(--theme-border);
+}
+
+.theme-header > a:not(.auth-back-link) {
+    color: inherit;
+    font-weight: 700;
+}
+
+.theme-header.auth-theme-header {
+    padding: 0;
+    background: transparent;
+    border: 0;
+    margin-block-end: 1rem;
+}
+
+.auth-theme-header .auth-back-link {
+    margin-block-end: 0;
+}
+
+.farmacia-chat-header .farmacia-chat-nav {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.farmacia-chat-header {
+    background: #103b2e;
+}
+
+.farmacia-chat-header > saludclick-theme-control {
+    align-self: flex-start;
+}
+
+.admin-topbar > saludclick-theme-control {
+    margin-inline-start: 0;
+}
+
+@media (max-width: 768px) {
+    .navbar:not(.home-navbar, .dashboard-navbar) .nav-container > .menu-toggle {
+        margin-inline-start: auto;
+    }
+
+    .navbar:not(.home-navbar, .dashboard-navbar) .nav-container > saludclick-theme-control {
+        margin-inline-start: .5rem;
+    }
+}
+
+.ad-workspace :is(.ad-topbar, .ad-heading):not(.panel-topbar):has(> saludclick-theme-control) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .ad-workspace :is(.ad-topbar, .ad-heading):not(.panel-topbar):has(> saludclick-theme-control) {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .ad-workspace :is(.ad-topbar, .ad-heading) > saludclick-theme-control {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .ad-workspace :is(.ad-topbar, .ad-heading):not(.panel-topbar):has(> saludclick-theme-control) > :nth-child(2) {
+        grid-column: 1;
+        grid-row: 2;
+        justify-self: start;
+    }
 }
 
 html[data-theme] :focus-visible {
@@ -88,6 +182,43 @@ html[data-theme="dark"] body.admin-console {
     --admin-ink: var(--theme-text);
     --admin-muted: var(--theme-muted);
     --admin-border: var(--theme-border);
+}
+
+html[data-theme="dark"] .dashboard-page:has(> .dashboard-navbar) {
+    --sc-text: var(--theme-text);
+    --sc-muted: var(--theme-muted);
+    --sc-white: var(--theme-surface);
+    --sc-border: var(--theme-border);
+    --sc-green: var(--theme-link);
+    --sc-green-light: var(--theme-selected);
+}
+
+html[data-theme="dark"] .dashboard-page :is(.dashboard-profile-button, .dashboard-navbar .menu-toggle):is(:hover, :focus-visible) {
+    background-color: var(--theme-action-hover);
+    border-color: var(--theme-focus);
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] .dashboard-page :is(
+    .dashboard-action, .dashboard-info-card, .dashboard-profile, .dashboard-service,
+    .dashboard-navbar .menu-toggle, .dashboard-navbar .main-nav
+) {
+    background-color: var(--theme-surface);
+    border-color: var(--theme-border);
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] .dashboard-page :is(
+    .dashboard-stat-info small, .dashboard-top-identity, .dashboard-info-header p,
+    .dashboard-action-content span, .dashboard-profile span, .dashboard-service p
+) {
+    color: var(--theme-muted);
+}
+
+html[data-theme="dark"] .admin-console :is(.admin-topbar-status, .eps-dash-accesos .btn-outline) {
+    background-color: var(--theme-selected);
+    border-color: var(--theme-control-border);
+    color: var(--theme-link);
 }
 
 html[data-theme="dark"] body.home-page :is(.home-hero, .servicios, .beneficios, .portada-faq) {
@@ -271,4 +402,253 @@ html[data-theme="dark"] body :is(.chat-bubble.mine, .vitalix-message-user .vital
 
 html[data-theme="dark"] body :is(.chat-bubble, .vitalix-message-content, .ad-message) :is(time, footer) {
     color: var(--theme-muted);
+}
+
+html[data-theme="dark"] body.bg-light {
+    --bs-light-rgb: 28, 36, 39;
+}
+
+html[data-theme="dark"] :is(.checkout-payment-page, .medicamentos-page, .admin-console, .ad-workspace, .farmacia-chat-body, .vitalix-page)
+    :is(h1, h2, h3, h4) {
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] body :is(
+    .mc-intro, .mc-filters, .mc-card, .mc-selection, #catalogoEstado:not(:empty),
+    .checkout-card, .checkout-panel, .checkout-final, .orders-history, .sc-pay-receipt,
+    .admin-card, .admin-table-wrap, .farmacia-catalogo-card, .farmacia-metric, .farmacia-dashboard-card, .chat-shell,
+    .farmacia-orders-panel, .farmacia-existencias, .farmacia-notifications,
+    .ac-workspace, .ac-inbox, .ac-thread-header, .ac-management, .ac-composer, .ac-message,
+    .vitalix-shell, .vitalix-menu, .vitalix-welcome, .vitalix-shortcuts, .vitalix-conversation
+) {
+    background: var(--theme-surface);
+    color: var(--theme-text);
+    border-color: var(--theme-border);
+}
+
+html[data-theme="dark"] body :is(
+    .mc-image, .mc-unit-count, .mc-category, .mc-secondary, .sc-pay-method, .sc-pay-demo,
+    .checkout-security, .checkout-total, .checkout-final-icon,
+    .sc-pay-status, .sc-pay-method .sc-pay-badge, .sc-pay input[readonly],
+    .ac-thread, .ac-avatar, .ac-live, .ac-message.ac-mine,
+    .vitalix-option.is-active, .vitalix-option:hover, .chat-connection
+) {
+    background: var(--theme-selected);
+    color: var(--theme-text);
+    border-color: var(--theme-control-border);
+}
+
+html[data-theme="dark"] body :is(
+    .mc-main, .mc-intro p, .mc-field label, .mc-section-heading p, .mc-prescription,
+    .mc-presentation, .mc-empty-selection, .sc-pay-heading p, .sc-pay-progress li,
+    .sc-pay-field label, .sc-pay-help, .sc-pay-method span:not(.sc-pay-selected, .sc-pay-badge),
+    .sc-pay-note, .sc-pay-receipt p, .sc-pay-receipt dt, .sc-pay-receipt dd,
+    .checkout-card-header p, .orders-history-header p, .checkout-total small,
+    .checkout-panel-header p, .checkout-final-info p,
+    .vitalix-heading p, .vitalix-menu-footnote, .vitalix-welcome p,
+    .vitalix-message-content p, .vitalix-faq dd, .vitalix-typing, .vitalix-disclaimer, .vitalix-mode,
+    .ac-inbox-heading p, .ac-status, .ac-excerpt, .ac-meta time, .ac-pagination,
+    .ac-thread-identity p, .ac-history-tools, .ac-message footer, .ac-empty, .ac-composer small,
+    .ac-placeholder, .farmacia-dashboard-empty p, .farmacia-metric-unavailable,
+    #farmaciaDashboardPeriodo label, .farmacia-metric small, .farmacia-dashboard-card > p
+) {
+    color: var(--theme-muted);
+}
+
+html[data-theme="dark"] body :is(
+    .mc-eyebrow, .mc-availability, .mc-unit-count strong, .mc-selection-actions a,
+    .sc-pay-eyebrow, .sc-pay-progress [aria-current="step"], .sc-pay-receipt a,
+    .checkout-kicker, .checkout-total strong,
+    .vitalix-eyebrow, .vitalix-clear, .vitalix-option span, .vitalix-message-name,
+    .vitalix-welcome strong, .vitalix-faq dt, .ac-case-state, .ac-message strong,
+    .admin-eyebrow, .admin-card a, .farmacia-notifications-bell
+) {
+    color: var(--theme-link);
+}
+
+html[data-theme="dark"] body :is(#catalogoEstado[data-state="error"], .sc-pay[data-state="rejected"] .sc-pay-status) {
+    background: #402d2d;
+    color: #ffd7cd;
+    border-color: #aa7163;
+}
+
+html[data-theme="dark"] body :is(.chat-error, .chat-notice) {
+    background: #402d2d;
+    color: #ffd7cd;
+}
+
+html[data-theme="dark"] .checkout-payment-page :is(
+    .checkout-cart-table td, .checkout-total span, .checkout-security span, .checkout-security strong,
+    .checkout-final-info strong, .checkout-panel label
+) {
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] .checkout-cart-table :is(td, th) {
+    border-color: var(--theme-border);
+}
+
+html[data-theme="dark"] .checkout-cart-table a {
+    color: var(--theme-link);
+}
+
+html[data-theme="dark"] .checkout-main {
+    background: var(--theme-bg);
+}
+
+html[data-theme="dark"] .farmacia-metric strong {
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] .admin-console .admin-content .btn-outline {
+    color: var(--theme-link);
+    background: var(--theme-surface);
+    border-color: var(--theme-control-border);
+}
+
+html[data-theme="dark"] .admin-console .admin-content .btn-outline:is(:hover, :focus-visible) {
+    background: var(--theme-selected);
+}
+
+html[data-theme="dark"] .farmacia-chat-body .farmacia-chat-module {
+    color: var(--theme-text);
+    background: var(--theme-bg);
+}
+
+html[data-theme="dark"] .auth-page .input-group-text {
+    color: var(--theme-muted);
+    background: var(--theme-selected);
+    border-color: var(--theme-control-border);
+}
+
+.auth-page .input-group {
+    display: flex;
+    flex-wrap: nowrap;
+}
+
+.auth-page .input-group .form-control {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+html[data-theme="dark"] body .sc-pay[data-state="approved"] .sc-pay-status {
+    background: var(--theme-selected);
+    color: var(--theme-link);
+}
+
+html[data-theme="dark"] .ac-workspace {
+    --ac-line: var(--theme-border);
+}
+
+html[data-theme="dark"] .ad-workspace .ac-conversation:is(:hover, .is-selected) {
+    background: var(--theme-selected);
+    border-color: var(--theme-control-border);
+}
+
+html[data-theme="dark"] :is(.navbar nav#menu, .farmacia-chat-header, .panel-menu-heading) {
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] .navbar:not(.home-navbar, .dashboard-navbar) nav#menu {
+    background: var(--theme-surface);
+    border-color: var(--theme-border);
+}
+
+html[data-theme="dark"] .navbar .logo {
+    color: var(--theme-link);
+}
+
+html[data-theme="dark"] .dashboard-navbar.panel-topbar nav#menu {
+    background: var(--theme-surface);
+    border-color: var(--theme-border);
+}
+
+.historial-eps {
+    margin-block: 1.5rem;
+    padding: 1rem;
+    border: 1px solid var(--theme-border);
+    border-radius: .75rem;
+    background: var(--theme-surface);
+    color: var(--theme-text);
+}
+
+.historial-eps > summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.historial-eps[open] > summary {
+    margin-bottom: .75rem;
+}
+
+.historial-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: .75rem;
+    margin-block: 0 1rem;
+}
+
+.historial-filtros label {
+    display: grid;
+    gap: .25rem;
+    min-width: 0;
+    flex: 1 1 12rem;
+}
+
+:is(.user-profile, .user-history) > .hero {
+    min-height: 0;
+    padding-block: clamp(1.75rem, 5vw, 3.5rem);
+}
+
+:is(.user-profile, .user-history) > .servicios {
+    padding-block: 1rem 2rem;
+}
+
+.user-history .historial-container {
+    margin-block: 0;
+}
+
+.user-formulas .page-content .card {
+    padding: clamp(.875rem, 3vw, 1.5rem);
+}
+
+.user-formulas .section-heading {
+    flex-wrap: wrap;
+    gap: .75rem;
+}
+
+html[data-theme="dark"] :is(.user-profile, .user-history) > :is(.hero, .servicios),
+html[data-theme="dark"] .user-formulas .page-content {
+    background: var(--theme-bg);
+}
+
+html[data-theme="dark"] .user-history .historial-header,
+html[data-theme="dark"] .user-formulas .formula-card {
+    background: var(--theme-surface);
+    border-color: var(--theme-border);
+}
+
+html[data-theme="dark"] :is(.user-profile, .user-history) .hero h1,
+html[data-theme="dark"] .user-profile .perfil-card h2,
+html[data-theme="dark"] .user-history .historial-header h2,
+html[data-theme="dark"] .user-formulas .page-header h1,
+html[data-theme="dark"] .user-formulas .formula-card h3 {
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] :is(.user-profile, .user-history) .hero p,
+html[data-theme="dark"] .user-history .historial-header p,
+html[data-theme="dark"] .user-formulas :is(.page-header p, .formula-upload-card small, .formula-card p, .formula-card small) {
+    color: var(--theme-muted);
+}
+
+html[data-theme="dark"] :is(.user-profile, .user-history, .user-formulas) .btn-outline {
+    color: var(--theme-link);
+    border-color: var(--theme-control-border);
+    background: var(--theme-surface);
+}
+
+html[data-theme="dark"] :is(.user-profile, .user-history, .user-formulas) .btn-outline:is(:hover, :focus-visible) {
+    background: var(--theme-selected);
 }
